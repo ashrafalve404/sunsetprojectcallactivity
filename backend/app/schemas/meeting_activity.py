@@ -1,9 +1,9 @@
 """Pydantic schemas for MeetingActivityEntry."""
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Any, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class MeetingEntryBase(BaseModel):
@@ -15,6 +15,22 @@ class MeetingEntryBase(BaseModel):
     total_count: Optional[int] = Field(None, ge=0)
     total_duration_minutes: Optional[int] = Field(None, ge=0)
     notes: Optional[str] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def remap_frontend_keys(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            if "activity_type" not in data and "metric_type" in data:
+                data["activity_type"] = data["metric_type"]
+            if "till_today_value" not in data and "till_today" in data:
+                data["till_today_value"] = data["till_today"]
+            if "slot_10am_1pm" not in data and "slot_10_to_1" in data:
+                data["slot_10am_1pm"] = data["slot_10_to_1"]
+            if "slot_2pm_5pm" not in data and "slot_2_to_5" in data:
+                data["slot_2pm_5pm"] = data["slot_2_to_5"]
+            if "slot_5pm_6pm" not in data and "slot_5_to_6" in data:
+                data["slot_5pm_6pm"] = data["slot_5_to_6"]
+        return data
 
 
 class MeetingEntryRead(MeetingEntryBase):

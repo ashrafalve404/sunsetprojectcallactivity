@@ -233,30 +233,88 @@ export const api = {
 
   calls: {
     get: async (reportId: number): Promise<CallActivityResponse> => {
-      return request<CallActivityResponse>(`/reports/${reportId}/calls`);
+      const res = await request<any>(`/reports/${reportId}/calls`);
+      const rawEntries = Array.isArray(res) ? res : res?.entries || [];
+      const entries: CallActivityEntry[] = rawEntries.map((item: any) => ({
+        id: item.id,
+        lead_category: item.lead_category,
+        till_today_status: item.till_today_status ?? null,
+        slot_10_to_1: item.slot_10_to_1 ?? item.slot_10am_1pm ?? null,
+        slot_2_to_5: item.slot_2_to_5 ?? item.slot_2pm_5pm ?? null,
+        slot_5_to_6: item.slot_5_to_6 ?? item.slot_5pm_6pm ?? null,
+        hp_count: item.hp_count ?? item.lead_status_hp ?? null,
+        p_count: item.p_count ?? item.lead_status_p ?? null,
+        fub_count: item.fub_count ?? item.lead_status_fub ?? null,
+        ni_count: item.ni_count ?? item.lead_status_ni ?? null,
+        notes: item.notes ?? null,
+      }));
+      return {
+        report_id: res?.report_id ?? reportId,
+        report_date: res?.report_date ?? "",
+        is_submitted: !!res?.is_submitted,
+        entries,
+        totals: res?.totals || ({} as any),
+      };
     },
     upsert: async (
       reportId: number,
       entries: CallActivityEntry[]
     ): Promise<CallActivityResponse> => {
+      const payload = entries.map((e: any) => ({
+        lead_category: e.lead_category,
+        till_today_status: e.till_today_status ?? null,
+        slot_10am_1pm: e.slot_10_to_1 ?? e.slot_10am_1pm ?? null,
+        slot_2pm_5pm: e.slot_2_to_5 ?? e.slot_2pm_5pm ?? null,
+        slot_5pm_6pm: e.slot_5_to_6 ?? e.slot_5pm_6pm ?? null,
+        lead_status_hp: e.hp_count ?? e.lead_status_hp ?? null,
+        lead_status_p: e.p_count ?? e.lead_status_p ?? null,
+        lead_status_fub: e.fub_count ?? e.lead_status_fub ?? null,
+        lead_status_ni: e.ni_count ?? e.lead_status_ni ?? null,
+        notes: e.notes ?? null,
+      }));
       return request<CallActivityResponse>(`/reports/${reportId}/calls`, {
         method: "PUT",
-        body: JSON.stringify({ entries }),
+        body: JSON.stringify({ entries: payload }),
       });
     },
   },
 
   meetings: {
     get: async (reportId: number): Promise<MeetingActivityResponse> => {
-      return request<MeetingActivityResponse>(`/reports/${reportId}/meetings`);
+      const res = await request<any>(`/reports/${reportId}/meetings`);
+      const rawEntries = Array.isArray(res) ? res : res?.entries || [];
+      const entries: MeetingActivityEntry[] = rawEntries.map((item: any) => ({
+        id: item.id,
+        metric_type: item.metric_type ?? item.activity_type,
+        till_today: item.till_today ?? item.till_today_value ?? null,
+        slot_10_to_1: item.slot_10_to_1 ?? item.slot_10am_1pm ?? null,
+        slot_2_to_5: item.slot_2_to_5 ?? item.slot_2pm_5pm ?? null,
+        slot_5_to_6: item.slot_5_to_6 ?? item.slot_5pm_6pm ?? null,
+        notes: item.notes ?? null,
+      }));
+      return {
+        report_id: res?.report_id ?? reportId,
+        report_date: res?.report_date ?? "",
+        is_submitted: !!res?.is_submitted,
+        entries,
+        totals: res?.totals || ({} as any),
+      };
     },
     upsert: async (
       reportId: number,
       entries: MeetingActivityEntry[]
     ): Promise<MeetingActivityResponse> => {
+      const payload = entries.map((m: any) => ({
+        activity_type: m.metric_type ?? m.activity_type,
+        till_today_value: m.till_today ?? m.till_today_value ?? null,
+        slot_10am_1pm: m.slot_10_to_1 ?? m.slot_10am_1pm ?? null,
+        slot_2pm_5pm: m.slot_2_to_5 ?? m.slot_2pm_5pm ?? null,
+        slot_5pm_6pm: m.slot_5_to_6 ?? m.slot_5pm_6pm ?? null,
+        notes: m.notes ?? null,
+      }));
       return request<MeetingActivityResponse>(`/reports/${reportId}/meetings`, {
         method: "PUT",
-        body: JSON.stringify({ entries }),
+        body: JSON.stringify({ entries: payload }),
       });
     },
   },

@@ -29,6 +29,7 @@ import { api, ApiError } from "@/lib/api";
 import { Report, User } from "@/types";
 import {
   getDhakaToday,
+  getDhakaDateOffset,
   formatReadableDate,
   formatBDT,
   formatMinutes,
@@ -57,7 +58,7 @@ function ReportsContent() {
 
   useEffect(() => {
     const today = getDhakaToday();
-    setStartDate(today);
+    setStartDate(getDhakaDateOffset(-30));
     setEndDate(today);
   }, []);
 
@@ -214,7 +215,7 @@ function ReportsContent() {
 
   const handleResetFilters = () => {
     const today = getDhakaToday();
-    setStartDate(today);
+    setStartDate(getDhakaDateOffset(-30));
     setEndDate(today);
     setStatusFilter("all");
     setSelectedEmployeeId("all");
