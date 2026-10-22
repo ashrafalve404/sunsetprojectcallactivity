@@ -16,7 +16,7 @@ class ReportRepository:
         self.db = db
 
     async def get_by_id(
-        self, report_id: int, load_employee: bool = False
+        self, report_id: int, load_employee: bool = True
     ) -> Optional[DailyActivityReport]:
         stmt = select(DailyActivityReport).where(DailyActivityReport.id == report_id)
         if load_employee:
@@ -25,14 +25,15 @@ class ReportRepository:
         return result.scalar_one_or_none()
 
     async def get_by_employee_and_date(
-        self, employee_id: int, report_date: date
+        self, employee_id: int, report_date: date, load_employee: bool = True
     ) -> Optional[DailyActivityReport]:
-        result = await self.db.execute(
-            select(DailyActivityReport).where(
-                DailyActivityReport.employee_id == employee_id,
-                DailyActivityReport.report_date == report_date,
-            )
+        stmt = select(DailyActivityReport).where(
+            DailyActivityReport.employee_id == employee_id,
+            DailyActivityReport.report_date == report_date,
         )
+        if load_employee:
+            stmt = stmt.options(selectinload(DailyActivityReport.employee))
+        result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
     async def list_reports(
@@ -79,14 +80,14 @@ class ReportRepository:
     async def create(self, report: DailyActivityReport) -> DailyActivityReport:
         self.db.add(report)
         await self.db.flush()
-        await self.db.refresh(report)
-        return report
+        fresh = await self.get_by_id(report.id, load_employee=True)
+        return fresh if fresh is not None else report
 
     async def update(self, report: DailyActivityReport) -> DailyActivityReport:
         self.db.add(report)
         await self.db.flush()
-        await self.db.refresh(report)
-        return report
+        fresh = await self.get_by_id(report.id, load_employee=True)
+        return fresh if fresh is not None else report
 
     async def delete(self, report: DailyActivityReport) -> None:
         await self.db.delete(report)
