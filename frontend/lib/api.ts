@@ -151,20 +151,54 @@ export const api = {
       employee_id?: number;
       start_date?: string;
       end_date?: string;
+      date_from?: string;
+      date_to?: string;
       is_submitted?: boolean;
+      status?: string;
       skip?: number;
       limit?: number;
+      page?: number;
+      page_size?: number;
     }): Promise<Report[]> => {
       const search = new URLSearchParams();
       if (params?.employee_id) search.set("employee_id", String(params.employee_id));
-      if (params?.start_date) search.set("start_date", params.start_date);
-      if (params?.end_date) search.set("end_date", params.end_date);
-      if (params?.is_submitted !== undefined) search.set("is_submitted", String(params.is_submitted));
-      if (params?.skip !== undefined) search.set("skip", String(params.skip));
-      if (params?.limit !== undefined) search.set("limit", String(params.limit));
+      const from = params?.start_date || params?.date_from;
+      if (from) search.set("date_from", from);
+      const to = params?.end_date || params?.date_to;
+      if (to) search.set("date_to", to);
+      if (params?.status) {
+        search.set("status", params.status);
+      } else if (params?.is_submitted !== undefined) {
+        search.set("status", params.is_submitted ? "submitted" : "draft");
+      }
+      if (params?.page) search.set("page", String(params.page));
+      if (params?.page_size) search.set("page_size", String(params.page_size));
+      else if (params?.limit) search.set("page_size", String(params.limit));
 
       const q = search.toString();
-      return request<Report[]>(`/reports${q ? `?${q}` : ""}`);
+      const res = await request<unknown>(`/reports${q ? `?${q}` : ""}`);
+      const rawItems: Record<string, unknown>[] = Array.isArray(res)
+        ? res
+        : res && typeof res === "object" && "items" in res && Array.isArray((res as { items: unknown[] }).items)
+        ? ((res as { items: Record<string, unknown>[] }).items)
+        : [];
+
+      return rawItems.map((item) => ({
+        id: Number(item.id),
+        employee_id: Number(item.employee_id),
+        report_date: String(item.report_date),
+        is_submitted: item.status === "submitted" || !!item.is_submitted,
+        status: String(item.status || "draft"),
+        submitted_at: item.submitted_at ? String(item.submitted_at) : null,
+        created_at: String(item.created_at || ""),
+        updated_at: String(item.updated_at || ""),
+        employee_name:
+          (item.employee && typeof item.employee === "object" && "full_name" in item.employee)
+            ? String((item.employee as { full_name: string }).full_name)
+            : typeof item.employee_name === "string"
+            ? item.employee_name
+            : undefined,
+      }));
     },
     getById: async (reportId: number): Promise<Report> => {
       return request<Report>(`/reports/${reportId}`);

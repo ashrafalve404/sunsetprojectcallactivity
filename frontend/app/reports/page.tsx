@@ -92,8 +92,9 @@ function ReportsContent() {
       });
 
       // Enhance with summary for each report
+      const safeRaw = Array.isArray(rawReports) ? rawReports : [];
       const detailed = await Promise.all(
-        rawReports.map(async (r) => {
+        safeRaw.map(async (r) => {
           try {
             const sum = await api.reports.getSummary(r.id);
             return { ...r, summary: sum as DetailedReportRow["summary"] };

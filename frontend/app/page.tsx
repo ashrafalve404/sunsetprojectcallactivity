@@ -91,7 +91,7 @@ function DashboardContent() {
       ]);
 
       setSummary(summaryData);
-      setRecentReports(reportsData);
+      setRecentReports(Array.isArray(reportsData) ? reportsData : []);
     } catch (err: unknown) {
       if (err instanceof ApiError) {
         setError(err.message);
@@ -462,7 +462,7 @@ function DashboardContent() {
                       <td className="py-3 px-4 text-right"><Skeleton className="h-4 w-16 ml-auto" /></td>
                     </tr>
                   ))
-                ) : recentReports.length === 0 ? (
+                ) : !Array.isArray(recentReports) || recentReports.length === 0 ? (
                   <tr>
                     <td
                       colSpan={isAdmin ? 4 : 3}
