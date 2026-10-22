@@ -489,7 +489,7 @@ function DashboardContent() {
                       </td>
                       <td className="py-3 px-4 text-right">
                         <Link
-                          href={`/calls?date=${report.report_date}`}
+                          href={`/calls?date=${report.report_date}&employee_id=${report.employee_id}`}
                           className="text-green-700 hover:text-green-800 font-semibold"
                         >
                           Open & Edit →

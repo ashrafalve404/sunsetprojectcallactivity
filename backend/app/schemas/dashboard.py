@@ -113,6 +113,21 @@ class DashboardSummary(BaseModel):
     date_to: date
     employee_id: Optional[int] = None
     report_count: int = 0
+    submitted_reports: int = 0
+
+    # Aliases for frontend compatibility
+    period_start: Optional[date] = None
+    period_end: Optional[date] = None
+    total_reports: int = 0
+    total_calls_dialed: int = 0
+    total_calls_connected: int = 0
+    total_meeting_time_minutes: int = 0
+    total_indoor_cx: int = 0
+    actual_collection_bdt: Decimal = Decimal("0")
+    commitments_bdt: Decimal = Decimal("0")
+    tb_collection_bdt: Decimal = Decimal("0")
+    tb_commitments_bdt: Decimal = Decimal("0")
+    emi_collection_bdt: Decimal = Decimal("0")
 
     total_dialed: int = 0
     total_connected: int = 0
@@ -123,7 +138,11 @@ class DashboardSummary(BaseModel):
 
     total_new_sales: Decimal = Decimal("0")
     total_actual_collection: Decimal = Decimal("0")
+    total_sales_commitments: Decimal = Decimal("0")
     total_tb_collection: Decimal = Decimal("0")
+    total_tb_commitments: Decimal = Decimal("0")
     total_emi_collection: Decimal = Decimal("0")
 
+    by_slot: dict[str, dict[str, int]] = {}
+    by_category: dict[str, dict[str, int]] = {}
     lead_category_breakdown: list[LeadCategoryBreakdown] = []

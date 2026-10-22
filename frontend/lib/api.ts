@@ -359,20 +359,52 @@ export const api = {
       employee_id?: number;
     }): Promise<DashboardSummary> => {
       const search = new URLSearchParams();
-      if (params?.start_date) search.set("start_date", params.start_date);
-      if (params?.end_date) search.set("end_date", params.end_date);
+      if (params?.start_date) {
+        search.set("start_date", params.start_date);
+        search.set("date_from", params.start_date);
+      }
+      if (params?.end_date) {
+        search.set("end_date", params.end_date);
+        search.set("date_to", params.end_date);
+      }
       if (params?.employee_id) search.set("employee_id", String(params.employee_id));
 
       const q = search.toString();
-      return request<DashboardSummary>(`/dashboard/summary${q ? `?${q}` : ""}`);
+      const raw = await request<any>(`/dashboard/summary${q ? `?${q}` : ""}`);
+      return {
+        period_start: raw.period_start || raw.date_from || "",
+        period_end: raw.period_end || raw.date_to || "",
+        total_reports: raw.total_reports ?? raw.report_count ?? 0,
+        submitted_reports: raw.submitted_reports ?? 0,
+        total_calls_dialed: raw.total_calls_dialed ?? raw.total_dialed ?? 0,
+        total_calls_connected: raw.total_calls_connected ?? raw.total_connected ?? 0,
+        connection_rate_pct: raw.connection_rate_pct !== undefined && raw.connection_rate_pct !== null ? Number(raw.connection_rate_pct) : null,
+        total_call_duration_minutes: raw.total_call_duration_minutes ?? 0,
+        total_meeting_time_minutes: raw.total_meeting_time_minutes ?? raw.total_meeting_duration_minutes ?? 0,
+        total_outdoor_visits: raw.total_outdoor_visits ?? 0,
+        total_indoor_cx: raw.total_indoor_cx ?? 0,
+        actual_collection_bdt: Number(raw.actual_collection_bdt ?? raw.total_actual_collection ?? 0),
+        commitments_bdt: Number(raw.commitments_bdt ?? (Number(raw.total_sales_commitments || 0) + Number(raw.total_tb_commitments || 0))),
+        tb_collection_bdt: Number(raw.tb_collection_bdt ?? raw.total_tb_collection ?? 0),
+        tb_commitments_bdt: Number(raw.tb_commitments_bdt ?? raw.total_tb_commitments ?? 0),
+        emi_collection_bdt: Number(raw.emi_collection_bdt ?? raw.total_emi_collection ?? 0),
+        by_category: raw.by_category || {},
+        by_slot: raw.by_slot || {},
+      };
     },
     getEmployeeSummary: async (
       employeeId: number,
       params?: { start_date?: string; end_date?: string }
     ): Promise<DashboardSummary> => {
       const search = new URLSearchParams();
-      if (params?.start_date) search.set("start_date", params.start_date);
-      if (params?.end_date) search.set("end_date", params.end_date);
+      if (params?.start_date) {
+        search.set("start_date", params.start_date);
+        search.set("date_from", params.start_date);
+      }
+      if (params?.end_date) {
+        search.set("end_date", params.end_date);
+        search.set("date_to", params.end_date);
+      }
       const q = search.toString();
       return request<DashboardSummary>(
         `/dashboard/employee/${employeeId}${q ? `?${q}` : ""}`

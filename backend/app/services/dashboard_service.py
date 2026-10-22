@@ -215,61 +215,125 @@ class DashboardService:
         total_dialed = 0
         total_connected = 0
         total_call_dur = 0
-        total_visits = 0
+        total_outdoor_visits = 0
+        total_indoor_cx = 0
         total_meeting_dur = 0
+        submitted_reports = 0
+
+        slot_breakdown: dict[str, dict[str, int]] = {
+            "10_to_1": {"dialed": 0},
+            "2_to_5": {"dialed": 0},
+            "5_to_6": {"dialed": 0},
+        }
+
         agg_fin: dict[str, Decimal] = {
             "total_new_sales": Decimal("0"),
             "total_actual_collection": Decimal("0"),
+            "total_sales_commitments": Decimal("0"),
             "total_tb_collection": Decimal("0"),
+            "total_tb_commitments": Decimal("0"),
             "total_emi_collection": Decimal("0"),
         }
         category_map: dict[str, LeadCategoryBreakdown] = {}
+        by_category_dict: dict[str, dict[str, int]] = {}
 
         for report in reports:
-            total_dialed += _sum_int(report.call_entries, "total_dialed")
-            total_connected += _sum_int(report.call_entries, "total_connected")
-            total_call_dur += _sum_int(report.call_entries, "total_duration_minutes")
-
-            for me in report.meeting_entries:
-                if me.total_count is not None:
-                    total_visits += me.total_count
-                if me.total_duration_minutes is not None:
-                    total_meeting_dur += me.total_duration_minutes
-
-            fin = SalesService.calc_totals(report.sales_collection_entries)
-            agg_fin["total_new_sales"] += fin["total_new_sales"]
-            agg_fin["total_actual_collection"] += fin["total_actual_collection"]
-            agg_fin["total_tb_collection"] += fin["total_tb_collection"]
-            agg_fin["total_emi_collection"] += fin["total_emi_collection"]
+            if report.status == ReportStatus.SUBMITTED:
+                submitted_reports += 1
 
             for ce in report.call_entries:
+                slot1 = ce.slot_10am_1pm or 0
+                slot2 = ce.slot_2pm_5pm or 0
+                slot3 = ce.slot_5pm_6pm or 0
+                ce_dialed = ce.total_dialed if ce.total_dialed is not None else (slot1 + slot2 + slot3)
+                ce_hp = ce.lead_status_hp or 0
+                ce_p = ce.lead_status_p or 0
+                ce_fub = ce.lead_status_fub or 0
+                ce_connected = ce.total_connected if ce.total_connected is not None else (ce_hp + ce_p + ce_fub)
+                ce_dur = ce.total_duration_minutes or 0
+
+                total_dialed += ce_dialed
+                total_connected += ce_connected
+                total_call_dur += ce_dur
+
+                slot_breakdown["10_to_1"]["dialed"] += slot1
+                slot_breakdown["2_to_5"]["dialed"] += slot2
+                slot_breakdown["5_to_6"]["dialed"] += slot3
+
+                cat_stat = by_category_dict.setdefault(
+                    ce.lead_category, {"dialed": 0, "connected": 0, "duration_min": 0}
+                )
+                cat_stat["dialed"] += ce_dialed
+                cat_stat["connected"] += ce_connected
+                cat_stat["duration_min"] += ce_dur
+
                 lb = category_map.setdefault(
                     ce.lead_category,
                     LeadCategoryBreakdown(lead_category=ce.lead_category),
                 )
-                _add_opt(lb, "total_dialed", ce.total_dialed)
-                _add_opt(lb, "total_connected", ce.total_connected)
-                _add_opt(lb, "total_duration_minutes", ce.total_duration_minutes)
+                _add_opt(lb, "total_dialed", ce_dialed)
+                _add_opt(lb, "total_connected", ce_connected)
+                _add_opt(lb, "total_duration_minutes", ce_dur)
                 _add_opt(lb, "lead_status_hp", ce.lead_status_hp)
                 _add_opt(lb, "lead_status_p", ce.lead_status_p)
                 _add_opt(lb, "lead_status_fub", ce.lead_status_fub)
                 _add_opt(lb, "lead_status_ni", ce.lead_status_ni)
 
+            for me in report.meeting_entries:
+                s_sum = (me.slot_10am_1pm or 0) + (me.slot_2pm_5pm or 0) + (me.slot_5pm_6pm or 0)
+                val = me.total_count if me.total_count is not None else s_sum
+                act_lower = (me.activity_type or "").lower()
+                if "outdoor_visit" in act_lower or "outdoor visit" in act_lower or "visit" in act_lower:
+                    total_outdoor_visits += val
+                elif "indoor_cx" in act_lower or "indoor cx" in act_lower or "cx" in act_lower:
+                    total_indoor_cx += val
+
+                dur = me.total_duration_minutes if me.total_duration_minutes is not None else s_sum
+                if "time" in act_lower or "duration" in act_lower or "minute" in act_lower:
+                    total_meeting_dur += dur
+
+            fin = SalesService.calc_totals(report.sales_collection_entries)
+            agg_fin["total_new_sales"] += fin["total_new_sales"]
+            agg_fin["total_actual_collection"] += fin["total_actual_collection"]
+            agg_fin["total_sales_commitments"] += fin["total_sales_commitments"]
+            agg_fin["total_tb_collection"] += fin["total_tb_collection"]
+            agg_fin["total_tb_commitments"] += fin["total_tb_commitments"]
+            agg_fin["total_emi_collection"] += fin["total_emi_collection"]
+
+        tot_commitments = agg_fin["total_sales_commitments"] + agg_fin["total_tb_commitments"]
+
         return DashboardSummary(
             date_from=date_from,
             date_to=date_to,
+            period_start=date_from,
+            period_end=date_to,
             employee_id=employee_id,
             report_count=len(reports),
+            total_reports=len(reports),
+            submitted_reports=submitted_reports,
             total_dialed=total_dialed,
+            total_calls_dialed=total_dialed,
             total_connected=total_connected,
+            total_calls_connected=total_connected,
             connection_rate_pct=_calc_rate(total_connected, total_dialed),
             total_call_duration_minutes=total_call_dur,
-            total_outdoor_visits=total_visits,
+            total_outdoor_visits=total_outdoor_visits,
+            total_indoor_cx=total_indoor_cx,
             total_meeting_duration_minutes=total_meeting_dur,
+            total_meeting_time_minutes=total_meeting_dur,
             total_new_sales=agg_fin["total_new_sales"],
             total_actual_collection=agg_fin["total_actual_collection"],
+            actual_collection_bdt=agg_fin["total_actual_collection"],
+            total_sales_commitments=agg_fin["total_sales_commitments"],
             total_tb_collection=agg_fin["total_tb_collection"],
+            tb_collection_bdt=agg_fin["total_tb_collection"],
+            total_tb_commitments=agg_fin["total_tb_commitments"],
+            tb_commitments_bdt=agg_fin["total_tb_commitments"],
             total_emi_collection=agg_fin["total_emi_collection"],
+            emi_collection_bdt=agg_fin["total_emi_collection"],
+            commitments_bdt=tot_commitments,
+            by_slot=slot_breakdown,
+            by_category=by_category_dict,
             lead_category_breakdown=list(category_map.values()),
         )
 

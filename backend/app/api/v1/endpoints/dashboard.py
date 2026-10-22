@@ -22,8 +22,10 @@ def _default_from() -> date:
 
 @router.get("/summary", response_model=DashboardSummary)
 async def dashboard_summary(
-    date_from: date = Query(default_factory=_default_from),
-    date_to: date = Query(default_factory=date.today),
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
     employee_id: Optional[int] = Query(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -32,65 +34,83 @@ async def dashboard_summary(
     Aggregated dashboard summary.
     Non-admins are restricted to their own data regardless of employee_id param.
     """
+    df = date_from or start_date or _default_from()
+    dt = date_to or end_date or date.today()
     if current_user.role != UserRole.ADMIN:
         employee_id = current_user.id
     svc = DashboardService(db)
-    return await svc.get_dashboard_summary(date_from, date_to, employee_id)
+    return await svc.get_dashboard_summary(df, dt, employee_id)
 
 
 @router.get("/call-trends", response_model=DashboardSummary)
 async def call_trends(
-    date_from: date = Query(default_factory=_default_from),
-    date_to: date = Query(default_factory=date.today),
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
     employee_id: Optional[int] = Query(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Call activity trends — same as summary but semantically for call data."""
+    df = date_from or start_date or _default_from()
+    dt = date_to or end_date or date.today()
     if current_user.role != UserRole.ADMIN:
         employee_id = current_user.id
     svc = DashboardService(db)
-    return await svc.get_dashboard_summary(date_from, date_to, employee_id)
+    return await svc.get_dashboard_summary(df, dt, employee_id)
 
 
 @router.get("/lead-breakdown", response_model=DashboardSummary)
 async def lead_breakdown(
-    date_from: date = Query(default_factory=_default_from),
-    date_to: date = Query(default_factory=date.today),
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
     employee_id: Optional[int] = Query(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Lead category breakdown for the given period."""
+    df = date_from or start_date or _default_from()
+    dt = date_to or end_date or date.today()
     if current_user.role != UserRole.ADMIN:
         employee_id = current_user.id
     svc = DashboardService(db)
-    return await svc.get_dashboard_summary(date_from, date_to, employee_id)
+    return await svc.get_dashboard_summary(df, dt, employee_id)
 
 
 @router.get("/sales-collection", response_model=DashboardSummary)
 async def sales_collection_summary(
-    date_from: date = Query(default_factory=_default_from),
-    date_to: date = Query(default_factory=date.today),
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
     employee_id: Optional[int] = Query(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Sales and collection summary for the given period."""
+    df = date_from or start_date or _default_from()
+    dt = date_to or end_date or date.today()
     if current_user.role != UserRole.ADMIN:
         employee_id = current_user.id
     svc = DashboardService(db)
-    return await svc.get_dashboard_summary(date_from, date_to, employee_id)
+    return await svc.get_dashboard_summary(df, dt, employee_id)
 
 
 @router.get("/employee-performance", response_model=DashboardSummary)
 async def employee_performance(
-    date_from: date = Query(default_factory=_default_from),
-    date_to: date = Query(default_factory=date.today),
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
     employee_id: Optional[int] = Query(None),
     current_user: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
     """Employee performance summary — admin only."""
+    df = date_from or start_date or _default_from()
+    dt = date_to or end_date or date.today()
     svc = DashboardService(db)
-    return await svc.get_dashboard_summary(date_from, date_to, employee_id)
+    return await svc.get_dashboard_summary(df, dt, employee_id)
