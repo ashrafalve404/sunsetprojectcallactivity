@@ -244,3 +244,63 @@ export function Alert({
     </div>
   );
 }
+
+// ─── Tooltip ─────────────────────────────────────────────────────────────────
+interface TooltipProps {
+  content: string;
+  subcontent?: string;
+  children: React.ReactNode;
+  className?: string;
+  align?: "center" | "left" | "right";
+  position?: "top" | "bottom";
+}
+
+export function Tooltip({
+  content,
+  subcontent,
+  children,
+  className,
+  align = "center",
+  position = "bottom",
+}: TooltipProps) {
+  const alignClasses = {
+    center: "left-1/2 -translate-x-1/2",
+    left: "left-0",
+    right: "right-0",
+  };
+
+  const posClasses = {
+    bottom: "top-full mt-1.5",
+    top: "bottom-full mb-1.5",
+  };
+
+  return (
+    <div
+      title={`${content}${subcontent ? ` — ${subcontent}` : ""}`}
+      className={cn("relative group/tip inline-flex items-center justify-center cursor-help", className)}
+    >
+      {children}
+      <div
+        role="tooltip"
+        className={cn(
+          "absolute hidden group-hover/tip:flex flex-col z-50 pointer-events-none",
+          "w-max max-w-[230px] rounded-md bg-slate-900 text-white p-2 shadow-xl border border-slate-700/80 text-left transition-all duration-150",
+          posClasses[position],
+          alignClasses[align]
+        )}
+      >
+        <span className="font-bold text-[11px] text-white leading-tight">{content}</span>
+        {subcontent && (
+          <span className="text-[10px] text-slate-300 font-normal leading-snug mt-0.5">
+            {subcontent}
+          </span>
+        )}
+        {position === "bottom" ? (
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-slate-900" />
+        ) : (
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900" />
+        )}
+      </div>
+    </div>
+  );
+}

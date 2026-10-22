@@ -423,15 +423,15 @@ function ReportsContent() {
                   <th className="py-2.5 px-4">Date</th>
                   {isAdmin && <th className="py-2.5 px-3">Employee</th>}
                   <th className="py-2.5 px-3 text-center">Status</th>
-                  <th className="py-2.5 px-3 text-right">Dialed</th>
-                  <th className="py-2.5 px-3 text-right">Connected</th>
-                  <th className="py-2.5 px-3 text-right">Call Time</th>
-                  <th className="py-2.5 px-3 text-right">Meeting Time</th>
-                  <th className="py-2.5 px-3 text-right">Outdoor</th>
-                  <th className="py-2.5 px-3 text-right font-bold text-emerald-800">
+                  <th className="py-2.5 px-3 text-right" title="Total calls dialed across all time blocks">Dialed</th>
+                  <th className="py-2.5 px-3 text-right" title="Connected Calls = HP + Potential + Follow-up Booked">Connected</th>
+                  <th className="py-2.5 px-3 text-right" title="Total call conversation duration">Call Time</th>
+                  <th className="py-2.5 px-3 text-right" title="Total indoor & team meeting duration">Meeting Time</th>
+                  <th className="py-2.5 px-3 text-right" title="Outdoor client visits and site sessions">Outdoor</th>
+                  <th className="py-2.5 px-3 text-right font-bold text-emerald-800" title="Actual cash collected today (BDT)">
                     Collection (BDT)
                   </th>
-                  <th className="py-2.5 px-3 text-right font-bold text-amber-800">
+                  <th className="py-2.5 px-3 text-right font-bold text-amber-800" title="Future payment commitments recorded today (BDT)">
                     Commitment (BDT)
                   </th>
                   <th className="py-2.5 px-3 text-right">Action</th>

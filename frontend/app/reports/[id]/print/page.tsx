@@ -335,14 +335,14 @@ function PrintableReportContent() {
               <thead>
                 <tr className="bg-slate-100 border-b border-slate-300 text-slate-800 font-bold">
                   <th className="py-2 px-3">Lead Category</th>
-                  <th className="py-2 px-2 text-right">Till Today</th>
-                  <th className="py-2 px-2 text-right">10:00 - 01:00</th>
-                  <th className="py-2 px-2 text-right">02:00 - 05:00</th>
-                  <th className="py-2 px-2 text-right">05:00 - 06:00</th>
-                  <th className="py-2 px-2 text-right font-extrabold text-emerald-800">HP</th>
-                  <th className="py-2 px-2 text-right font-bold text-slate-800">P</th>
-                  <th className="py-2 px-2 text-right text-slate-700">FUB</th>
-                  <th className="py-2 px-2 text-right text-slate-600">NI</th>
+                  <th className="py-2 px-2 text-right" title="Cumulative lead status reached till today">Till Today</th>
+                  <th className="py-2 px-2 text-right" title="10:00 AM – 1:00 PM Dialed Calls">10:00 - 01:00</th>
+                  <th className="py-2 px-2 text-right" title="2:00 PM – 5:00 PM Dialed Calls">02:00 - 05:00</th>
+                  <th className="py-2 px-2 text-right" title="5:00 PM – 6:00 PM Dialed Calls">05:00 - 06:00</th>
+                  <th className="py-2 px-2 text-right font-extrabold text-emerald-800" title="High Potential: Ready for site visit or immediate booking">HP</th>
+                  <th className="py-2 px-2 text-right font-bold text-slate-800" title="Potential: General interested lead requiring follow-up">P</th>
+                  <th className="py-2 px-2 text-right text-slate-700" title="Follow-Up Booked: Client requested scheduled callback">FUB</th>
+                  <th className="py-2 px-2 text-right text-slate-600" title="Not Interested: Declined, wrong number, or no requirement">NI</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
@@ -364,6 +364,13 @@ function PrintableReportContent() {
                 })}
               </tbody>
             </table>
+          </div>
+          <div className="mt-1.5 text-[9.5px] text-slate-500 flex flex-wrap gap-x-4 gap-y-0.5 print:text-[8.5px]">
+            <span><strong className="text-slate-700">HP:</strong> High Potential (Immediate visit/booking)</span>
+            <span><strong className="text-slate-700">P:</strong> Potential (Interested, follow-up needed)</span>
+            <span><strong className="text-slate-700">FUB:</strong> Follow-Up Booked (Scheduled callback)</span>
+            <span><strong className="text-slate-700">NI:</strong> Not Interested</span>
+            <span><strong className="text-slate-700">Connected:</strong> HP + P + Fub</span>
           </div>
         </div>
 

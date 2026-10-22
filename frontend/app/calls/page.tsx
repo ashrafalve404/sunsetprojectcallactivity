@@ -22,6 +22,7 @@ import {
   Button,
   Modal,
   Alert,
+  Tooltip,
 } from "@/components/ui";
 import { useAuth } from "@/lib/auth-context";
 import { api, ApiError } from "@/lib/api";
@@ -437,16 +438,56 @@ function DailyCallActivityContent() {
                   <th className="py-2.5 px-3 min-w-[160px] sticky left-0 bg-slate-100/90 z-10">
                     Lead Category
                   </th>
-                  <th className="py-2.5 px-2.5 text-center w-24">Till Today</th>
-                  <th className="py-2.5 px-2.5 text-center w-24 bg-green-50/50">10am-1pm</th>
-                  <th className="py-2.5 px-2.5 text-center w-24 bg-green-50/50">2pm-5pm</th>
-                  <th className="py-2.5 px-2.5 text-center w-24 bg-green-50/50">5pm-6pm</th>
-                  <th className="py-2.5 px-2.5 text-center w-24 bg-slate-50 font-bold">Total Dialed</th>
-                  <th className="py-2.5 px-2 text-center w-16">HP</th>
-                  <th className="py-2.5 px-2 text-center w-16">P</th>
-                  <th className="py-2.5 px-2 text-center w-16">Fub</th>
-                  <th className="py-2.5 px-2 text-center w-16">NI</th>
-                  <th className="py-2.5 px-2.5 text-center w-24 bg-emerald-50/50 font-bold">Connected</th>
+                  <th className="py-2.5 px-2 text-center w-24">
+                    <Tooltip content="Till Today Status" subcontent="Cumulative leads status worked or reached up to today.">
+                      <span className="border-b border-dotted border-slate-400 hover:text-slate-900">Till Today</span>
+                    </Tooltip>
+                  </th>
+                  <th className="py-2.5 px-2 text-center w-24 bg-green-50/50">
+                    <Tooltip content="10:00 AM – 1:00 PM" subcontent="Morning call block dials.">
+                      <span className="border-b border-dotted border-slate-400 hover:text-slate-900">10am-1pm</span>
+                    </Tooltip>
+                  </th>
+                  <th className="py-2.5 px-2 text-center w-24 bg-green-50/50">
+                    <Tooltip content="2:00 PM – 5:00 PM" subcontent="Afternoon call block dials.">
+                      <span className="border-b border-dotted border-slate-400 hover:text-slate-900">2pm-5pm</span>
+                    </Tooltip>
+                  </th>
+                  <th className="py-2.5 px-2 text-center w-24 bg-green-50/50">
+                    <Tooltip content="5:00 PM – 6:00 PM" subcontent="Late afternoon wrap-up call block dials.">
+                      <span className="border-b border-dotted border-slate-400 hover:text-slate-900">5pm-6pm</span>
+                    </Tooltip>
+                  </th>
+                  <th className="py-2.5 px-2 text-center w-24 bg-slate-50 font-bold">
+                    <Tooltip content="Total Dialed" subcontent="Sum of calls dialed across all 3 time blocks today.">
+                      <span className="border-b border-dotted border-slate-500 font-bold text-slate-900">Total Dialed</span>
+                    </Tooltip>
+                  </th>
+                  <th className="py-2.5 px-2 text-center w-16">
+                    <Tooltip content="HP — High Potential" subcontent="Highly interested client with strong purchasing power, ready for site visit or immediate booking.">
+                      <span className="font-bold text-emerald-800 border-b border-dotted border-emerald-600 hover:text-emerald-950">HP</span>
+                    </Tooltip>
+                  </th>
+                  <th className="py-2.5 px-2 text-center w-16">
+                    <Tooltip content="P — Potential" subcontent="General interested client requiring further project presentations, brochures, or follow-up.">
+                      <span className="font-bold text-slate-800 border-b border-dotted border-slate-500 hover:text-slate-950">P</span>
+                    </Tooltip>
+                  </th>
+                  <th className="py-2.5 px-2 text-center w-16">
+                    <Tooltip content="Fub — Follow-Up Booked" subcontent="Client requested to be called back at a specific scheduled date and time.">
+                      <span className="font-bold text-slate-800 border-b border-dotted border-slate-500 hover:text-slate-950">Fub</span>
+                    </Tooltip>
+                  </th>
+                  <th className="py-2.5 px-2 text-center w-16">
+                    <Tooltip content="NI — Not Interested" subcontent="Client declined, no requirement, bought elsewhere, or wrong number.">
+                      <span className="font-bold text-slate-600 border-b border-dotted border-slate-400 hover:text-slate-900">NI</span>
+                    </Tooltip>
+                  </th>
+                  <th className="py-2.5 px-2 text-center w-24 bg-emerald-50/50 font-bold">
+                    <Tooltip content="Connected (HP + P + Fub)" subcontent="Total productive conversations established with active clients today." align="right">
+                      <span className="font-bold text-emerald-900 border-b border-dotted border-emerald-700 hover:text-emerald-950">Connected</span>
+                    </Tooltip>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
