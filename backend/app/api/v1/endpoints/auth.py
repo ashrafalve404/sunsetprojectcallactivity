@@ -14,7 +14,7 @@ Cookie / CORS / CSRF notes:
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -41,17 +41,42 @@ _ACCESS_EXPIRE_SECONDS = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
 @router.post("/login", response_model=TokenResponse)
 async def login(
     response: Response,
-    form_data: OAuth2PasswordRequestForm = Depends(),
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     """
     Authenticate with username/email and password.
-    Returns a short-lived access token in the body and sets an HttpOnly
-    refresh-token cookie.
+    Supports both JSON body ({"username": "...", "password": "..."})
+    and standard OAuth2 x-www-form-urlencoded form data.
     """
+    username: str = ""
+    password: str = ""
+
+    content_type = request.headers.get("content-type", "").lower()
+    if "application/json" in content_type:
+        try:
+            body = await request.json()
+            username = str(body.get("username", "")).strip()
+            password = str(body.get("password", ""))
+        except Exception:
+            pass
+    else:
+        try:
+            form = await request.form()
+            username = str(form.get("username", "")).strip()
+            password = str(form.get("password", ""))
+        except Exception:
+            pass
+
+    if not username or not password:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Username and password are required",
+        )
+
     repo = UserRepository(db)
-    user = await repo.get_by_username_or_email(form_data.username)
-    if not user or not verify_password(form_data.password, user.password_hash):
+    user = await repo.get_by_username_or_email(username)
+    if not user or not verify_password(password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
