@@ -19,11 +19,11 @@ export const metadata: Metadata = {
     "Enterprise dashboard for tracking daily call activity, meetings, sales, collections, and commitments.",
   icons: {
     icon: [
-      { url: "/Sunset-Group-Logo.png", sizes: "any" },
-      { url: "/Sunset-Group-Logo.png", type: "image/png" },
+      { url: "/Sunset-Group-Logo.png?v=2", sizes: "any" },
+      { url: "/Sunset-Group-Logo.png?v=2", type: "image/png" },
     ],
-    shortcut: "/Sunset-Group-Logo.png",
-    apple: "/Sunset-Group-Logo.png",
+    shortcut: "/Sunset-Group-Logo.png?v=2",
+    apple: "/Sunset-Group-Logo.png?v=2",
   },
 };
 
@@ -37,6 +37,11 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <link rel="icon" href="/Sunset-Group-Logo.png?v=2" type="image/png" />
+        <link rel="shortcut icon" href="/Sunset-Group-Logo.png?v=2" type="image/png" />
+        <link rel="apple-touch-icon" href="/Sunset-Group-Logo.png?v=2" />
+      </head>
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900 font-sans">
         <AuthProvider>{children}</AuthProvider>
       </body>
