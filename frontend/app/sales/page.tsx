@@ -43,6 +43,9 @@ function SalesVsCollectionContent() {
 
   const today = getDhakaToday();
   const initialDate = searchParams.get("date") || today;
+  const targetEmployeeId = searchParams.get("employee_id")
+    ? parseInt(searchParams.get("employee_id")!, 10)
+    : undefined;
   const [reportDate, setReportDate] = useState<string>(initialDate);
 
   // Report & entries state
@@ -71,16 +74,16 @@ function SalesVsCollectionContent() {
   } | null>(null);
 
   // Load report and transactions
-  const loadData = useCallback(async (dateStr: string) => {
+  const loadData = useCallback(async (dateStr: string, empId?: number) => {
     setLoading(true);
     setStatusMessage(null);
     try {
       let r: Report;
       try {
-        r = await api.reports.getByDate(dateStr);
+        r = await api.reports.getByDate(dateStr, empId);
       } catch (err: unknown) {
         if (err instanceof ApiError && err.status === 404) {
-          r = await api.reports.create(dateStr);
+          r = await api.reports.create(dateStr, empId);
         } else {
           throw err;
         }
@@ -104,8 +107,8 @@ function SalesVsCollectionContent() {
   }, []);
 
   useEffect(() => {
-    loadData(reportDate);
-  }, [reportDate, loadData]);
+    loadData(reportDate, targetEmployeeId);
+  }, [reportDate, targetEmployeeId, loadData]);
 
   // Grouped Calculations
   const calculations = useMemo(() => {
@@ -284,7 +287,8 @@ function SalesVsCollectionContent() {
                     value={reportDate}
                     onChange={(e) => {
                       setReportDate(e.target.value);
-                      router.replace(`/sales?date=${e.target.value}`);
+                      const empQuery = targetEmployeeId ? `&employee_id=${targetEmployeeId}` : "";
+                      router.replace(`/sales?date=${e.target.value}${empQuery}`);
                     }}
                     className="border border-slate-300 rounded px-2.5 py-1 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-green-600 bg-white"
                   />
@@ -294,7 +298,7 @@ function SalesVsCollectionContent() {
 
                 <div className="text-xs text-slate-600">
                   <span className="text-slate-400">Employee: </span>
-                  <span className="font-semibold text-slate-900">{user?.full_name}</span>
+                  <span className="font-semibold text-slate-900">{report?.employee_name || user?.full_name}</span>
                 </div>
 
                 <Badge variant={isLocked ? "success" : "warning"}>

@@ -503,7 +503,7 @@ function ReportsContent() {
                       <td className="py-3 px-3 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Link
-                            href={`/calls?date=${report.report_date}`}
+                            href={`/calls?date=${report.report_date}&employee_id=${report.employee_id}`}
                             className="text-green-700 hover:text-green-800 font-semibold inline-flex items-center gap-1 text-xs"
                             title="View Dial Matrix"
                           >
