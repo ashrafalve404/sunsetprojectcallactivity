@@ -10,6 +10,7 @@ import {
   ArrowRight,
   AlertCircle,
   Trash2,
+  Printer,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import {
@@ -503,8 +504,17 @@ function ReportsContent() {
                           <Link
                             href={`/calls?date=${report.report_date}`}
                             className="text-green-700 hover:text-green-800 font-semibold inline-flex items-center gap-1 text-xs"
+                            title="View Dial Matrix"
                           >
                             View <ArrowRight className="w-3 h-3" />
+                          </Link>
+                          <Link
+                            href={`/reports/${report.id}/print`}
+                            target="_blank"
+                            className="p-1 text-slate-500 hover:text-slate-800 rounded transition-colors inline-flex items-center"
+                            title="Print / Save PDF Report"
+                          >
+                            <Printer className="w-3.5 h-3.5" />
                           </Link>
                           {isAdmin && (
                             <button

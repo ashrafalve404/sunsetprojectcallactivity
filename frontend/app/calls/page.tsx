@@ -10,6 +10,7 @@ import {
   Calendar,
   AlertCircle,
   Trash2,
+  Printer,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import {
@@ -366,6 +367,17 @@ function DailyCallActivityContent() {
                     <Lock className="w-3.5 h-3.5" />
                     Locked for Edits
                   </div>
+                )}
+                {report && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(`/reports/${report.id}/print`, "_blank")}
+                    title="Print / Save PDF Report"
+                  >
+                    <Printer className="w-4 h-4 mr-1.5" />
+                    Print Report
+                  </Button>
                 )}
                 {isAdmin && report && (
                   <Button
