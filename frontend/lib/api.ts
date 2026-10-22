@@ -380,10 +380,11 @@ export const api = {
       if (params?.target_date) search.set("target_date", params.target_date);
       if (params?.employee_id) search.set("employee_id", String(params.employee_id));
       const q = search.toString();
-      return request<DailyTarget[]>(`/settings/targets${q ? `?${q}` : ""}`);
+      const res = await request<unknown>(`/targets${q ? `?${q}` : ""}`);
+      return Array.isArray(res) ? (res as DailyTarget[]) : [];
     },
     createTarget: async (data: Partial<DailyTarget>): Promise<DailyTarget> => {
-      return request<DailyTarget>("/settings/targets", {
+      return request<DailyTarget>("/targets", {
         method: "POST",
         body: JSON.stringify(data),
       });
@@ -392,9 +393,14 @@ export const api = {
       targetId: number,
       data: Partial<DailyTarget>
     ): Promise<DailyTarget> => {
-      return request<DailyTarget>(`/settings/targets/${targetId}`, {
+      return request<DailyTarget>(`/targets/${targetId}`, {
         method: "PUT",
         body: JSON.stringify(data),
+      });
+    },
+    deleteTarget: async (targetId: number): Promise<void> => {
+      return request<void>(`/targets/${targetId}`, {
+        method: "DELETE",
       });
     },
     getSystemSettings: async (namespace?: string): Promise<SystemSetting[]> => {

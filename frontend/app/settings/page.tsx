@@ -60,8 +60,8 @@ function SettingsContent() {
         api.settings.getTargets(),
         api.employees.list({ is_active: true }),
       ]);
-      setTargets(targetsData);
-      setEmployees(employeesData);
+      setTargets(Array.isArray(targetsData) ? targetsData : []);
+      setEmployees(Array.isArray(employeesData) ? employeesData : []);
     } catch (err: unknown) {
       if (err instanceof ApiError) {
         setStatusMessage({ type: "error", text: err.message });
@@ -216,7 +216,7 @@ function SettingsContent() {
                       Loading targets...
                     </td>
                   </tr>
-                ) : targets.length === 0 ? (
+                ) : !Array.isArray(targets) || targets.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="py-10 text-center text-slate-400">
                       No custom targets configured yet. Global defaults are active.
