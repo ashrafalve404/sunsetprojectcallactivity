@@ -60,6 +60,17 @@ async def list_reports(
     return PaginatedReports(total=total, page=page, page_size=page_size, items=list(items))
 
 
+@router.get("/by-date/{report_date}", response_model=ReportRead)
+async def get_report_by_date(
+    report_date: date,
+    employee_id: Optional[int] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    svc = ReportService(db)
+    return await svc.get_report_by_date(report_date, current_user, employee_id)
+
+
 @router.get("/{report_id}", response_model=ReportRead)
 async def get_report(
     report_id: int,

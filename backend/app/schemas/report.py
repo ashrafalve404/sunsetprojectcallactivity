@@ -12,6 +12,7 @@ from app.schemas.user import UserReadPublic
 
 class ReportCreate(BaseModel):
     report_date: date
+    employee_id: Optional[int] = None
     notes: Optional[str] = None
 
 

@@ -24,22 +24,43 @@ class ReportService:
     async def create_report(
         self, data: ReportCreate, current_user: User
     ) -> DailyActivityReport:
-        # Check for duplicate
+        target_emp_id = current_user.id
+        if data.employee_id and current_user.role == UserRole.ADMIN:
+            target_emp_id = data.employee_id
+
+        # Check for duplicate; return existing if already present
         existing = await self.repo.get_by_employee_and_date(
-            current_user.id, data.report_date
+            target_emp_id, data.report_date
         )
         if existing:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"A report for {data.report_date} already exists for this employee.",
-            )
+            return existing
+
         report = DailyActivityReport(
-            employee_id=current_user.id,
+            employee_id=target_emp_id,
             report_date=data.report_date,
             notes=data.notes,
             status=ReportStatus.DRAFT,
         )
         return await self.repo.create(report)
+
+    async def get_report_by_date(
+        self,
+        report_date: date,
+        current_user: User,
+        employee_id: Optional[int] = None,
+    ) -> DailyActivityReport:
+        target_emp_id = current_user.id
+        if employee_id and current_user.role == UserRole.ADMIN:
+            target_emp_id = employee_id
+
+        report = await self.repo.get_by_employee_and_date(target_emp_id, report_date)
+        if not report:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Report for date {report_date} not found.",
+            )
+        _assert_access(report, current_user)
+        return report
 
     async def get_report(
         self, report_id: int, current_user: User

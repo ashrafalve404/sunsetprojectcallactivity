@@ -203,8 +203,9 @@ export const api = {
     getById: async (reportId: number): Promise<Report> => {
       return request<Report>(`/reports/${reportId}`);
     },
-    getByDate: async (dateStr: string): Promise<Report> => {
-      return request<Report>(`/reports/by-date/${dateStr}`);
+    getByDate: async (dateStr: string, employeeId?: number): Promise<Report> => {
+      const q = employeeId ? `?employee_id=${employeeId}` : "";
+      return request<Report>(`/reports/by-date/${dateStr}${q}`);
     },
     create: async (reportDate: string, employeeId?: number): Promise<Report> => {
       return request<Report>("/reports", {
