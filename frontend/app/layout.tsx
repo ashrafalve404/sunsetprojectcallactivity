@@ -17,6 +17,14 @@ export const metadata: Metadata = {
   title: "Sunset Group — Daily Call Activity Dashboard",
   description:
     "Enterprise dashboard for tracking daily call activity, meetings, sales, collections, and commitments.",
+  icons: {
+    icon: [
+      { url: "/Sunset-Group-Logo.png", sizes: "any" },
+      { url: "/Sunset-Group-Logo.png", type: "image/png" },
+    ],
+    shortcut: "/Sunset-Group-Logo.png",
+    apple: "/Sunset-Group-Logo.png",
+  },
 };
 
 export default function RootLayout({
