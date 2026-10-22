@@ -1,0 +1,35 @@
+# FastAPI and server
+fastapi==0.115.12
+uvicorn>=0.34.0
+
+# Database
+sqlalchemy[asyncio]==2.0.41
+alembic==1.16.1
+asyncpg>=0.30.0
+aiosqlite==0.21.0
+greenlet>=3.0.0
+
+# Validation
+pydantic==2.11.4
+pydantic-settings==2.9.1
+email-validator==2.2.0
+
+# Authentication & Security
+python-jose[cryptography]==3.5.0 
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.20
+
+# Date/time
+python-dateutil==2.9.0.post0
+pytz==2025.2
+
+# HTTP utilities
+httpx==0.28.1
+
+# Testing
+pytest==8.3.5
+pytest-asyncio==0.26.0
+pytest-cov==6.1.0
+
+# Dev utilities
+python-dotenv==1.1.0

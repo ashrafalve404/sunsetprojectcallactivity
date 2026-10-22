@@ -1,0 +1,384 @@
+/**
+ * Centralized API client for Sunset Group FastAPI backend.
+ */
+
+import {
+  AuthTokenResponse,
+  CallActivityEntry,
+  CallActivityResponse,
+  DashboardSummary,
+  DailyTarget,
+  MeetingActivityEntry,
+  MeetingActivityResponse,
+  Report,
+  SalesCollectionEntry,
+  SalesCollectionResponse,
+  SystemSetting,
+  User,
+} from "@/types";
+
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
+
+class ApiError extends Error {
+  status: number;
+  data: unknown;
+
+  constructor(status: number, message: string, data?: unknown) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.data = data;
+  }
+}
+
+// Token storage in browser
+let memoryToken: string | null = null;
+
+export const setAccessToken = (token: string | null) => {
+  memoryToken = token;
+  if (typeof window !== "undefined") {
+    if (token) {
+      sessionStorage.setItem("sunset_access_token", token);
+    } else {
+      sessionStorage.removeItem("sunset_access_token");
+    }
+  }
+};
+
+export const getAccessToken = (): string | null => {
+  if (memoryToken) return memoryToken;
+  if (typeof window !== "undefined") {
+    return sessionStorage.getItem("sunset_access_token");
+  }
+  return null;
+};
+
+async function request<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const token = getAccessToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    ...(options.headers as Record<string, string>),
+  };
+
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const url = `${API_BASE}${endpoint}`;
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+      credentials: "include", // For refresh cookie
+    });
+  } catch (err: unknown) {
+    throw new ApiError(0, "Unable to reach the server. Please check your network connection.", err);
+  }
+
+  if (response.status === 204) {
+    return {} as T;
+  }
+
+  let data: unknown;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    let errorMessage = `Request failed with status ${response.status}`;
+    if (data && typeof data === "object") {
+      const errObj = data as { detail?: unknown; message?: string };
+      if (typeof errObj.detail === "string") {
+        errorMessage = errObj.detail;
+      } else if (Array.isArray(errObj.detail)) {
+        // FastAPI validation error list
+        errorMessage = errObj.detail
+          .map((item: { loc?: string[]; msg?: string }) => {
+            const field = item.loc ? item.loc.slice(1).join(".") : "";
+            return `${field ? field + ": " : ""}${item.msg}`;
+          })
+          .join(" | ");
+      } else if (errObj.message) {
+        errorMessage = errObj.message;
+      }
+    }
+    throw new ApiError(response.status, errorMessage, data);
+  }
+
+  return data as T;
+}
+
+export const api = {
+  auth: {
+    login: async (username: string, password: string): Promise<AuthTokenResponse> => {
+      const res = await request<AuthTokenResponse>("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ username, password }),
+      });
+      setAccessToken(res.access_token);
+      return res;
+    },
+    logout: async (): Promise<void> => {
+      try {
+        await request<void>("/auth/logout", { method: "POST" });
+      } finally {
+        setAccessToken(null);
+      }
+    },
+    me: async (): Promise<User> => {
+      return request<User>("/auth/me");
+    },
+    refresh: async (): Promise<AuthTokenResponse> => {
+      const res = await request<AuthTokenResponse>("/auth/refresh", {
+        method: "POST",
+      });
+      setAccessToken(res.access_token);
+      return res;
+    },
+  },
+
+  reports: {
+    list: async (params?: {
+      employee_id?: number;
+      start_date?: string;
+      end_date?: string;
+      is_submitted?: boolean;
+      skip?: number;
+      limit?: number;
+    }): Promise<Report[]> => {
+      const search = new URLSearchParams();
+      if (params?.employee_id) search.set("employee_id", String(params.employee_id));
+      if (params?.start_date) search.set("start_date", params.start_date);
+      if (params?.end_date) search.set("end_date", params.end_date);
+      if (params?.is_submitted !== undefined) search.set("is_submitted", String(params.is_submitted));
+      if (params?.skip !== undefined) search.set("skip", String(params.skip));
+      if (params?.limit !== undefined) search.set("limit", String(params.limit));
+
+      const q = search.toString();
+      return request<Report[]>(`/reports${q ? `?${q}` : ""}`);
+    },
+    getById: async (reportId: number): Promise<Report> => {
+      return request<Report>(`/reports/${reportId}`);
+    },
+    getByDate: async (dateStr: string): Promise<Report> => {
+      return request<Report>(`/reports/by-date/${dateStr}`);
+    },
+    create: async (reportDate: string, employeeId?: number): Promise<Report> => {
+      return request<Report>("/reports", {
+        method: "POST",
+        body: JSON.stringify({
+          report_date: reportDate,
+          ...(employeeId ? { employee_id: employeeId } : {}),
+        }),
+      });
+    },
+    submit: async (reportId: number): Promise<Report> => {
+      return request<Report>(`/reports/${reportId}/submit`, {
+        method: "POST",
+      });
+    },
+    getSummary: async (reportId: number): Promise<Record<string, unknown>> => {
+      return request<Record<string, unknown>>(`/reports/${reportId}/summary`);
+    },
+  },
+
+  calls: {
+    get: async (reportId: number): Promise<CallActivityResponse> => {
+      return request<CallActivityResponse>(`/reports/${reportId}/calls`);
+    },
+    upsert: async (
+      reportId: number,
+      entries: CallActivityEntry[]
+    ): Promise<CallActivityResponse> => {
+      return request<CallActivityResponse>(`/reports/${reportId}/calls`, {
+        method: "PUT",
+        body: JSON.stringify({ entries }),
+      });
+    },
+  },
+
+  meetings: {
+    get: async (reportId: number): Promise<MeetingActivityResponse> => {
+      return request<MeetingActivityResponse>(`/reports/${reportId}/meetings`);
+    },
+    upsert: async (
+      reportId: number,
+      entries: MeetingActivityEntry[]
+    ): Promise<MeetingActivityResponse> => {
+      return request<MeetingActivityResponse>(`/reports/${reportId}/meetings`, {
+        method: "PUT",
+        body: JSON.stringify({ entries }),
+      });
+    },
+  },
+
+  sales: {
+    get: async (reportId: number): Promise<SalesCollectionResponse> => {
+      return request<SalesCollectionResponse>(`/reports/${reportId}/sales-collections`);
+    },
+    create: async (
+      reportId: number,
+      entry: Omit<SalesCollectionEntry, "id" | "report_id">
+    ): Promise<SalesCollectionEntry> => {
+      return request<SalesCollectionEntry>(`/reports/${reportId}/sales-collections`, {
+        method: "POST",
+        body: JSON.stringify(entry),
+      });
+    },
+    update: async (
+      reportId: number,
+      entryId: number,
+      entry: Partial<SalesCollectionEntry>
+    ): Promise<SalesCollectionEntry> => {
+      return request<SalesCollectionEntry>(
+        `/reports/${reportId}/sales-collections/${entryId}`,
+        {
+          method: "PUT",
+          body: JSON.stringify(entry),
+        }
+      );
+    },
+    delete: async (reportId: number, entryId: number): Promise<void> => {
+      return request<void>(`/reports/${reportId}/sales-collections/${entryId}`, {
+        method: "DELETE",
+      });
+    },
+  },
+
+  dashboard: {
+    getSummary: async (params?: {
+      start_date?: string;
+      end_date?: string;
+      employee_id?: number;
+    }): Promise<DashboardSummary> => {
+      const search = new URLSearchParams();
+      if (params?.start_date) search.set("start_date", params.start_date);
+      if (params?.end_date) search.set("end_date", params.end_date);
+      if (params?.employee_id) search.set("employee_id", String(params.employee_id));
+
+      const q = search.toString();
+      return request<DashboardSummary>(`/dashboard/summary${q ? `?${q}` : ""}`);
+    },
+    getEmployeeSummary: async (
+      employeeId: number,
+      params?: { start_date?: string; end_date?: string }
+    ): Promise<DashboardSummary> => {
+      const search = new URLSearchParams();
+      if (params?.start_date) search.set("start_date", params.start_date);
+      if (params?.end_date) search.set("end_date", params.end_date);
+      const q = search.toString();
+      return request<DashboardSummary>(
+        `/dashboard/employee/${employeeId}${q ? `?${q}` : ""}`
+      );
+    },
+  },
+
+  employees: {
+    list: async (params?: {
+      skip?: number;
+      limit?: number;
+      role?: string;
+      is_active?: boolean;
+      search?: string;
+    }): Promise<User[]> => {
+      const search = new URLSearchParams();
+      if (params?.skip !== undefined) search.set("skip", String(params.skip));
+      if (params?.limit !== undefined) search.set("limit", String(params.limit));
+      if (params?.role) search.set("role", params.role);
+      if (params?.is_active !== undefined) search.set("is_active", String(params.is_active));
+      if (params?.search) search.set("search", params.search);
+
+      const q = search.toString();
+      return request<User[]>(`/employees${q ? `?${q}` : ""}`);
+    },
+    get: async (userId: number): Promise<User> => {
+      return request<User>(`/employees/${userId}`);
+    },
+    create: async (data: {
+      full_name: string;
+      email: string;
+      username: string;
+      password: string;
+      role: "admin" | "employee";
+    }): Promise<User> => {
+      return request<User>("/employees", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+    },
+    update: async (
+      userId: number,
+      data: Partial<{
+        full_name: string;
+        email: string;
+        role: "admin" | "employee";
+        is_active: boolean;
+        password?: string;
+      }>
+    ): Promise<User> => {
+      return request<User>(`/employees/${userId}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      });
+    },
+    delete: async (userId: number): Promise<void> => {
+      return request<void>(`/employees/${userId}`, {
+        method: "DELETE",
+      });
+    },
+  },
+
+  settings: {
+    getTargets: async (params?: {
+      target_date?: string;
+      employee_id?: number;
+    }): Promise<DailyTarget[]> => {
+      const search = new URLSearchParams();
+      if (params?.target_date) search.set("target_date", params.target_date);
+      if (params?.employee_id) search.set("employee_id", String(params.employee_id));
+      const q = search.toString();
+      return request<DailyTarget[]>(`/settings/targets${q ? `?${q}` : ""}`);
+    },
+    createTarget: async (data: Partial<DailyTarget>): Promise<DailyTarget> => {
+      return request<DailyTarget>("/settings/targets", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+    },
+    updateTarget: async (
+      targetId: number,
+      data: Partial<DailyTarget>
+    ): Promise<DailyTarget> => {
+      return request<DailyTarget>(`/settings/targets/${targetId}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      });
+    },
+    getSystemSettings: async (namespace?: string): Promise<SystemSetting[]> => {
+      const q = namespace ? `?namespace=${encodeURIComponent(namespace)}` : "";
+      return request<SystemSetting[]>(`/settings/system${q}`);
+    },
+    updateSystemSetting: async (data: {
+      namespace: string;
+      key: string;
+      value: string;
+      description?: string;
+    }): Promise<SystemSetting> => {
+      return request<SystemSetting>("/settings/system", {
+        method: "PUT",
+        body: JSON.stringify(data),
+      });
+    },
+  },
+};
+
+export { ApiError };

@@ -1,0 +1,506 @@
+"use client";
+
+import React, { useState, useEffect, useCallback, Suspense } from "react";
+import {
+  Target,
+  Sliders,
+  Plus,
+  Edit2,
+  Users,
+} from "lucide-react";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  Badge,
+  Button,
+  Modal,
+  Alert,
+} from "@/components/ui";
+import { api, ApiError } from "@/lib/api";
+import { DailyTarget, User } from "@/types";
+import { formatBDT, getDhakaToday, formatReadableDate } from "@/lib/utils";
+
+function SettingsContent() {
+  // Targets state
+  const [targets, setTargets] = useState<DailyTarget[]>([]);
+  const [employees, setEmployees] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Target Modal State
+  const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
+  const [editingTarget, setEditingTarget] = useState<DailyTarget | null>(null);
+
+  // Target Form fields
+  const [targetEmployeeId, setTargetEmployeeId] = useState<number | "global">("global");
+  const [targetDate, setTargetDate] = useState<string>("");
+  const [dialedTarget, setDialedTarget] = useState<string>("50");
+  const [connectedTarget, setConnectedTarget] = useState<string>("20");
+  const [callDurationTarget, setCallDurationTarget] = useState<string>("120");
+  const [outdoorTarget, setOutdoorTarget] = useState<string>("3");
+  const [meetingTarget, setMeetingTarget] = useState<string>("180");
+  const [salesTarget, setSalesTarget] = useState<string>("500000");
+  const [collectionTarget, setCollectionTarget] = useState<string>("300000");
+
+  const [formSubmitting, setFormSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const [statusMessage, setStatusMessage] = useState<{
+    type: "success" | "error" | "info";
+    text: string;
+  } | null>(null);
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setStatusMessage(null);
+    try {
+      const [targetsData, employeesData] = await Promise.all([
+        api.settings.getTargets(),
+        api.employees.list({ is_active: true }),
+      ]);
+      setTargets(targetsData);
+      setEmployees(employeesData);
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setStatusMessage({ type: "error", text: err.message });
+      } else {
+        setStatusMessage({
+          type: "error",
+          text: "Failed to load system settings and targets.",
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const openCreateTarget = () => {
+    const today = getDhakaToday();
+    setEditingTarget(null);
+    setTargetEmployeeId("global");
+    setTargetDate(today);
+    setDialedTarget("50");
+    setConnectedTarget("20");
+    setCallDurationTarget("120");
+    setOutdoorTarget("3");
+    setMeetingTarget("180");
+    setSalesTarget("500000");
+    setCollectionTarget("300000");
+    setFormError(null);
+    setIsTargetModalOpen(true);
+  };
+
+  const openEditTarget = (t: DailyTarget) => {
+    const today = getDhakaToday();
+    setEditingTarget(t);
+    setTargetEmployeeId(t.employee_id ? t.employee_id : "global");
+    setTargetDate(t.target_date || today);
+    setDialedTarget(t.dialed_calls_target ? String(t.dialed_calls_target) : "");
+    setConnectedTarget(t.connected_calls_target ? String(t.connected_calls_target) : "");
+    setCallDurationTarget(t.call_duration_minutes_target ? String(t.call_duration_minutes_target) : "");
+    setOutdoorTarget(t.outdoor_visits_target ? String(t.outdoor_visits_target) : "");
+    setMeetingTarget(t.meeting_minutes_target ? String(t.meeting_minutes_target) : "");
+    setSalesTarget(t.sales_amount_target ? String(t.sales_amount_target) : "");
+    setCollectionTarget(t.collection_amount_target ? String(t.collection_amount_target) : "");
+    setFormError(null);
+    setIsTargetModalOpen(true);
+  };
+
+  const handleTargetSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormSubmitting(true);
+    setFormError(null);
+
+    const payload: Partial<DailyTarget> = {
+      employee_id: targetEmployeeId === "global" ? null : Number(targetEmployeeId),
+      target_date: targetDate || null,
+      dialed_calls_target: dialedTarget ? parseInt(dialedTarget, 10) : null,
+      connected_calls_target: connectedTarget ? parseInt(connectedTarget, 10) : null,
+      call_duration_minutes_target: callDurationTarget ? parseInt(callDurationTarget, 10) : null,
+      outdoor_visits_target: outdoorTarget ? parseInt(outdoorTarget, 10) : null,
+      meeting_minutes_target: meetingTarget ? parseInt(meetingTarget, 10) : null,
+      sales_amount_target: salesTarget ? parseFloat(salesTarget) : null,
+      collection_amount_target: collectionTarget ? parseFloat(collectionTarget) : null,
+    };
+
+    try {
+      if (editingTarget) {
+        const updated = await api.settings.updateTarget(editingTarget.id, payload);
+        setTargets((prev) =>
+          prev.map((item) => (item.id === updated.id ? updated : item))
+        );
+        setStatusMessage({
+          type: "success",
+          text: "Daily target successfully updated.",
+        });
+      } else {
+        const created = await api.settings.createTarget(payload);
+        setTargets((prev) => [created, ...prev]);
+        setStatusMessage({
+          type: "success",
+          text: "New performance target established successfully.",
+        });
+      }
+      setIsTargetModalOpen(false);
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setFormError(err.message);
+      } else {
+        setFormError("Failed to save target. Please try again.");
+      }
+    } finally {
+      setFormSubmitting(false);
+    }
+  };
+
+  return (
+    <DashboardLayout
+      title="Settings & Targets"
+      subtitle="Configure daily employee KPI targets, business parameters, and system labels"
+      adminOnly
+    >
+      <div className="space-y-6">
+        {/* ── Status Feedback Alert ────────────────────────────────────────── */}
+        {statusMessage && (
+          <Alert
+            type={statusMessage.type}
+            onDismiss={() => setStatusMessage(null)}
+          >
+            {statusMessage.text}
+          </Alert>
+        )}
+
+        {/* ── Daily Performance Targets Section ───────────────────────────── */}
+        <Card>
+          <CardHeader>
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="w-4 h-4 text-green-700" />
+                Daily KPI Performance Targets
+              </CardTitle>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Target thresholds used to calculate achievement percentages on the dashboard
+              </p>
+            </div>
+            <Button variant="primary" size="sm" onClick={openCreateTarget}>
+              <Plus className="w-3.5 h-3.5 mr-1" />
+              Set Target
+            </Button>
+          </CardHeader>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-100/70 border-b border-slate-200 text-slate-700 text-[11px] font-semibold">
+                  <th className="py-2.5 px-4">Scope</th>
+                  <th className="py-2.5 px-3">Date</th>
+                  <th className="py-2.5 px-3 text-right">Dialed Calls</th>
+                  <th className="py-2.5 px-3 text-right">Connected</th>
+                  <th className="py-2.5 px-3 text-right">Outdoor Visits</th>
+                  <th className="py-2.5 px-3 text-right">Meeting Time</th>
+                  <th className="py-2.5 px-3 text-right">Sales Target (BDT)</th>
+                  <th className="py-2.5 px-3 text-right">Collection Target (BDT)</th>
+                  <th className="py-2.5 px-3 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {loading ? (
+                  <tr>
+                    <td colSpan={9} className="py-10 text-center text-slate-400">
+                      Loading targets...
+                    </td>
+                  </tr>
+                ) : targets.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="py-10 text-center text-slate-400">
+                      No custom targets configured yet. Global defaults are active.
+                    </td>
+                  </tr>
+                ) : (
+                  targets.map((t) => {
+                    const emp = employees.find((e) => e.id === t.employee_id);
+                    return (
+                      <tr key={t.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="py-3 px-4 font-semibold text-slate-900">
+                          {emp ? (
+                            <span className="flex items-center gap-1.5">
+                              <Users className="w-3.5 h-3.5 text-green-700" />
+                              {emp.full_name}
+                            </span>
+                          ) : (
+                            <Badge variant="neutral">Global Default</Badge>
+                          )}
+                        </td>
+                        <td className="py-3 px-3 text-slate-600">
+                          {t.target_date ? formatReadableDate(t.target_date) : "All Dates"}
+                        </td>
+                        <td className="py-3 px-3 text-right font-medium text-slate-900">
+                          {t.dialed_calls_target ?? "—"}
+                        </td>
+                        <td className="py-3 px-3 text-right font-medium text-emerald-700">
+                          {t.connected_calls_target ?? "—"}
+                        </td>
+                        <td className="py-3 px-3 text-right text-slate-700">
+                          {t.outdoor_visits_target ?? "—"}
+                        </td>
+                        <td className="py-3 px-3 text-right text-slate-700">
+                          {t.meeting_minutes_target ? `${t.meeting_minutes_target}m` : "—"}
+                        </td>
+                        <td className="py-3 px-3 text-right font-semibold text-slate-900">
+                          {t.sales_amount_target ? formatBDT(t.sales_amount_target) : "—"}
+                        </td>
+                        <td className="py-3 px-3 text-right font-semibold text-emerald-800">
+                          {t.collection_amount_target ? formatBDT(t.collection_amount_target) : "—"}
+                        </td>
+                        <td className="py-3 px-3 text-right">
+                          <button
+                            onClick={() => openEditTarget(t)}
+                            className="p-1 text-slate-400 hover:text-green-700 rounded"
+                            title="Edit Target"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        {/* ── Business Hours & System Parameters Section ──────────────────── */}
+        <Card>
+          <CardHeader>
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-green-700" />
+                Operational System Configuration
+              </CardTitle>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Time slots, business timezone, and lead status definitions
+              </p>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+                <p className="font-semibold text-slate-900">Reporting Time Slots</p>
+                <div className="space-y-1 text-slate-600">
+                  <div className="flex justify-between py-1 border-b border-slate-200">
+                    <span>Morning Slot</span>
+                    <span className="font-mono font-medium">10:00 AM – 01:00 PM</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-200">
+                    <span>Afternoon Slot</span>
+                    <span className="font-mono font-medium">02:00 PM – 05:00 PM</span>
+                  </div>
+                  <div className="flex justify-between py-1">
+                    <span>Evening Slot</span>
+                    <span className="font-mono font-medium">05:00 PM – 06:00 PM</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+                <p className="font-semibold text-slate-900">Business Timezone & Currency</p>
+                <div className="space-y-1 text-slate-600">
+                  <div className="flex justify-between py-1 border-b border-slate-200">
+                    <span>Operating Timezone</span>
+                    <span className="font-mono font-medium">Asia/Dhaka (UTC+6)</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-200">
+                    <span>Standard Currency</span>
+                    <span className="font-mono font-medium">BDT (৳)</span>
+                  </div>
+                  <div className="flex justify-between py-1">
+                    <span>Report Lock Status</span>
+                    <span className="font-medium text-emerald-700">Enforced on Submit</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ── Target Edit Modal ────────────────────────────────────────────── */}
+        <Modal
+          isOpen={isTargetModalOpen}
+          onClose={() => setIsTargetModalOpen(false)}
+          title={editingTarget ? "Edit Daily Target" : "Establish Performance Target"}
+          description="Specify daily quotas for phone calls, customer visits, and collections"
+        >
+          <form onSubmit={handleTargetSubmit} className="space-y-4">
+            {formError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded text-xs text-rose-800">
+                {formError}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Scope
+                </label>
+                <select
+                  value={targetEmployeeId}
+                  onChange={(e) =>
+                    setTargetEmployeeId(
+                      e.target.value === "global" ? "global" : Number(e.target.value)
+                    )
+                  }
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
+                >
+                  <option value="global">Global Company Default</option>
+                  {employees.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.full_name} (@{emp.username})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Target Date
+                </label>
+                <input
+                  type="date"
+                  value={targetDate}
+                  onChange={(e) => setTargetDate(e.target.value)}
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Dialed Calls Target
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="e.g. 50"
+                  value={dialedTarget}
+                  onChange={(e) => setDialedTarget(e.target.value)}
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Connected Target
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="e.g. 20"
+                  value={connectedTarget}
+                  onChange={(e) => setConnectedTarget(e.target.value)}
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Outdoor Visits Target
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="e.g. 3"
+                  value={outdoorTarget}
+                  onChange={(e) => setOutdoorTarget(e.target.value)}
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Meeting Minutes Target
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="e.g. 180"
+                  value={meetingTarget}
+                  onChange={(e) => setMeetingTarget(e.target.value)}
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Sales Target (BDT)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="e.g. 500000"
+                  value={salesTarget}
+                  onChange={(e) => setSalesTarget(e.target.value)}
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Collection Target (BDT)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="e.g. 300000"
+                  value={collectionTarget}
+                  onChange={(e) => setCollectionTarget(e.target.value)}
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsTargetModalOpen(false)}
+                disabled={formSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" size="sm" loading={formSubmitting}>
+                Save Target
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      </div>
+    </DashboardLayout>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 text-sm text-slate-500">
+          Loading Settings & Targets...
+        </div>
+      }
+    >
+      <SettingsContent />
+    </Suspense>
+  );
+}
