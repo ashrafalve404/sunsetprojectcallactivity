@@ -155,16 +155,16 @@ export function StatCard({ title, value, subtitle, icon, badge }: StatCardProps)
     <Card className="hover:border-slate-300 transition-colors">
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+          <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
             {title}
           </span>
-          {icon && <span className="text-slate-400">{icon}</span>}
+          {icon && <span className="text-slate-600">{icon}</span>}
         </div>
         <div className="mt-2 flex items-baseline justify-between">
           <div className="text-2xl font-bold text-slate-900">{value}</div>
           {badge}
         </div>
-        {subtitle && <p className="mt-1 text-xs text-slate-500">{subtitle}</p>}
+        {subtitle && <p className="mt-1 text-xs text-slate-600 font-medium">{subtitle}</p>}
       </CardContent>
     </Card>
   );

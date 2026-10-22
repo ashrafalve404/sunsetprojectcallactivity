@@ -209,23 +209,23 @@ export default function EmployeesPage() {
               <div className="flex flex-wrap items-center gap-3 flex-1">
                 {/* Search */}
                 <div className="relative min-w-[220px] max-w-sm">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
                   <input
                     type="text"
                     placeholder="Search by name, username or email..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full pl-9 pr-3 py-1.5 text-xs border border-slate-300 rounded focus:ring-1 focus:ring-green-600 focus:outline-none"
+                    className="w-full pl-9 pr-3 py-1.5 text-xs font-semibold text-slate-800 placeholder:text-slate-500 border border-slate-300 rounded focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
                   />
                 </div>
 
                 {/* Role filter */}
-                <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                  <span>Role:</span>
+                <div className="flex items-center gap-1.5 text-xs text-slate-700">
+                  <span className="font-semibold text-slate-700">Role:</span>
                   <select
                     value={roleFilter}
                     onChange={(e) => setRoleFilter(e.target.value)}
-                    className="border border-slate-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
+                    className="border border-slate-300 rounded px-2 py-1 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
                   >
                     <option value="all">All Roles</option>
                     <option value="employee">Employee</option>
@@ -234,12 +234,12 @@ export default function EmployeesPage() {
                 </div>
 
                 {/* Status filter */}
-                <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                  <span>Status:</span>
+                <div className="flex items-center gap-1.5 text-xs text-slate-700">
+                  <span className="font-semibold text-slate-700">Status:</span>
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="border border-slate-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
+                    className="border border-slate-300 rounded px-2 py-1 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
                   >
                     <option value="all">All Status</option>
                     <option value="active">Active Only</option>
@@ -403,7 +403,7 @@ export default function EmployeesPage() {
                 placeholder="e.g. Shakil Ahmed"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                className="w-full border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none"
+                className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
               />
             </div>
 
@@ -419,7 +419,7 @@ export default function EmployeesPage() {
                   placeholder="e.g. shakil"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50"
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50"
                 />
               </div>
 
@@ -433,7 +433,7 @@ export default function EmployeesPage() {
                   placeholder="shakil@sunsetgroup.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none"
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
                 />
               </div>
             </div>
@@ -447,7 +447,7 @@ export default function EmployeesPage() {
                 placeholder={editingEmployee ? "Leave blank to keep unchanged" : "••••••••"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none"
+                className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
               />
             </div>
 
@@ -459,7 +459,7 @@ export default function EmployeesPage() {
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value as UserRole)}
-                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
                 >
                   <option value="employee">Employee</option>
                   <option value="admin">Administrator</option>
@@ -474,7 +474,7 @@ export default function EmployeesPage() {
                   <select
                     value={isActive ? "active" : "inactive"}
                     onChange={(e) => setIsActive(e.target.value === "active")}
-                    className="w-full border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
+                    className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
                   >
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>

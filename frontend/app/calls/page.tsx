@@ -425,7 +425,7 @@ function DailyCallActivityContent() {
                             handleCellChange(cat.key, "till_today_status", ev.target.value)
                           }
                           placeholder="—"
-                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                          className="w-full text-center py-1 border border-slate-300 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                         />
                       </td>
 
@@ -440,7 +440,7 @@ function DailyCallActivityContent() {
                             handleCellChange(cat.key, "slot_10_to_1", ev.target.value)
                           }
                           placeholder="—"
-                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                          className="w-full text-center py-1 border border-slate-300 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                         />
                       </td>
 
@@ -455,7 +455,7 @@ function DailyCallActivityContent() {
                             handleCellChange(cat.key, "slot_2_to_5", ev.target.value)
                           }
                           placeholder="—"
-                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                          className="w-full text-center py-1 border border-slate-300 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                         />
                       </td>
 
@@ -470,7 +470,7 @@ function DailyCallActivityContent() {
                             handleCellChange(cat.key, "slot_5_to_6", ev.target.value)
                           }
                           placeholder="—"
-                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                          className="w-full text-center py-1 border border-slate-300 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                         />
                       </td>
 
@@ -490,7 +490,7 @@ function DailyCallActivityContent() {
                             handleCellChange(cat.key, "hp_count", ev.target.value)
                           }
                           placeholder="—"
-                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                          className="w-full text-center py-1 border border-slate-300 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                         />
                       </td>
 
@@ -505,7 +505,7 @@ function DailyCallActivityContent() {
                             handleCellChange(cat.key, "p_count", ev.target.value)
                           }
                           placeholder="—"
-                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                          className="w-full text-center py-1 border border-slate-300 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                         />
                       </td>
 
@@ -520,7 +520,7 @@ function DailyCallActivityContent() {
                             handleCellChange(cat.key, "fub_count", ev.target.value)
                           }
                           placeholder="—"
-                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                          className="w-full text-center py-1 border border-slate-300 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                         />
                       </td>
 
@@ -535,7 +535,7 @@ function DailyCallActivityContent() {
                             handleCellChange(cat.key, "ni_count", ev.target.value)
                           }
                           placeholder="—"
-                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                          className="w-full text-center py-1 border border-slate-300 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                         />
                       </td>
 
@@ -575,43 +575,43 @@ function DailyCallActivityContent() {
         {/* ── Bottom Summary Breakdown Cards ───────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="p-4">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+            <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
               Total Dialed Today
             </span>
             <div className="text-2xl font-bold text-slate-900 mt-1">
               {totals.totalDialed}
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">Sum of all 3 slots</p>
+            <p className="text-xs text-slate-600 font-medium mt-0.5">Sum of all 3 slots</p>
           </Card>
 
           <Card className="p-4">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+            <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
               Total Connected
             </span>
             <div className="text-2xl font-bold text-emerald-700 mt-1">
               {totals.totalConnected}
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">HP + Potential + Follow-up</p>
+            <p className="text-xs text-slate-600 font-medium mt-0.5">HP + Potential + Follow-up</p>
           </Card>
 
           <Card className="p-4">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+            <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
               Connection Rate
             </span>
             <div className="text-2xl font-bold text-green-700 mt-1">
               {totals.connectionRate}%
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">Target: 40%+</p>
+            <p className="text-xs text-slate-600 font-medium mt-0.5">Target: 40%+</p>
           </Card>
 
           <Card className="p-4">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
+            <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
               High Potential Leads
             </span>
             <div className="text-2xl font-bold text-slate-900 mt-1">
               {totals.hp}
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">Immediate closing priority</p>
+            <p className="text-xs text-slate-600 font-medium mt-0.5">Immediate closing priority</p>
           </Card>
         </div>
 

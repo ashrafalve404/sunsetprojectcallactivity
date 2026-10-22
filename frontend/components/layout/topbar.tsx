@@ -37,7 +37,7 @@ export function Topbar({ title, subtitle, onOpenMobileMenu }: TopbarProps) {
             {title}
           </h1>
           {subtitle && (
-            <p className="text-xs text-slate-500 hidden sm:block">{subtitle}</p>
+            <p className="text-xs text-slate-600 font-medium hidden sm:block">{subtitle}</p>
           )}
         </div>
       </div>
@@ -45,10 +45,10 @@ export function Topbar({ title, subtitle, onOpenMobileMenu }: TopbarProps) {
       {/* Right: Date, User info, Logout */}
       <div className="flex items-center gap-4">
         {/* Dhaka Reporting Date */}
-        <div className="hidden lg:flex items-center gap-1.5 text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 px-2.5 py-1.5 rounded-md">
+        <div className="hidden lg:flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-300 px-2.5 py-1.5 rounded-md">
           <Calendar className="w-3.5 h-3.5 text-green-700" />
           <span>{formatReadableDate(todayDhaka)}</span>
-          <span className="text-[10px] text-slate-400 font-mono">(Dhaka)</span>
+          <span className="text-[10px] text-slate-500 font-mono">(Dhaka)</span>
         </div>
 
         {/* User Badge */}

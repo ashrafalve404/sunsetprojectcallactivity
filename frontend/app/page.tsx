@@ -132,7 +132,7 @@ function DashboardContent() {
               <div className="flex flex-wrap items-center gap-3">
                 {/* Date range pickers */}
                 <div className="flex items-center gap-2 text-sm">
-                  <label htmlFor="start_date" className="text-xs text-slate-500 font-medium">
+                  <label htmlFor="start_date" className="text-xs text-slate-700 font-semibold">
                     From:
                   </label>
                   <input
@@ -140,12 +140,12 @@ function DashboardContent() {
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="border border-slate-300 rounded px-2.5 py-1 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none"
+                    className="border border-slate-300 rounded px-2.5 py-1 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
                   />
                 </div>
 
                 <div className="flex items-center gap-2 text-sm">
-                  <label htmlFor="end_date" className="text-xs text-slate-500 font-medium">
+                  <label htmlFor="end_date" className="text-xs text-slate-700 font-semibold">
                     To:
                   </label>
                   <input
@@ -153,14 +153,14 @@ function DashboardContent() {
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="border border-slate-300 rounded px-2.5 py-1 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none"
+                    className="border border-slate-300 rounded px-2.5 py-1 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
                   />
                 </div>
 
                 {/* Employee Selector (Admin only) */}
                 {isAdmin && (
                   <div className="flex items-center gap-2 text-sm">
-                    <label htmlFor="employee_select" className="text-xs text-slate-500 font-medium">
+                    <label htmlFor="employee_select" className="text-xs text-slate-700 font-semibold">
                       Employee:
                     </label>
                     <select
@@ -171,7 +171,7 @@ function DashboardContent() {
                           e.target.value === "all" ? "all" : Number(e.target.value)
                         )
                       }
-                      className="border border-slate-300 rounded px-2.5 py-1 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
+                      className="border border-slate-300 rounded px-2.5 py-1 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
                     >
                       <option value="all">All Employees</option>
                       {employees.map((emp) => (

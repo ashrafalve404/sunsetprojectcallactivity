@@ -24,3 +24,14 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Ensure all input boxes have deep ash readable text and crisp borders */
+input, select, textarea {
+  color: #1e293b; /* deep ash / slate-800 */
+}
+
+input::placeholder, textarea::placeholder {
+  color: #64748b; /* readable medium-deep ash placeholder / slate-500 */
+  opacity: 1;
+}
+

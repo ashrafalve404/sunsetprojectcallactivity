@@ -356,7 +356,7 @@ function SettingsContent() {
                       e.target.value === "global" ? "global" : Number(e.target.value)
                     )
                   }
-                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
                 >
                   <option value="global">Global Company Default</option>
                   {employees.map((emp) => (
@@ -375,7 +375,7 @@ function SettingsContent() {
                   type="date"
                   value={targetDate}
                   onChange={(e) => setTargetDate(e.target.value)}
-                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none"
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none"
                 />
               </div>
             </div>
@@ -391,7 +391,7 @@ function SettingsContent() {
                   placeholder="e.g. 50"
                   value={dialedTarget}
                   onChange={(e) => setDialedTarget(e.target.value)}
-                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none"
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
                 />
               </div>
 
@@ -405,7 +405,7 @@ function SettingsContent() {
                   placeholder="e.g. 20"
                   value={connectedTarget}
                   onChange={(e) => setConnectedTarget(e.target.value)}
-                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none"
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
                 />
               </div>
             </div>
@@ -421,7 +421,7 @@ function SettingsContent() {
                   placeholder="e.g. 3"
                   value={outdoorTarget}
                   onChange={(e) => setOutdoorTarget(e.target.value)}
-                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none"
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
                 />
               </div>
 
@@ -435,7 +435,7 @@ function SettingsContent() {
                   placeholder="e.g. 180"
                   value={meetingTarget}
                   onChange={(e) => setMeetingTarget(e.target.value)}
-                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none"
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
                 />
               </div>
             </div>
@@ -451,7 +451,7 @@ function SettingsContent() {
                   placeholder="e.g. 500000"
                   value={salesTarget}
                   onChange={(e) => setSalesTarget(e.target.value)}
-                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none"
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
                 />
               </div>
 
@@ -465,7 +465,7 @@ function SettingsContent() {
                   placeholder="e.g. 300000"
                   value={collectionTarget}
                   onChange={(e) => setCollectionTarget(e.target.value)}
-                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none"
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
                 />
               </div>
             </div>

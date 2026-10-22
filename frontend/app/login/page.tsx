@@ -91,7 +91,7 @@ export default function LoginPage() {
                 Username
               </label>
               <div className="relative rounded-md shadow-xs">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
                   <User className="h-4 w-4" />
                 </div>
                 <input
@@ -103,7 +103,7 @@ export default function LoginPage() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="e.g. admin or emp1"
-                  className="block w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-green-600"
+                  className="block w-full pl-9 pr-3 py-2 text-sm font-semibold text-slate-800 border border-slate-300 rounded-md placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-green-600 bg-white"
                 />
               </div>
             </div>
@@ -116,7 +116,7 @@ export default function LoginPage() {
                 Password
               </label>
               <div className="relative rounded-md shadow-xs">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
                   <Lock className="h-4 w-4" />
                 </div>
                 <input
@@ -128,7 +128,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="block w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-md placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-green-600"
+                  className="block w-full pl-9 pr-3 py-2 text-sm font-semibold text-slate-800 border border-slate-300 rounded-md placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-green-600 bg-white"
                 />
               </div>
             </div>

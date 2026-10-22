@@ -392,7 +392,7 @@ function MeetingTimeDailyContent() {
                             handleCellChange(metric.key, "till_today", ev.target.value)
                           }
                           placeholder="—"
-                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                          className="w-full text-center py-1 border border-slate-300 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                         />
                       </td>
 
@@ -407,7 +407,7 @@ function MeetingTimeDailyContent() {
                             handleCellChange(metric.key, "slot_10_to_1", ev.target.value)
                           }
                           placeholder="—"
-                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                          className="w-full text-center py-1 border border-slate-300 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                         />
                       </td>
 
@@ -422,7 +422,7 @@ function MeetingTimeDailyContent() {
                             handleCellChange(metric.key, "slot_2_to_5", ev.target.value)
                           }
                           placeholder="—"
-                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                          className="w-full text-center py-1 border border-slate-300 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                         />
                       </td>
 
@@ -437,7 +437,7 @@ function MeetingTimeDailyContent() {
                             handleCellChange(metric.key, "slot_5_to_6", ev.target.value)
                           }
                           placeholder="—"
-                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                          className="w-full text-center py-1 border border-slate-300 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                         />
                       </td>
 
@@ -460,46 +460,46 @@ function MeetingTimeDailyContent() {
         {/* ── Key Metric Summary Cards ────────────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="p-4">
-            <div className="flex items-center gap-1.5 text-slate-500 mb-1">
+            <div className="flex items-center gap-1.5 text-slate-700 mb-1">
               <MapPin className="w-3.5 h-3.5 text-green-700" />
-              <span className="text-[11px] font-semibold uppercase tracking-wider">
+              <span className="text-[11px] font-bold uppercase tracking-wider">
                 Outdoor Visits
               </span>
             </div>
             <div className="text-2xl font-bold text-slate-900">
               {totals.outdoorVisits}
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-600 font-medium mt-0.5">
               Duration: {formatMinutes(totals.outdoorMinutes)}
             </p>
           </Card>
 
           <Card className="p-4">
-            <div className="flex items-center gap-1.5 text-slate-500 mb-1">
+            <div className="flex items-center gap-1.5 text-slate-700 mb-1">
               <UserCheck className="w-3.5 h-3.5 text-green-700" />
-              <span className="text-[11px] font-semibold uppercase tracking-wider">
+              <span className="text-[11px] font-bold uppercase tracking-wider">
                 Indoor Customers (CX)
               </span>
             </div>
             <div className="text-2xl font-bold text-slate-900">
               {totals.indoorCxCount}
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-600 font-medium mt-0.5">
               Duration: {formatMinutes(totals.indoorMinutes)}
             </p>
           </Card>
 
           <Card className="p-4">
-            <div className="flex items-center gap-1.5 text-slate-500 mb-1">
+            <div className="flex items-center gap-1.5 text-slate-700 mb-1">
               <Users className="w-3.5 h-3.5 text-green-700" />
-              <span className="text-[11px] font-semibold uppercase tracking-wider">
+              <span className="text-[11px] font-bold uppercase tracking-wider">
                 Internal Meetings
               </span>
             </div>
             <div className="text-2xl font-bold text-slate-900">
               {formatMinutes(totals.mgMinutes + totals.teamMeetingMinutes)}
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-600 font-medium mt-0.5">
               MG ({totals.mgMinutes}m) + Team ({totals.teamMeetingMinutes}m)
             </p>
           </Card>
@@ -507,14 +507,14 @@ function MeetingTimeDailyContent() {
           <Card className="p-4 bg-green-50/40 border-green-200">
             <div className="flex items-center gap-1.5 text-green-800 mb-1">
               <Clock className="w-3.5 h-3.5 text-green-700" />
-              <span className="text-[11px] font-semibold uppercase tracking-wider">
+              <span className="text-[11px] font-bold uppercase tracking-wider">
                 Total Meeting Time
               </span>
             </div>
             <div className="text-2xl font-extrabold text-green-900">
               {totals.formattedTotalTime}
             </div>
-            <p className="text-xs text-green-800 mt-0.5">
+            <p className="text-xs text-green-800 font-medium mt-0.5">
               {totals.totalMeetingMinutes} total minutes today
             </p>
           </Card>

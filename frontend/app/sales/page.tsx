@@ -286,7 +286,7 @@ function SalesVsCollectionContent() {
                       setReportDate(e.target.value);
                       router.replace(`/sales?date=${e.target.value}`);
                     }}
-                    className="border border-slate-300 rounded px-2.5 py-1 text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-green-600 bg-white"
+                    className="border border-slate-300 rounded px-2.5 py-1 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-green-600 bg-white"
                   />
                 </div>
 
@@ -381,15 +381,15 @@ function SalesVsCollectionContent() {
           {/* Token to Booking (TB) Total */}
           <Card className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+              <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
                 TB (Token to Booking)
               </span>
-              <Receipt className="w-4 h-4 text-slate-400" />
+              <Receipt className="w-4 h-4 text-slate-600" />
             </div>
             <div className="text-xl font-bold text-slate-900 mt-2">
               {formatBDT(calculations.tbCollection)}
             </div>
-            <p className="text-[11px] text-slate-500 mt-1">
+            <p className="text-[11px] text-slate-600 font-medium mt-1">
               Commitment: {formatBDT(calculations.tbCommitments)}
             </p>
           </Card>
@@ -397,15 +397,15 @@ function SalesVsCollectionContent() {
           {/* EMI Collection */}
           <Card className="p-4">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+              <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
                 EMI Installments
               </span>
-              <Banknote className="w-4 h-4 text-slate-400" />
+              <Banknote className="w-4 h-4 text-slate-600" />
             </div>
             <div className="text-xl font-bold text-slate-900 mt-2">
               {formatBDT(calculations.emiCollection)}
             </div>
-            <p className="text-[11px] text-slate-500 mt-1">
+            <p className="text-[11px] text-slate-600 font-medium mt-1">
               Strictly counted towards collection
             </p>
           </Card>
@@ -530,7 +530,7 @@ function SalesVsCollectionContent() {
                 onChange={(e) =>
                   setFormCategory(e.target.value as SalesCollectionCategory)
                 }
-                className="w-full border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
+                className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
               >
                 <optgroup label="New Sales">
                   <option value="new_sales_collection">New Sales Collection (Actual)</option>
@@ -556,7 +556,7 @@ function SalesVsCollectionContent() {
                 Amount (BDT) *
               </label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-bold text-xs">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500 font-bold text-xs">
                   ৳
                 </span>
                 <input
@@ -567,7 +567,7 @@ function SalesVsCollectionContent() {
                   placeholder="e.g. 50000"
                   value={formAmount}
                   onChange={(e) => setFormAmount(e.target.value)}
-                  className="w-full border border-slate-300 rounded pl-7 pr-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none"
+                  className="w-full border border-slate-300 rounded pl-7 pr-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
                 />
               </div>
             </div>
@@ -582,7 +582,7 @@ function SalesVsCollectionContent() {
                   placeholder="Client name"
                   value={formCustomerName}
                   onChange={(e) => setFormCustomerName(e.target.value)}
-                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none"
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
                 />
               </div>
 
@@ -596,7 +596,7 @@ function SalesVsCollectionContent() {
                   placeholder="e.g. 1, 2, 3"
                   value={formPaymentSeq}
                   onChange={(e) => setFormPaymentSeq(e.target.value)}
-                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none"
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
                 />
               </div>
             </div>
@@ -610,7 +610,7 @@ function SalesVsCollectionContent() {
                 placeholder="Cheque number, MR slip, or transaction ID"
                 value={formReference}
                 onChange={(e) => setFormReference(e.target.value)}
-                className="w-full border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none"
+                className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
               />
             </div>
 
@@ -623,7 +623,7 @@ function SalesVsCollectionContent() {
                 placeholder="Additional details..."
                 value={formNotes}
                 onChange={(e) => setFormNotes(e.target.value)}
-                className="w-full border border-slate-300 rounded px-3 py-2 text-xs focus:ring-1 focus:ring-green-600 focus:outline-none"
+                className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
               />
             </div>
 
