@@ -282,7 +282,7 @@ function DailyCallActivityContent() {
               {/* Left: Date selector & Status */}
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-amber-600" />
+                  <Calendar className="w-4 h-4 text-green-700" />
                   <span className="text-xs font-semibold text-slate-700 uppercase">Date:</span>
                   <input
                     type="date"
@@ -291,7 +291,7 @@ function DailyCallActivityContent() {
                       setReportDate(e.target.value);
                       router.replace(`/calls?date=${e.target.value}`);
                     }}
-                    className="border border-slate-300 rounded px-2.5 py-1 text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white"
+                    className="border border-slate-300 rounded px-2.5 py-1 text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-green-600 bg-white"
                   />
                 </div>
 
@@ -368,7 +368,7 @@ function DailyCallActivityContent() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <PhoneCall className="w-4 h-4 text-amber-600" />
+              <PhoneCall className="w-4 h-4 text-green-700" />
               Daily Dialed & Lead Classification
             </CardTitle>
             <span className="text-xs text-slate-500">
@@ -383,9 +383,9 @@ function DailyCallActivityContent() {
                     Lead Category
                   </th>
                   <th className="py-2.5 px-2.5 text-center w-24">Till Today</th>
-                  <th className="py-2.5 px-2.5 text-center w-24 bg-amber-50/50">10am-1pm</th>
-                  <th className="py-2.5 px-2.5 text-center w-24 bg-amber-50/50">2pm-5pm</th>
-                  <th className="py-2.5 px-2.5 text-center w-24 bg-amber-50/50">5pm-6pm</th>
+                  <th className="py-2.5 px-2.5 text-center w-24 bg-green-50/50">10am-1pm</th>
+                  <th className="py-2.5 px-2.5 text-center w-24 bg-green-50/50">2pm-5pm</th>
+                  <th className="py-2.5 px-2.5 text-center w-24 bg-green-50/50">5pm-6pm</th>
                   <th className="py-2.5 px-2.5 text-center w-24 bg-slate-50 font-bold">Total Dialed</th>
                   <th className="py-2.5 px-2 text-center w-16">HP</th>
                   <th className="py-2.5 px-2 text-center w-16">P</th>
@@ -425,12 +425,12 @@ function DailyCallActivityContent() {
                             handleCellChange(cat.key, "till_today_status", ev.target.value)
                           }
                           placeholder="—"
-                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                         />
                       </td>
 
                       {/* 10 AM to 1 PM */}
-                      <td className="p-1 text-center bg-amber-50/20">
+                      <td className="p-1 text-center bg-green-50/20">
                         <input
                           type="number"
                           min="0"
@@ -440,12 +440,12 @@ function DailyCallActivityContent() {
                             handleCellChange(cat.key, "slot_10_to_1", ev.target.value)
                           }
                           placeholder="—"
-                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                         />
                       </td>
 
                       {/* 2 PM to 5 PM */}
-                      <td className="p-1 text-center bg-amber-50/20">
+                      <td className="p-1 text-center bg-green-50/20">
                         <input
                           type="number"
                           min="0"
@@ -455,12 +455,12 @@ function DailyCallActivityContent() {
                             handleCellChange(cat.key, "slot_2_to_5", ev.target.value)
                           }
                           placeholder="—"
-                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                         />
                       </td>
 
                       {/* 5 PM to 6 PM */}
-                      <td className="p-1 text-center bg-amber-50/20">
+                      <td className="p-1 text-center bg-green-50/20">
                         <input
                           type="number"
                           min="0"
@@ -470,7 +470,7 @@ function DailyCallActivityContent() {
                             handleCellChange(cat.key, "slot_5_to_6", ev.target.value)
                           }
                           placeholder="—"
-                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                         />
                       </td>
 
@@ -490,7 +490,7 @@ function DailyCallActivityContent() {
                             handleCellChange(cat.key, "hp_count", ev.target.value)
                           }
                           placeholder="—"
-                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                         />
                       </td>
 
@@ -505,7 +505,7 @@ function DailyCallActivityContent() {
                             handleCellChange(cat.key, "p_count", ev.target.value)
                           }
                           placeholder="—"
-                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                         />
                       </td>
 
@@ -520,7 +520,7 @@ function DailyCallActivityContent() {
                             handleCellChange(cat.key, "fub_count", ev.target.value)
                           }
                           placeholder="—"
-                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                         />
                       </td>
 
@@ -535,7 +535,7 @@ function DailyCallActivityContent() {
                             handleCellChange(cat.key, "ni_count", ev.target.value)
                           }
                           placeholder="—"
-                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-amber-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                          className="w-full text-center py-1 border border-slate-200 rounded text-xs focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                         />
                       </td>
 
@@ -553,10 +553,10 @@ function DailyCallActivityContent() {
                     Grand Total
                   </td>
                   <td className="py-3 px-2 text-center text-slate-700">{totals.tillToday || 0}</td>
-                  <td className="py-3 px-2 text-center text-amber-800 bg-amber-100/50">{totals.slot1 || 0}</td>
-                  <td className="py-3 px-2 text-center text-amber-800 bg-amber-100/50">{totals.slot2 || 0}</td>
-                  <td className="py-3 px-2 text-center text-amber-800 bg-amber-100/50">{totals.slot3 || 0}</td>
-                  <td className="py-3 px-2.5 text-center text-base font-extrabold text-amber-900 bg-slate-200/80">
+                  <td className="py-3 px-2 text-center text-green-800 bg-green-100/50">{totals.slot1 || 0}</td>
+                  <td className="py-3 px-2 text-center text-green-800 bg-green-100/50">{totals.slot2 || 0}</td>
+                  <td className="py-3 px-2 text-center text-green-800 bg-green-100/50">{totals.slot3 || 0}</td>
+                  <td className="py-3 px-2.5 text-center text-base font-extrabold text-green-900 bg-slate-200/80">
                     {totals.totalDialed || 0}
                   </td>
                   <td className="py-3 px-2 text-center text-slate-700">{totals.hp || 0}</td>
@@ -598,7 +598,7 @@ function DailyCallActivityContent() {
             <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
               Connection Rate
             </span>
-            <div className="text-2xl font-bold text-amber-600 mt-1">
+            <div className="text-2xl font-bold text-green-700 mt-1">
               {totals.connectionRate}%
             </div>
             <p className="text-xs text-slate-500 mt-0.5">Target: 40%+</p>
@@ -623,8 +623,8 @@ function DailyCallActivityContent() {
           description={`Finalizing report for ${formatReadableDate(reportDate)}`}
         >
           <div className="space-y-4">
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded text-xs text-amber-900 flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-amber-700 mt-0.5" />
+            <div className="p-3 bg-green-50 border border-green-200 rounded text-xs text-green-900 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-green-700 mt-0.5" />
               <div>
                 <p className="font-semibold">Important Confirmation</p>
                 <p className="mt-0.5">
