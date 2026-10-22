@@ -39,7 +39,7 @@ async def seed() -> None:
 
         admin = User(
             full_name="Sunset Admin",
-            email="admin@sunsetgroup.local",
+            email="admin@sunsetgroup.com",
             username="admin",
             password_hash=hash_password("ChangeMe123!"),
             role=UserRole.ADMIN,
