@@ -9,6 +9,7 @@ import {
   RotateCcw,
   ArrowRight,
   AlertCircle,
+  Trash2,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import {
@@ -19,6 +20,8 @@ import {
   Badge,
   Button,
   Skeleton,
+  Modal,
+  Alert,
 } from "@/components/ui";
 import { useAuth } from "@/lib/auth-context";
 import { api, ApiError } from "@/lib/api";
@@ -62,6 +65,9 @@ function ReportsContent() {
   const [employees, setEmployees] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [deleteReportId, setDeleteReportId] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Fetch employees for admin filter
   useEffect(() => {
@@ -213,6 +219,25 @@ function ReportsContent() {
     setSelectedEmployeeId("all");
   };
 
+  const handleDeleteReport = async (reportId: number) => {
+    setDeleting(true);
+    setError(null);
+    try {
+      await api.reports.delete(reportId);
+      setReports((prev) => prev.filter((r) => r.id !== reportId));
+      setDeleteReportId(null);
+      setSuccessMessage("Daily activity report deleted successfully.");
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError("Failed to delete report.");
+      }
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <DashboardLayout
       title="Reports & Analytics"
@@ -314,12 +339,18 @@ function ReportsContent() {
           </CardContent>
         </Card>
 
-        {/* ── Error Banner ─────────────────────────────────────────────────── */}
+        {/* ── Alerts ──────────────────────────────────────────────────────── */}
+        {successMessage && (
+          <Alert type="success" onDismiss={() => setSuccessMessage(null)}>
+            {successMessage}
+          </Alert>
+        )}
+
         {error && (
           <div className="p-4 rounded-md bg-rose-50 border border-rose-200 flex items-start gap-3 text-sm text-rose-800">
             <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold">Error Loading Reports</p>
+              <p className="font-semibold">Error</p>
               <p className="text-xs mt-0.5">{error}</p>
             </div>
           </div>
@@ -468,12 +499,23 @@ function ReportsContent() {
                         {formatBDT(report.summary?.commitments_bdt)}
                       </td>
                       <td className="py-3 px-3 text-right">
-                        <Link
-                          href={`/calls?date=${report.report_date}`}
-                          className="text-green-700 hover:text-green-800 font-semibold inline-flex items-center gap-1"
-                        >
-                          View <ArrowRight className="w-3 h-3" />
-                        </Link>
+                        <div className="flex items-center justify-end gap-2">
+                          <Link
+                            href={`/calls?date=${report.report_date}`}
+                            className="text-green-700 hover:text-green-800 font-semibold inline-flex items-center gap-1 text-xs"
+                          >
+                            View <ArrowRight className="w-3 h-3" />
+                          </Link>
+                          {isAdmin && (
+                            <button
+                              onClick={() => setDeleteReportId(report.id)}
+                              className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors"
+                              title="Admin: Delete Report"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -482,6 +524,39 @@ function ReportsContent() {
             </table>
           </div>
         </Card>
+
+        {/* ── Admin: Delete Confirmation Modal ────────────────────────────────────── */}
+        <Modal
+          isOpen={deleteReportId !== null}
+          onClose={() => setDeleteReportId(null)}
+          title="Admin: Delete Daily Report"
+          description="Are you sure you want to permanently delete this daily activity report?"
+        >
+          <div className="space-y-4">
+            <p className="text-xs text-slate-600">
+              This will permanently purge this daily report, including its hourly dial activity,
+              meeting records, and linked logs. This action is restricted to administrators and cannot be undone.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDeleteReportId(null)}
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                loading={deleting}
+                onClick={() => deleteReportId && handleDeleteReport(deleteReportId)}
+              >
+                Delete Report
+              </Button>
+            </div>
+          </div>
+        </Modal>
       </div>
     </DashboardLayout>
   );

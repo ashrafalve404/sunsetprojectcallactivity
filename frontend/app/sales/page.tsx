@@ -39,7 +39,7 @@ import {
 function SalesVsCollectionContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   const today = getDhakaToday();
   const initialDate = searchParams.get("date") || today;
@@ -303,7 +303,7 @@ function SalesVsCollectionContent() {
               </div>
 
               <div className="flex items-center gap-2">
-                {!isLocked && (
+                {(!isLocked || isAdmin) && (
                   <Button
                     variant="primary"
                     size="sm"
@@ -314,10 +314,16 @@ function SalesVsCollectionContent() {
                     Record Transaction
                   </Button>
                 )}
-                {isLocked && (
+                {isLocked && !isAdmin && (
                   <div className="flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded border border-emerald-200 font-medium">
                     <Lock className="w-3.5 h-3.5" />
                     Locked for Edits
+                  </div>
+                )}
+                {isLocked && isAdmin && (
+                  <div className="flex items-center gap-1.5 text-xs text-amber-800 bg-amber-50 px-3 py-1.5 rounded border border-amber-300 font-medium">
+                    <Lock className="w-3.5 h-3.5 text-amber-700" />
+                    Finalized (Admin Override Enabled)
                   </div>
                 )}
               </div>
@@ -432,14 +438,14 @@ function SalesVsCollectionContent() {
                   <th className="py-2.5 px-3">Customer Name</th>
                   <th className="py-2.5 px-3">Seq #</th>
                   <th className="py-2.5 px-3">Reference / Notes</th>
-                  {!isLocked && <th className="py-2.5 px-3 text-right">Actions</th>}
+                  {(!isLocked || isAdmin) && <th className="py-2.5 px-3 text-right">Actions</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {entries.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={isLocked ? 6 : 7}
+                      colSpan={(!isLocked || isAdmin) ? 7 : 6}
                       className="py-10 text-center text-slate-400"
                     >
                       No financial transactions recorded for this day yet.
@@ -478,7 +484,7 @@ function SalesVsCollectionContent() {
                         <td className="py-3 px-3 text-slate-500 max-w-[200px] truncate">
                           {entry.reference || entry.notes || "—"}
                         </td>
-                        {!isLocked && (
+                        {(!isLocked || isAdmin) && (
                           <td className="py-3 px-3 text-right">
                             <div className="flex items-center justify-end gap-1">
                               <button

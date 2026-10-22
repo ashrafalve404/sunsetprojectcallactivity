@@ -6,6 +6,7 @@ import {
   Sliders,
   Plus,
   Edit2,
+  Trash2,
   Users,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
@@ -46,6 +47,8 @@ function SettingsContent() {
 
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+  const [deletingTarget, setDeletingTarget] = useState(false);
 
   const [statusMessage, setStatusMessage] = useState<{
     type: "success" | "error" | "info";
@@ -159,6 +162,27 @@ function SettingsContent() {
     }
   };
 
+  const handleDeleteTarget = async (id: number) => {
+    setDeletingTarget(true);
+    try {
+      await api.settings.deleteTarget(id);
+      setTargets((prev) => prev.filter((t) => t.id !== id));
+      setDeleteTargetId(null);
+      setStatusMessage({
+        type: "success",
+        text: "Target removed successfully.",
+      });
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setStatusMessage({ type: "error", text: err.message });
+      } else {
+        setStatusMessage({ type: "error", text: "Failed to delete target." });
+      }
+    } finally {
+      setDeletingTarget(false);
+    }
+  };
+
   return (
     <DashboardLayout
       title="Settings & Targets"
@@ -259,13 +283,22 @@ function SettingsContent() {
                           {t.collection_amount_target ? formatBDT(t.collection_amount_target) : "—"}
                         </td>
                         <td className="py-3 px-3 text-right">
-                          <button
-                            onClick={() => openEditTarget(t)}
-                            className="p-1 text-slate-400 hover:text-green-700 rounded"
-                            title="Edit Target"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => openEditTarget(t)}
+                              className="p-1 text-slate-400 hover:text-green-700 rounded transition-colors"
+                              title="Edit Target"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setDeleteTargetId(t.id)}
+                              className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors"
+                              title="Delete Target"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -485,6 +518,38 @@ function SettingsContent() {
               </Button>
             </div>
           </form>
+        </Modal>
+
+        {/* ── Delete Target Confirmation Modal ─────────────────────────────── */}
+        <Modal
+          isOpen={deleteTargetId !== null}
+          onClose={() => setDeleteTargetId(null)}
+          title="Confirm Delete Target"
+          description="Are you sure you want to remove this KPI target?"
+        >
+          <div className="space-y-4">
+            <p className="text-xs text-slate-600">
+              This target configuration will be permanently removed. The employee or system will revert to default global targets.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDeleteTargetId(null)}
+                disabled={deletingTarget}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                loading={deletingTarget}
+                onClick={() => deleteTargetId && handleDeleteTarget(deleteTargetId)}
+              >
+                Delete Target
+              </Button>
+            </div>
+          </div>
         </Modal>
       </div>
     </DashboardLayout>

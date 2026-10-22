@@ -9,6 +9,7 @@ import {
   Lock,
   Calendar,
   AlertCircle,
+  Trash2,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import {
@@ -34,7 +35,7 @@ import { getDhakaToday, formatReadableDate } from "@/lib/utils";
 function DailyCallActivityContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   const today = getDhakaToday();
   const initialDate = searchParams.get("date") || today;
@@ -68,6 +69,9 @@ function DailyCallActivityContent() {
     type: "success" | "error" | "info";
     text: string;
   } | null>(null);
+
+  const [adminDeleteModalOpen, setAdminDeleteModalOpen] = useState(false);
+  const [deletingReport, setDeletingReport] = useState(false);
 
   // Load or initialize report for the selected date
   const loadReport = useCallback(async (dateStr: string) => {
@@ -267,6 +271,31 @@ function DailyCallActivityContent() {
     }
   };
 
+  const handleAdminDeleteReport = async () => {
+    if (!report) return;
+    setDeletingReport(true);
+    try {
+      await api.reports.delete(report.id);
+      setAdminDeleteModalOpen(false);
+      setStatusMessage({
+        type: "success",
+        text: "Daily report deleted by admin.",
+      });
+      setTimeout(() => {
+        router.replace(`/calls?date=${today}`);
+        window.location.reload();
+      }, 500);
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setStatusMessage({ type: "error", text: err.message });
+      } else {
+        setStatusMessage({ type: "error", text: "Failed to delete report." });
+      }
+    } finally {
+      setDeletingReport(false);
+    }
+  };
+
   const isLocked = report?.is_submitted ?? false;
 
   return (
@@ -337,6 +366,17 @@ function DailyCallActivityContent() {
                     <Lock className="w-3.5 h-3.5" />
                     Locked for Edits
                   </div>
+                )}
+                {isAdmin && report && (
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => setAdminDeleteModalOpen(true)}
+                    title="Admin: Permanently delete this daily report"
+                  >
+                    <Trash2 className="w-4 h-4 mr-1.5" />
+                    Delete Report
+                  </Button>
                 )}
               </div>
             </div>
@@ -664,6 +704,39 @@ function DailyCallActivityContent() {
                 loading={submitting}
               >
                 Confirm & Submit Report
+              </Button>
+            </div>
+          </div>
+        </Modal>
+
+        {/* ── Admin: Delete Daily Report Modal ─────────────────────────────── */}
+        <Modal
+          isOpen={adminDeleteModalOpen}
+          onClose={() => setAdminDeleteModalOpen(false)}
+          title="Admin: Delete Daily Report"
+          description={`Are you sure you want to permanently delete the report for ${formatReadableDate(reportDate)}?`}
+        >
+          <div className="space-y-4">
+            <p className="text-xs text-slate-600">
+              This will permanently delete this daily activity report, all hourly call data,
+              and associated logs. This action is restricted to administrators and cannot be recovered.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAdminDeleteModalOpen(false)}
+                disabled={deletingReport}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                loading={deletingReport}
+                onClick={handleAdminDeleteReport}
+              >
+                Delete Report
               </Button>
             </div>
           </div>

@@ -223,6 +223,11 @@ export const api = {
     getSummary: async (reportId: number): Promise<Record<string, unknown>> => {
       return request<Record<string, unknown>>(`/reports/${reportId}/summary`);
     },
+    delete: async (reportId: number): Promise<void> => {
+      return request<void>(`/reports/${reportId}`, {
+        method: "DELETE",
+      });
+    },
   },
 
   calls: {
