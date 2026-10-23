@@ -116,13 +116,29 @@ function SalesVsCollectionContent() {
   // Form fields
   const [formCategory, setFormCategory] = useState<SalesCollectionCategory>("new_sales_collection");
   const [formAmount, setFormAmount] = useState<string>("");
-  const [formCustomerName, setFormCustomerName] = useState<string>("");
+  const [formCustomerNames, setFormCustomerNames] = useState<string[]>([""]);
   const [formPaymentMethod, setFormPaymentMethod] = useState<string>("cash");
   const [formPaymentSeq, setFormPaymentSeq] = useState<string>("");
   const [formReference, setFormReference] = useState<string>("");
   const [formNotes, setFormNotes] = useState<string>("");
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  const handleCustomerNameChange = (index: number, val: string) => {
+    setFormCustomerNames((prev) => {
+      const updated = [...prev];
+      updated[index] = val;
+      return updated;
+    });
+  };
+
+  const handleAddNextCustomer = () => {
+    setFormCustomerNames((prev) => [...prev, ""]);
+  };
+
+  const handleRemoveCustomer = (index: number) => {
+    setFormCustomerNames((prev) => (prev.length <= 1 ? [""] : prev.filter((_, i) => i !== index)));
+  };
 
   const [statusMessage, setStatusMessage] = useState<{
     type: "success" | "error" | "info";
@@ -223,7 +239,7 @@ function SalesVsCollectionContent() {
     setEditingEntry(null);
     setFormCategory("new_sales_collection");
     setFormAmount("");
-    setFormCustomerName("");
+    setFormCustomerNames([""]);
     setFormPaymentMethod("cash");
     setFormPaymentSeq("");
     setFormReference("");
@@ -236,7 +252,15 @@ function SalesVsCollectionContent() {
     setEditingEntry(entry);
     setFormCategory(entry.category);
     setFormAmount(String(entry.amount));
-    setFormCustomerName(entry.customer_name || "");
+    if (entry.customer_name) {
+      const parts = entry.customer_name
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      setFormCustomerNames(parts.length > 0 ? parts : [""]);
+    } else {
+      setFormCustomerNames([""]);
+    }
     setFormPaymentMethod(entry.payment_method || "cash");
     setFormPaymentSeq(entry.payment_sequence ? String(entry.payment_sequence) : "");
     setFormReference(entry.reference || "");
@@ -262,11 +286,16 @@ function SalesVsCollectionContent() {
     const catDef = SALES_CATEGORIES.find((c) => c.key === formCategory);
     const isCollection = catDef?.isCollection ?? false;
 
+    const joinedCustomerNames = formCustomerNames
+      .map((n) => n.trim())
+      .filter(Boolean)
+      .join(", ");
+
     const payload = {
       category: formCategory,
       is_collection: isCollection,
       amount: amt,
-      customer_name: formCustomerName.trim() || null,
+      customer_name: joinedCustomerNames || null,
       payment_method: formPaymentMethod || null,
       payment_sequence: formPaymentSeq ? parseInt(formPaymentSeq, 10) : null,
       reference: formReference.trim() || null,
@@ -641,58 +670,28 @@ function SalesVsCollectionContent() {
               </select>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Amount (BDT) *
-              </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500 font-bold text-xs">
-                  ৳
-                </span>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  required
-                  placeholder="e.g. 50000"
-                  value={formAmount}
-                  onChange={(e) => setFormAmount(e.target.value)}
-                  className="w-full border border-slate-300 rounded pl-7 pr-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
-                />
-              </div>
-            </div>
-
+            {/* Amount and Payment Sequence */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Customer Name(s)
+                  Amount (BDT) *
                 </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Mr. Farhan, Mrs. Sabrina (use comma for multiple)"
-                  value={formCustomerName}
-                  onChange={(e) => setFormCustomerName(e.target.value)}
-                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
-                />
-                {formCustomerName.includes(",") && (
-                  <div className="flex flex-wrap gap-1 mt-1.5">
-                    <span className="text-[10px] text-slate-600 font-bold self-center mr-1">Joint:</span>
-                    {formCustomerName
-                      .split(",")
-                      .map((n) => n.trim())
-                      .filter(Boolean)
-                      .map((n, i) => (
-                        <span
-                          key={i}
-                          className="inline-block bg-green-50 text-green-800 border border-green-200 text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                        >
-                          {n}
-                        </span>
-                      ))}
-                  </div>
-                )}
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500 font-bold text-xs">
+                    ৳
+                  </span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    required
+                    placeholder="e.g. 50000"
+                    value={formAmount}
+                    onChange={(e) => setFormAmount(e.target.value)}
+                    className="w-full border border-slate-300 rounded pl-7 pr-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
+                  />
+                </div>
               </div>
-
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
@@ -707,6 +706,63 @@ function SalesVsCollectionContent() {
                   className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
                 />
               </div>
+            </div>
+
+            {/* Customer Name(s) - Progressive Dynamic Fields */}
+            <div className="bg-slate-50/70 p-3 rounded-lg border border-slate-200 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                  Customer Name(s)
+                </label>
+                {formCustomerNames.filter((n) => n.trim()).length > 1 && (
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    Joint / Multi Customer ({formCustomerNames.filter((n) => n.trim()).length})
+                  </span>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                {formCustomerNames.map((name, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <span className="text-[11px] font-semibold text-slate-600 w-24 shrink-0">
+                      {idx === 0 ? "Customer 1:" : `Customer ${idx + 1} (Opt):`}
+                    </span>
+                    <input
+                      type="text"
+                      placeholder={
+                        idx === 0
+                          ? "e.g. Mr. Farhan Ahmed"
+                          : `e.g. Customer ${idx + 1} / Joint buyer name`
+                      }
+                      value={name}
+                      onChange={(e) => handleCustomerNameChange(idx, e.target.value)}
+                      className="flex-1 border border-slate-300 rounded px-3 py-1.5 text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
+                    />
+                    {idx > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveCustomer(idx)}
+                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                        title={`Remove Customer ${idx + 1}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Show button when the current last customer field has text */}
+              {formCustomerNames[formCustomerNames.length - 1]?.trim().length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleAddNextCustomer}
+                  className="w-full mt-1 py-1.5 px-3 border border-dashed border-emerald-300 hover:border-emerald-500 rounded text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50/50 hover:bg-emerald-50 flex items-center justify-center gap-1.5 transition-all"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>+ Add Customer {formCustomerNames.length + 1} (Optional)</span>
+                </button>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
