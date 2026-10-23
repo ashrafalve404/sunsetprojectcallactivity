@@ -56,9 +56,11 @@ class SalesCollectionEntry(Base):
     payment_sequence: Mapped[int | None] = mapped_column(nullable=True)
 
     customer_name: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    payment_method: Mapped[str | None] = mapped_column(String(50), nullable=True)
     reference: Mapped[str | None] = mapped_column(String(200), nullable=True)
 
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

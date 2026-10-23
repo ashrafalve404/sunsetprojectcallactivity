@@ -36,6 +36,61 @@ import {
   formatBDT,
 } from "@/lib/utils";
 
+function getPaymentMethodBadge(method?: string | null) {
+  if (!method) return <span className="text-slate-400">—</span>;
+  const m = method.toLowerCase();
+  switch (m) {
+    case "cash":
+      return (
+        <span className="inline-flex items-center gap-1 font-semibold text-[11px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
+          💵 Cash
+        </span>
+      );
+    case "cheque":
+      return (
+        <span className="inline-flex items-center gap-1 font-semibold text-[11px] px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200">
+          🏦 Cheque
+        </span>
+      );
+    case "bkash":
+      return (
+        <span className="inline-flex items-center gap-1 font-semibold text-[11px] px-2 py-0.5 rounded bg-pink-50 text-pink-800 border border-pink-200">
+          📱 bKash
+        </span>
+      );
+    case "nagad":
+      return (
+        <span className="inline-flex items-center gap-1 font-semibold text-[11px] px-2 py-0.5 rounded bg-orange-50 text-orange-800 border border-orange-200">
+          📱 Nagad
+        </span>
+      );
+    case "rocket":
+      return (
+        <span className="inline-flex items-center gap-1 font-semibold text-[11px] px-2 py-0.5 rounded bg-purple-50 text-purple-800 border border-purple-200">
+          📱 Rocket
+        </span>
+      );
+    case "bank_transfer":
+      return (
+        <span className="inline-flex items-center gap-1 font-semibold text-[11px] px-2 py-0.5 rounded bg-indigo-50 text-indigo-800 border border-indigo-200">
+          🏛️ Bank Transfer
+        </span>
+      );
+    case "pos":
+      return (
+        <span className="inline-flex items-center gap-1 font-semibold text-[11px] px-2 py-0.5 rounded bg-cyan-50 text-cyan-800 border border-cyan-200">
+          💳 POS / Card
+        </span>
+      );
+    default:
+      return (
+        <span className="inline-flex items-center gap-1 font-semibold text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-200">
+          {method}
+        </span>
+      );
+  }
+}
+
 function SalesVsCollectionContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -62,6 +117,7 @@ function SalesVsCollectionContent() {
   const [formCategory, setFormCategory] = useState<SalesCollectionCategory>("new_sales_collection");
   const [formAmount, setFormAmount] = useState<string>("");
   const [formCustomerName, setFormCustomerName] = useState<string>("");
+  const [formPaymentMethod, setFormPaymentMethod] = useState<string>("cash");
   const [formPaymentSeq, setFormPaymentSeq] = useState<string>("");
   const [formReference, setFormReference] = useState<string>("");
   const [formNotes, setFormNotes] = useState<string>("");
@@ -168,6 +224,7 @@ function SalesVsCollectionContent() {
     setFormCategory("new_sales_collection");
     setFormAmount("");
     setFormCustomerName("");
+    setFormPaymentMethod("cash");
     setFormPaymentSeq("");
     setFormReference("");
     setFormNotes("");
@@ -180,6 +237,7 @@ function SalesVsCollectionContent() {
     setFormCategory(entry.category);
     setFormAmount(String(entry.amount));
     setFormCustomerName(entry.customer_name || "");
+    setFormPaymentMethod(entry.payment_method || "cash");
     setFormPaymentSeq(entry.payment_sequence ? String(entry.payment_sequence) : "");
     setFormReference(entry.reference || "");
     setFormNotes(entry.notes || "");
@@ -209,6 +267,7 @@ function SalesVsCollectionContent() {
       is_collection: isCollection,
       amount: amt,
       customer_name: formCustomerName.trim() || null,
+      payment_method: formPaymentMethod || null,
       payment_sequence: formPaymentSeq ? parseInt(formPaymentSeq, 10) : null,
       reference: formReference.trim() || null,
       notes: formNotes.trim() || null,
@@ -440,6 +499,7 @@ function SalesVsCollectionContent() {
                   <th className="py-2.5 px-3">Type</th>
                   <th className="py-2.5 px-3 text-right">Amount (BDT)</th>
                   <th className="py-2.5 px-3">Customer Name</th>
+                  <th className="py-2.5 px-3">Method</th>
                   <th className="py-2.5 px-3">Seq #</th>
                   <th className="py-2.5 px-3">Reference / Notes</th>
                   {(!isLocked || isAdmin) && <th className="py-2.5 px-3 text-right">Actions</th>}
@@ -449,7 +509,7 @@ function SalesVsCollectionContent() {
                 {entries.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={(!isLocked || isAdmin) ? 7 : 6}
+                      colSpan={(!isLocked || isAdmin) ? 8 : 7}
                       className="py-10 text-center text-slate-400"
                     >
                       No financial transactions recorded for this day yet.
@@ -499,7 +559,9 @@ function SalesVsCollectionContent() {
                             "—"
                           )}
                         </td>
-
+                        <td className="py-3 px-3">
+                          {getPaymentMethodBadge(entry.payment_method)}
+                        </td>
                         <td className="py-3 px-3 text-slate-600">
                           {entry.payment_sequence ? `#${entry.payment_sequence}` : "—"}
                         </td>
@@ -647,17 +709,53 @@ function SalesVsCollectionContent() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                Reference / Cheque #
-              </label>
-              <input
-                type="text"
-                placeholder="Cheque number, MR slip, or transaction ID"
-                value={formReference}
-                onChange={(e) => setFormReference(e.target.value)}
-                className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Payment Method *
+                </label>
+                <select
+                  value={formPaymentMethod}
+                  onChange={(e) => setFormPaymentMethod(e.target.value)}
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
+                >
+                  <option value="cash">💵 Cash</option>
+                  <option value="cheque">🏦 Cheque</option>
+                  <optgroup label="Mobile Banking">
+                    <option value="bkash">📱 bKash</option>
+                    <option value="nagad">📱 Nagad</option>
+                    <option value="rocket">📱 Rocket</option>
+                  </optgroup>
+                  <optgroup label="Bank & Card">
+                    <option value="bank_transfer">🏛️ Online Bank Transfer / BEFTN</option>
+                    <option value="pos">💳 POS / Card Payment</option>
+                  </optgroup>
+                  <option value="other">📝 Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Reference / Slip # / Trx ID
+                </label>
+                <input
+                  type="text"
+                  placeholder={
+                    formPaymentMethod === "cheque"
+                      ? "e.g. Bank name & Cheque #"
+                      : formPaymentMethod === "bkash" || formPaymentMethod === "nagad" || formPaymentMethod === "rocket"
+                      ? "e.g. Transaction ID / TrxID"
+                      : formPaymentMethod === "pos"
+                      ? "e.g. POS Card Slip / Approval #"
+                      : formPaymentMethod === "bank_transfer"
+                      ? "e.g. Bank Name / Transfer Ref"
+                      : "MR slip, receipt #, or reference"
+                  }
+                  value={formReference}
+                  onChange={(e) => setFormReference(e.target.value)}
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
+                />
+              </div>
             </div>
 
             <div>

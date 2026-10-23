@@ -194,6 +194,20 @@ export const SALES_CATEGORIES: {
   { key: "other_collection", label: "Other Collection", isCollection: true, group: "other" },
 ];
 
+export const PAYMENT_METHODS = [
+
+  { key: "cash", label: "Cash" },
+  { key: "cheque", label: "Cheque" },
+  { key: "bkash", label: "bKash" },
+  { key: "nagad", label: "Nagad" },
+  { key: "rocket", label: "Rocket" },
+  { key: "bank_transfer", label: "Bank Transfer (Online / BEFTN)" },
+  { key: "pos", label: "POS / Card Payment" },
+  { key: "other", label: "Other" },
+] as const;
+
+export type PaymentMethodKey = (typeof PAYMENT_METHODS)[number]["key"];
+
 export interface SalesCollectionEntry {
   id: number;
   report_id: number;
@@ -201,11 +215,13 @@ export interface SalesCollectionEntry {
   is_collection: boolean;
   amount: number;
   customer_name?: string | null;
+  payment_method?: string | null;
   payment_sequence?: number | null;
   reference?: string | null;
   notes?: string | null;
   created_at?: string;
 }
+
 
 export interface FinancialTotals {
   actual_collection_total: number;

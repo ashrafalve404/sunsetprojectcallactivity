@@ -503,14 +503,15 @@ function PrintableReportContent() {
                   <th className="py-2 px-2 text-center">Type</th>
                   <th className="py-2 px-3 text-right">Amount (BDT)</th>
                   <th className="py-2 px-3">Customer Name</th>
+                  <th className="py-2 px-2 text-center">Method</th>
                   <th className="py-2 px-2 text-center">Seq #</th>
-                  <th className="py-2 px-3">Reference / Cheque Details</th>
+                  <th className="py-2 px-3">Reference / Slip Details</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {salesEntries.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-3 px-3 text-center text-slate-500 italic">
+                    <td colSpan={7} className="py-3 px-3 text-center text-slate-500 italic">
                       No financial transactions recorded on this reporting date.
                     </td>
                   </tr>
@@ -553,12 +554,22 @@ function PrintableReportContent() {
                             "—"
                           )}
                         </td>
+                        <td className="py-1.5 px-2 text-center">
+                          {s.payment_method ? (
+                            <span className="font-bold text-[10px] text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded uppercase border border-slate-200">
+                              {s.payment_method.replace("_", " ")}
+                            </span>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
                         <td className="py-1.5 px-2 text-center text-slate-600">
                           {s.payment_sequence ? `#${s.payment_sequence}` : "—"}
                         </td>
                         <td className="py-1.5 px-3 text-slate-600">
                           {s.reference || s.notes || "—"}
                         </td>
+
                       </tr>
                     );
                   })

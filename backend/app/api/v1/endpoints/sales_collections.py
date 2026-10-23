@@ -51,9 +51,14 @@ async def create_sales_collection(
     "/sales-collections/{entry_id}",
     response_model=SalesCollectionEntryRead,
 )
+@router.put(
+    "/reports/{report_id}/sales-collections/{entry_id}",
+    response_model=SalesCollectionEntryRead,
+)
 async def update_sales_collection(
     entry_id: int,
     data: SalesCollectionEntryUpdate,
+    report_id: int | None = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -62,10 +67,13 @@ async def update_sales_collection(
 
 
 @router.delete("/sales-collections/{entry_id}", status_code=204)
+@router.delete("/reports/{report_id}/sales-collections/{entry_id}", status_code=204)
 async def delete_sales_collection(
     entry_id: int,
+    report_id: int | None = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     svc = SalesService(db)
     await svc.delete_entry(entry_id, current_user)
+

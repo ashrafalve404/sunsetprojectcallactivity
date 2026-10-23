@@ -14,6 +14,7 @@ class SalesCollectionEntryBase(BaseModel):
     amount: Decimal = Field(..., decimal_places=2, ge=Decimal("0"))
     payment_sequence: Optional[int] = Field(None, ge=1)
     customer_name: Optional[str] = Field(None, max_length=500)
+    payment_method: Optional[str] = Field(None, max_length=50)
     reference: Optional[str] = Field(None, max_length=200)
     notes: Optional[str] = None
 
@@ -32,8 +33,10 @@ class SalesCollectionEntryUpdate(BaseModel):
     amount: Optional[Decimal] = Field(None, decimal_places=2, ge=Decimal("0"))
     payment_sequence: Optional[int] = Field(None, ge=1)
     customer_name: Optional[str] = Field(None, max_length=500)
+    payment_method: Optional[str] = Field(None, max_length=50)
     reference: Optional[str] = Field(None, max_length=200)
     notes: Optional[str] = None
+
 
 
     @field_validator("amount", mode="before")
