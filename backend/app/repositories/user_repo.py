@@ -79,5 +79,22 @@ class UserRepository:
         return user
 
     async def delete(self, user: User) -> None:
+        from app.models.report import DailyActivityReport
+        from app.models.targets import DailyTargets
+
+        # Cleanly delete all associated reports for this employee
+        # (their call_entries, meeting_entries, and sales_collection_entries cascade automatically)
+        reports_stmt = select(DailyActivityReport).where(DailyActivityReport.employee_id == user.id)
+        reports_res = await self.db.execute(reports_stmt)
+        reports = list(reports_res.scalars().all())
+        for r in reports:
+            await self.db.delete(r)
+
+        # Cleanly delete associated targets for this employee
+        targets_stmt = select(DailyTargets).where(DailyTargets.employee_id == user.id)
+        targets_res = await self.db.execute(targets_stmt)
+        for t in list(targets_res.scalars().all()):
+            await self.db.delete(t)
+
         await self.db.delete(user)
         await self.db.flush()

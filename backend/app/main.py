@@ -50,7 +50,19 @@ app.add_middleware(
 app.include_router(api_router, prefix="/api/v1")
 
 
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    import logging
+    logging.getLogger("uvicorn.error").error(f"Unhandled server error: {exc}", exc_info=True)
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal server error: {str(exc)}"}
+    )
+
+
 @app.get("/health", tags=["Health"])
 async def health_check():
     """Simple health check endpoint."""
     return {"status": "ok", "app": settings.APP_NAME, "version": settings.APP_VERSION}
+

@@ -39,10 +39,18 @@ class User(Base):
 
     # ── Relationships ─────────────────────────────────────────────────────────
     reports: Mapped[list["DailyActivityReport"]] = relationship(  # noqa: F821
-        "DailyActivityReport", back_populates="employee", lazy="select"
+        "DailyActivityReport",
+        back_populates="employee",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        lazy="select",
     )
     targets: Mapped[list["DailyTargets"]] = relationship(  # noqa: F821
-        "DailyTargets", back_populates="employee", lazy="select"
+        "DailyTargets",
+        back_populates="employee",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        lazy="select",
     )
 
     def __repr__(self) -> str:
