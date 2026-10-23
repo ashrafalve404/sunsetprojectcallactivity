@@ -284,3 +284,30 @@ export interface SystemSetting {
   value: string;
   description?: string | null;
 }
+
+export interface ReminderItem {
+  id: string;
+  type: "follow_up_today" | "follow_up_overdue" | "report_submission" | "commitment_due" | "slot_nudge" | string;
+  severity: "urgent" | "warning" | "info";
+  title: string;
+  message: string;
+  client_name?: string | null;
+  phone_number?: string | null;
+  category?: string | null;
+  date?: string | null;
+  link?: string | null;
+  action_label?: string | null;
+}
+
+export interface ReminderSummary {
+  total_count: number;
+  follow_ups_today_count: number;
+  overdue_count: number;
+  unsubmitted_report: boolean;
+  slot_nudge?: string | null;
+}
+
+export interface RemindersResponse {
+  summary: ReminderSummary;
+  reminders: ReminderItem[];
+}

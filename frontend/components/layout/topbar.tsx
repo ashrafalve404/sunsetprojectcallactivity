@@ -4,6 +4,7 @@ import React from "react";
 import { Menu, LogOut, Calendar, ShieldCheck, User as UserIcon } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { formatReadableDate, getDhakaToday } from "@/lib/utils";
+import { NotificationBell } from "./notification-bell";
 
 interface TopbarProps {
   title: string;
@@ -42,14 +43,17 @@ export function Topbar({ title, subtitle, onOpenMobileMenu }: TopbarProps) {
         </div>
       </div>
 
-      {/* Right: Date, User info, Logout */}
-      <div className="flex items-center gap-4">
+      {/* Right: Date, Notification Bell, User info, Logout */}
+      <div className="flex items-center gap-3 sm:gap-4">
         {/* Dhaka Reporting Date */}
         <div className="hidden lg:flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-300 px-2.5 py-1.5 rounded-md">
           <Calendar className="w-3.5 h-3.5 text-green-700" />
           <span>{formatReadableDate(todayDhaka)}</span>
           <span className="text-[10px] text-slate-500 font-mono">(Dhaka)</span>
         </div>
+
+        {/* Notifications & Reminders Bell */}
+        {user && <NotificationBell />}
 
         {/* User Badge */}
         {user && (

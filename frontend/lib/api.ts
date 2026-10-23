@@ -16,6 +16,7 @@ import {
   SalesCollectionResponse,
   SystemSetting,
   User,
+  RemindersResponse,
 } from "@/types";
 
 const API_BASE =
@@ -530,6 +531,12 @@ export const api = {
         method: "PUT",
         body: JSON.stringify(data),
       });
+    },
+  },
+  reminders: {
+    get: async (employeeId?: number): Promise<RemindersResponse> => {
+      const q = employeeId ? `?employee_id=${employeeId}` : "";
+      return request<RemindersResponse>(`/reminders${q}`);
     },
   },
 };

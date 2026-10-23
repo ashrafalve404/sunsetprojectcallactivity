@@ -12,6 +12,7 @@ from app.api.v1.endpoints import (
     reports,
     sales_collections,
     settings,
+    reminders,
 )
 
 api_router = APIRouter()
@@ -24,3 +25,4 @@ api_router.include_router(sales_collections.router)
 api_router.include_router(dashboard.router)
 api_router.include_router(employees.router)
 api_router.include_router(settings.router)
+api_router.include_router(reminders.router)
