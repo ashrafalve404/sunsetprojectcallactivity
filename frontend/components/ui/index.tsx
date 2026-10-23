@@ -170,34 +170,54 @@ export function StatCard({ title, value, subtitle, icon, badge }: StatCardProps)
   );
 }
 
-// ─── Modal / Dialog ──────────────────────────────────────────────────────────
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   description?: string;
   children: React.ReactNode;
+  maxWidth?: string;
 }
 
-export function Modal({ isOpen, onClose, title, description, children }: ModalProps) {
+export function Modal({
+  isOpen,
+  onClose,
+  title,
+  description,
+  children,
+  maxWidth = "max-w-lg",
+}: ModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="bg-white rounded-lg shadow-xl border border-slate-200 w-full max-w-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
-            {description && <p className="text-xs text-slate-500 mt-0.5">{description}</p>}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-150 overflow-y-auto">
+      <div
+        className={cn(
+          "bg-white rounded-xl shadow-2xl border border-slate-200 w-full flex flex-col max-h-[92vh] sm:max-h-[88vh] overflow-hidden my-auto animate-in zoom-in-95 duration-150",
+          maxWidth
+        )}
+      >
+        <div className="px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white sticky top-0 z-10">
+          <div className="pr-3">
+            <h3 className="text-base sm:text-lg font-semibold text-slate-900 leading-snug">
+              {title}
+            </h3>
+            {description && (
+              <p className="text-xs text-slate-500 mt-0.5">{description}</p>
+            )}
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-100"
+            className="text-slate-400 hover:text-slate-600 p-1.5 rounded-md hover:bg-slate-100 transition-colors shrink-0"
+            title="Close"
           >
             ✕
           </button>
         </div>
-        <div className="p-6">{children}</div>
+        <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain flex-1">
+          {children}
+        </div>
       </div>
     </div>
   );
