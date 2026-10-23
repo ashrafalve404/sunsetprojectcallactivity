@@ -95,9 +95,27 @@ function DailyCallActivityContent() {
   const [adminDeleteModalOpen, setAdminDeleteModalOpen] = useState(false);
   const [deletingReport, setDeletingReport] = useState(false);
 
-  // Mobile App View vs Spreadsheet Table
-  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
+  // Mobile App View vs Spreadsheet Table: Default to "table" on PC, "cards" on mobile
+  const [viewMode, setViewMode] = useState<"cards" | "table">("table");
+  const [hasUserSwitchedView, setHasUserSwitchedView] = useState(false);
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<string>("all");
+
+  // Automatically adjust view mode on mount based on screen width (Table on PC >= 768px, Cards on Mobile < 768px)
+  // Stops auto-adjusting once user manually toggles
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleResize = () => {
+      if (!hasUserSwitchedView) {
+        const isMobile = window.innerWidth < 768;
+        setViewMode(isMobile ? "cards" : "table");
+      }
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [hasUserSwitchedView]);
 
   // Priority Client Follow-Up Directory (HP / FUB / P Leads)
   const [clientContacts, setClientContacts] = useState<ClientContactEntry[]>([]);
@@ -555,7 +573,10 @@ function DailyCallActivityContent() {
                 <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
                   <button
                     type="button"
-                    onClick={() => setViewMode("cards")}
+                    onClick={() => {
+                      setHasUserSwitchedView(true);
+                      setViewMode("cards");
+                    }}
                     className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
                       viewMode === "cards"
                         ? "bg-white text-emerald-800 shadow-2xs font-bold"
@@ -568,7 +589,10 @@ function DailyCallActivityContent() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setViewMode("table")}
+                    onClick={() => {
+                      setHasUserSwitchedView(true);
+                      setViewMode("table");
+                    }}
                     className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
                       viewMode === "table"
                         ? "bg-white text-emerald-800 shadow-2xs font-bold"
