@@ -130,7 +130,7 @@ async def performance_leaderboard(
     df = date_from or start_date or _default_from()
     dt = date_to or end_date or date.today()
     target_emp_id = employee_id
-    if current_user.role != UserRole.ADMIN and employee_id is not None:
+    if current_user.role != UserRole.ADMIN:
         target_emp_id = current_user.id
     svc = DashboardService(db)
     return await svc.get_performance_leaderboard(df, dt, target_emp_id)

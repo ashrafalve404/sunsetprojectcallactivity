@@ -17,6 +17,7 @@ import {
   Flame,
   ArrowUpDown,
   ExternalLink,
+  Target,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, Badge, Skeleton, Button } from "@/components/ui";
 import { PerformanceLeaderboardResponse, EmployeeLeaderboardItem } from "@/types";
@@ -175,6 +176,139 @@ export function KPILeaderboard({
       </div>
     );
   };
+
+  const isPersonalView = data && data.rankings.length === 1 && (!data.champions || data.champions.length === 0);
+  const personal = isPersonalView ? data.rankings[0] : null;
+
+  if (!loading && isPersonalView && personal) {
+    return (
+      <Card className="border border-slate-200/80 shadow-xs overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 text-white p-4 sm:p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <CardTitle className="text-base sm:text-lg font-bold flex items-center gap-2 text-white">
+                <Target className="w-5 h-5 text-emerald-400" />
+                My Daily KPI Targets & Progress
+              </CardTitle>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Your assigned daily targets and real-time achievement progress today
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 self-start sm:self-center">
+              {getStatusBadge(personal.status, personal.overall_score_pct)}
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-4 sm:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Dialed */}
+            <div className="p-4 rounded-xl border border-slate-200/80 bg-gradient-to-br from-blue-50/50 to-white shadow-2xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-600">Dialed Calls</span>
+                <div className="p-1.5 rounded-md bg-blue-100 text-blue-700">
+                  <PhoneCall className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="flex items-baseline justify-between">
+                <span className="text-2xl font-extrabold text-slate-900">
+                  {personal.dialed_calls}
+                  <span className="text-sm font-normal text-slate-400 ml-1">/ {personal.dialed_target}</span>
+                </span>
+                <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                  {personal.dialed_pct}%
+                </span>
+              </div>
+              {renderProgressBar(personal.dialed_pct)}
+              <p className="text-[11px] text-slate-500 pt-1 font-medium">
+                {personal.dialed_calls >= personal.dialed_target
+                  ? "Target reached! 🎉"
+                  : `${personal.dialed_target - personal.dialed_calls} calls remaining`}
+              </p>
+            </div>
+
+            {/* Connected */}
+            <div className="p-4 rounded-xl border border-slate-200/80 bg-gradient-to-br from-emerald-50/50 to-white shadow-2xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-600">Connected Calls</span>
+                <div className="p-1.5 rounded-md bg-emerald-100 text-emerald-700">
+                  <PhoneForwarded className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="flex items-baseline justify-between">
+                <span className="text-2xl font-extrabold text-slate-900">
+                  {personal.connected_calls}
+                  <span className="text-sm font-normal text-slate-400 ml-1">/ {personal.connected_target}</span>
+                </span>
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  {personal.connected_pct}%
+                </span>
+              </div>
+              {renderProgressBar(personal.connected_pct)}
+              <p className="text-[11px] text-slate-500 pt-1 font-medium">
+                {personal.connected_calls >= personal.connected_target
+                  ? "Target reached! 🎉"
+                  : `${personal.connected_target - personal.connected_calls} connected calls remaining`}
+              </p>
+            </div>
+
+            {/* Outdoor Visits */}
+            <div className="p-4 rounded-xl border border-slate-200/80 bg-gradient-to-br from-purple-50/50 to-white shadow-2xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-600">Outdoor Client Visits</span>
+                <div className="p-1.5 rounded-md bg-purple-100 text-purple-700">
+                  <MapPin className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="flex items-baseline justify-between">
+                <span className="text-2xl font-extrabold text-slate-900">
+                  {personal.outdoor_visits}
+                  <span className="text-sm font-normal text-slate-400 ml-1">/ {personal.outdoor_target}</span>
+                </span>
+                <span className="text-xs font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
+                  {personal.outdoor_pct}%
+                </span>
+              </div>
+              {renderProgressBar(personal.outdoor_pct)}
+              <p className="text-[11px] text-slate-500 pt-1 font-medium">
+                {personal.outdoor_visits >= personal.outdoor_target
+                  ? "Target reached! 🎉"
+                  : `${personal.outdoor_target - personal.outdoor_visits} client visits remaining`}
+              </p>
+            </div>
+
+            {/* Collections */}
+            <div className="p-4 rounded-xl border border-slate-200/80 bg-gradient-to-br from-amber-50/50 to-white shadow-2xs space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-600">Collections (BDT)</span>
+                <div className="p-1.5 rounded-md bg-amber-100 text-amber-700">
+                  <Banknote className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="flex items-baseline justify-between">
+                <span className="text-xl font-extrabold text-slate-900 truncate">
+                  {formatBDT(personal.actual_collections)}
+                </span>
+                <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 ml-1">
+                  {personal.collection_pct}%
+                </span>
+              </div>
+              <div className="text-[10px] text-slate-400 truncate">
+                Target: {formatBDT(personal.collection_target)}
+              </div>
+              {renderProgressBar(personal.collection_pct)}
+              <p className="text-[11px] text-slate-500 pt-1 font-medium truncate">
+                {personal.actual_collections >= personal.collection_target
+                  ? "Target reached! 🎉"
+                  : `${formatBDT(personal.collection_target - personal.actual_collections)} remaining`}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="border border-slate-200/80 shadow-xs overflow-hidden">

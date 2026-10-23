@@ -420,7 +420,7 @@ class DashboardService:
             item.rank = idx
 
         champions: list[KPIChampion] = []
-        if rankings:
+        if rankings and employee_id is None:
             top_caller = max(rankings, key=lambda r: r.dialed_calls)
             top_conn = max(rankings, key=lambda r: r.connected_calls)
             top_visits = max(rankings, key=lambda r: r.outdoor_visits)
