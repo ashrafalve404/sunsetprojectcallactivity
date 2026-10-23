@@ -190,13 +190,21 @@ function PrintableReportContent() {
             <ArrowLeft className="w-4 h-4 mr-1.5" />
             Back
           </Button>
-          <div>
-            <h1 className="text-sm font-bold text-slate-900 leading-tight">
-              Print Preview: Daily Activity Report #{report.id}
-            </h1>
-            <p className="text-xs text-slate-500">
-              {formatReadableDate(report.report_date)} • {report.employee_name || `Employee #${report.employee_id}`}
-            </p>
+          <div className="flex items-center gap-2.5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/Sunset-Group-Logo.png"
+              alt="Sunset Group Logo"
+              className="h-8 w-auto object-contain shrink-0"
+            />
+            <div>
+              <h1 className="text-sm font-bold text-slate-900 leading-tight">
+                Print Preview: Daily Activity Report #{report.id}
+              </h1>
+              <p className="text-xs text-slate-500">
+                {formatReadableDate(report.report_date)} • {report.employee_name || `Employee #${report.employee_id}`}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -228,18 +236,22 @@ function PrintableReportContent() {
         {/* Document Header */}
         <div className="border-b-2 border-green-800 pb-4 mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="bg-green-800 text-white font-extrabold text-sm px-2.5 py-1 rounded tracking-wider">
-                  SUNSET
-                </span>
-                <span className="text-base font-extrabold text-slate-900 tracking-tight">
+            <div className="flex items-center gap-3.5">
+              {/* Sunset Group Logo in Small Size */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/Sunset-Group-Logo.png"
+                alt="Sunset Group Logo"
+                className="h-12 w-auto object-contain shrink-0 print:h-11"
+              />
+              <div>
+                <h1 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight leading-tight">
                   SUNSET GROUP REAL ESTATE
-                </span>
+                </h1>
+                <p className="text-[10.5px] text-slate-600 mt-0.5 font-semibold uppercase tracking-wider">
+                  Sales & Corporate Marketing Division • Daily Performance & Call Activity Report
+                </p>
               </div>
-              <p className="text-[11px] text-slate-600 mt-1 font-semibold uppercase tracking-wider">
-                Sales & Corporate Marketing Division • Daily Performance & Call Activity Report
-              </p>
             </div>
 
             <div className="text-right sm:text-right">
