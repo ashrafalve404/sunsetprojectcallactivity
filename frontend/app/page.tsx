@@ -130,84 +130,42 @@ function DashboardContent() {
       subtitle="Overview of daily call activities, customer meetings, and collections"
     >
       <div className="space-y-6">
-        {/* ── Today's Action Items & Reminders Banner ─────────────────────── */}
+        {/* ── Today's Reminders Banner (Simple & Compact) ─────────────────── */}
         {reminders.length > 0 && (
-          <div className="bg-gradient-to-r from-emerald-900 to-green-950 text-white rounded-xl shadow-md p-4 sm:p-5 border border-emerald-800">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-emerald-800/60">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-emerald-800/80 rounded-lg text-emerald-200">
-                  <Bell className="w-5 h-5 animate-bounce" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold tracking-wide">
-                    Action Items & Follow-up Reminders
-                  </h3>
-                  <p className="text-xs text-emerald-300">
-                    {reminderSummary?.slot_nudge || "Important follow-ups and submission tasks for today."}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="bg-emerald-800/90 text-emerald-200 border border-emerald-700 text-xs font-bold px-2.5 py-1 rounded-full">
-                  {reminders.length} Pending {reminders.length === 1 ? "Item" : "Items"}
-                </span>
+          <div className="bg-emerald-900 text-white rounded-lg p-2.5 sm:px-4 sm:py-2.5 flex flex-wrap items-center justify-between gap-2.5 text-xs shadow-xs border border-emerald-800">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="flex items-center gap-1.5 font-bold text-white shrink-0">
+                <Bell className="w-4 h-4 text-emerald-300" />
+                Reminders ({reminders.length}):
+              </span>
+
+              {reminders.slice(0, 3).map((r) => (
                 <Link
-                  href="/calls"
-                  className="text-xs font-semibold text-emerald-200 hover:text-white underline hover:no-underline ml-1"
+                  key={r.id}
+                  href={r.link || "/calls"}
+                  className="inline-flex items-center gap-1.5 bg-emerald-800/90 hover:bg-emerald-700 text-emerald-100 hover:text-white px-2.5 py-1 rounded text-xs transition-colors"
                 >
-                  Go to Call Activity →
+                  <span className="font-semibold truncate max-w-[200px]">{r.title}</span>
+                  {r.phone_number && (
+                    <span className="text-[10px] text-emerald-300 font-mono">({r.phone_number})</span>
+                  )}
+                  <ChevronRight className="w-3 h-3 text-emerald-300 shrink-0" />
                 </Link>
-              </div>
+              ))}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-3.5">
-              {reminders.slice(0, 3).map((r) => (
-                <div
-                  key={r.id}
-                  className="bg-emerald-950/60 border border-emerald-800/80 rounded-lg p-3 flex flex-col justify-between hover:border-emerald-600 transition-colors"
-                >
-                  <div>
-                    <div className="flex items-center justify-between gap-1 mb-1">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
-                        {r.type.replace(/_/g, " ")}
-                      </span>
-                      {r.category && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-800 text-emerald-200">
-                          {r.category}
-                        </span>
-                      )}
-                    </div>
-                    <h4 className="text-xs font-bold text-white truncate">
-                      {r.title}
-                    </h4>
-                    <p className="text-[11px] text-emerald-200/90 mt-0.5 line-clamp-2">
-                      {r.message}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-2 mt-2.5 pt-2 border-t border-emerald-850">
-                    {r.phone_number ? (
-                      <a
-                        href={`tel:${r.phone_number}`}
-                        className="inline-flex items-center gap-1 text-[11px] font-bold text-white bg-green-600 hover:bg-green-500 px-2.5 py-1 rounded shadow-2xs transition-colors"
-                      >
-                        <Phone className="w-3 h-3" />
-                        <span>Call</span>
-                      </a>
-                    ) : <span />}
-
-                    {r.link && (
-                      <Link
-                        href={r.link}
-                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-300 hover:text-white"
-                      >
-                        <span>{r.action_label || "View"}</span>
-                        <ChevronRight className="w-3 h-3" />
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              ))}
+            <div className="flex items-center gap-2.5 shrink-0">
+              {reminderSummary?.slot_nudge && (
+                <span className="text-[11px] font-medium text-emerald-200 bg-emerald-950/70 px-2 py-0.5 rounded border border-emerald-800">
+                  {reminderSummary.slot_nudge}
+                </span>
+              )}
+              <Link
+                href="/calls"
+                className="text-xs font-semibold text-emerald-200 hover:text-white underline hover:no-underline"
+              >
+                View all →
+              </Link>
             </div>
           </div>
         )}

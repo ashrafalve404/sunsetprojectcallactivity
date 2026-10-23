@@ -61,13 +61,10 @@ class ReminderService:
                     type="report_submission",
                     severity="urgent" if is_evening else "warning",
                     title="Daily Report Not Submitted" if is_evening else "Daily Report Pending",
-                    message=(
-                        f"Your daily call activity report for today ({today_str}) is not submitted yet. "
-                        f"{'Please submit it before end of day!' if is_evening else 'Remember to log your activities.'}"
-                    ),
+                    message="Today's report is pending submission.",
                     date=today_str,
                     link=f"/calls?date={today_str}",
-                    action_label="Open & Submit",
+                    action_label="Submit",
                 )
             )
 
@@ -179,15 +176,15 @@ class ReminderService:
         # ── 4. Call Slot Mid-Day Nudge ────────────────────────────────────────
         slot_nudge_text = None
         if 10 <= hour < 13:
-            slot_nudge_text = "Slot 1 (10 AM – 1 PM): Morning cold & potential calls in progress."
+            slot_nudge_text = "Slot 1 (10 AM – 1 PM)"
         elif 13 <= hour < 14:
-            slot_nudge_text = "Slot 1 ended: Don't forget to enter your morning call counts!"
+            slot_nudge_text = "Slot 1 Ended"
         elif 14 <= hour < 17:
-            slot_nudge_text = "Slot 2 (2 PM – 5 PM): Afternoon follow-up session active."
+            slot_nudge_text = "Slot 2 (2 PM – 5 PM)"
         elif 17 <= hour < 18:
-            slot_nudge_text = "Slot 3 (5 PM – 6 PM): Final call slot. Wrap up and log numbers."
+            slot_nudge_text = "Slot 3 (5 PM – 6 PM)"
         elif hour >= 18:
-            slot_nudge_text = "End of Day: Review meetings and submit your daily report."
+            slot_nudge_text = "End of Day"
 
         summary = ReminderSummary(
             total_count=len(reminders),
