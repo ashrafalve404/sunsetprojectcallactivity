@@ -1406,11 +1406,12 @@ function DailyCallActivityContent() {
                 <span className="p-1 rounded bg-amber-100 text-amber-800">
                   <Flame className="w-4 h-4 text-orange-600" />
                 </span>
-                Hot & Follow-Up Client Directory (কাস্টমারদের নাম ও ফলো-আপ তালিকা)
+                Hot & Follow-Up Client Directory
               </CardTitle>
               <p className="text-xs text-slate-500 mt-0.5">
                 Record specific customer names, phone numbers, and next follow-up dates for high priority leads.
               </p>
+
             </div>
             {!isLocked && (
               <Button
@@ -1779,13 +1780,14 @@ function DailyCallActivityContent() {
                   onChange={(e) => setClientFormCategory(e.target.value as any)}
                   className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none"
                 >
-                  <option value="HP">HP — High Potential (উচ্চ আগ্রহী)</option>
-                  <option value="P">P — Potential (সাধারণ আগ্রহী)</option>
-                  <option value="FUB">FUB — Follow-Up Booked (পুনরায় কল)</option>
+                  <option value="HP">HP — High Potential</option>
+                  <option value="P">P — Potential</option>
+                  <option value="FUB">FUB — Follow-Up Booked</option>
                   <option value="CX">CX — Indoor CX / Site Meeting</option>
                   <option value="NI">NI — Not Interested</option>
                   <option value="Other">Other Lead</option>
                 </select>
+
               </div>
             </div>
 
