@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   UserCheck,
   Plus,
@@ -9,6 +9,7 @@ import {
   Trash2,
   CheckCircle2,
   XCircle,
+  X,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import {
@@ -32,9 +33,18 @@ export default function EmployeesPage() {
 
   const [employees, setEmployees] = useState<User[]>([]);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
+
+  // Debounce search input for backend query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   // Modals
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -65,7 +75,7 @@ export default function EmployeesPage() {
       const roleParam = roleFilter === "all" ? undefined : roleFilter;
 
       const data = await api.employees.list({
-        search: search.trim() || undefined,
+        search: debouncedSearch.trim() || undefined,
         role: roleParam,
         is_active: activeParam,
       });
@@ -82,11 +92,23 @@ export default function EmployeesPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, roleFilter, statusFilter]);
+  }, [debouncedSearch, roleFilter, statusFilter]);
 
   useEffect(() => {
     loadEmployees();
   }, [loadEmployees]);
+
+  // Instant client-side filter fallback so typing has 0ms perceived latency
+  const displayedEmployees = useMemo(() => {
+    if (!search.trim()) return employees;
+    const q = search.trim().toLowerCase();
+    return employees.filter(
+      (emp) =>
+        emp.full_name?.toLowerCase().includes(q) ||
+        emp.username?.toLowerCase().includes(q) ||
+        emp.email?.toLowerCase().includes(q)
+    );
+  }, [employees, search]);
 
   const openCreateModal = () => {
     setEditingEmployee(null);
@@ -215,8 +237,18 @@ export default function EmployeesPage() {
                     placeholder="Search by name, username or email..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full pl-9 pr-3 py-1.5 text-xs font-semibold text-slate-800 placeholder:text-slate-500 border border-slate-300 rounded focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
+                    className="w-full pl-9 pr-8 py-1.5 text-xs font-semibold text-slate-800 placeholder:text-slate-500 border border-slate-300 rounded focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
                   />
+                  {search && (
+                    <button
+                      type="button"
+                      onClick={() => setSearch("")}
+                      className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 p-0.5 rounded"
+                      title="Clear search"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
 
                 {/* Role filter */}
@@ -274,7 +306,7 @@ export default function EmployeesPage() {
               Staff Accounts Directory
             </CardTitle>
             <span className="text-xs text-slate-500">
-              {employees.length} {employees.length === 1 ? "account" : "accounts"}
+              {displayedEmployees.length} {displayedEmployees.length === 1 ? "account" : "accounts"}
             </span>
           </CardHeader>
           <div className="overflow-x-auto">
@@ -291,7 +323,7 @@ export default function EmployeesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {loading ? (
+                {loading && employees.length === 0 ? (
                   Array.from({ length: 4 }).map((_, i) => (
                     <tr key={i}>
                       <td className="py-3 px-4"><Skeleton className="h-4 w-32" /></td>
@@ -303,14 +335,14 @@ export default function EmployeesPage() {
                       <td className="py-3 px-3 text-right"><Skeleton className="h-4 w-12 ml-auto" /></td>
                     </tr>
                   ))
-                ) : employees.length === 0 ? (
+                ) : displayedEmployees.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-slate-400">
                       No employees match your search criteria.
                     </td>
                   </tr>
                 ) : (
-                  employees.map((emp) => (
+                  displayedEmployees.map((emp) => (
                     <tr key={emp.id} className="hover:bg-slate-50 transition-colors">
                       <td className="py-3 px-4 font-semibold text-slate-900">
                         {emp.full_name}

@@ -21,13 +21,22 @@ router = APIRouter(prefix="/employees", tags=["Employees"])
 async def list_employees(
     role: Optional[UserRole] = Query(None),
     is_active: Optional[bool] = Query(None),
+    search: Optional[str] = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     _: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
     repo = UserRepository(db)
-    return list(await repo.list_all(role=role, is_active=is_active, skip=skip, limit=limit))
+    return list(
+        await repo.list_all(
+            role=role,
+            is_active=is_active,
+            search=search,
+            skip=skip,
+            limit=limit,
+        )
+    )
 
 
 @router.post("", response_model=UserRead, status_code=201)

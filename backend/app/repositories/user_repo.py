@@ -40,6 +40,7 @@ class UserRepository:
         self,
         role: Optional[UserRole] = None,
         is_active: Optional[bool] = None,
+        search: Optional[str] = None,
         skip: int = 0,
         limit: int = 50,
     ) -> Sequence[User]:
@@ -48,6 +49,13 @@ class UserRepository:
             stmt = stmt.where(User.role == role)
         if is_active is not None:
             stmt = stmt.where(User.is_active == is_active)
+        if search and search.strip():
+            pattern = f"%{search.strip()}%"
+            stmt = stmt.where(
+                (User.full_name.ilike(pattern))
+                | (User.username.ilike(pattern))
+                | (User.email.ilike(pattern))
+            )
         stmt = stmt.offset(skip).limit(limit).order_by(User.id)
         result = await self.db.execute(stmt)
         return result.scalars().all()
@@ -56,6 +64,7 @@ class UserRepository:
         self,
         role: Optional[UserRole] = None,
         is_active: Optional[bool] = None,
+        search: Optional[str] = None,
     ) -> int:
         from sqlalchemy import func
         stmt = select(func.count(User.id))
@@ -63,6 +72,13 @@ class UserRepository:
             stmt = stmt.where(User.role == role)
         if is_active is not None:
             stmt = stmt.where(User.is_active == is_active)
+        if search and search.strip():
+            pattern = f"%{search.strip()}%"
+            stmt = stmt.where(
+                (User.full_name.ilike(pattern))
+                | (User.username.ilike(pattern))
+                | (User.email.ilike(pattern))
+            )
         result = await self.db.execute(stmt)
         return result.scalar_one()
 
