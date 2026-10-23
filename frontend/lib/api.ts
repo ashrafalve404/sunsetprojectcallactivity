@@ -6,6 +6,7 @@ import {
   AuthTokenResponse,
   CallActivityEntry,
   CallActivityResponse,
+  CarryForwardInfo,
   DashboardSummary,
   DailyTarget,
   MeetingActivityEntry,
@@ -254,7 +255,11 @@ export const api = {
         is_submitted: !!res?.is_submitted,
         entries,
         totals: res?.totals || ({} as any),
+        carry_forward: res?.carry_forward ?? null,
       };
+    },
+    getCarryForward: async (reportId: number): Promise<CarryForwardInfo> => {
+      return request<CarryForwardInfo>(`/reports/${reportId}/calls/carry-forward`);
     },
     upsert: async (
       reportId: number,

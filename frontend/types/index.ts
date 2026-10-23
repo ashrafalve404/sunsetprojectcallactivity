@@ -80,12 +80,29 @@ export interface CallSlotTotals {
   total_ni: number;
 }
 
+export interface CategoryCarryForward {
+  lead_category: string;
+  prev_till_today: number;
+  prev_hp: number;
+  prev_p: number;
+  prev_fub: number;
+  prev_ni: number;
+}
+
+export interface CarryForwardInfo {
+  employee_id: number;
+  employee_name: string | null;
+  previous_report_date: string | null;
+  categories: Record<string, CategoryCarryForward>;
+}
+
 export interface CallActivityResponse {
   report_id: number;
   report_date: string;
   is_submitted: boolean;
   entries: CallActivityEntry[];
   totals: CallSlotTotals;
+  carry_forward?: CarryForwardInfo | null;
 }
 
 export type MeetingMetricType =

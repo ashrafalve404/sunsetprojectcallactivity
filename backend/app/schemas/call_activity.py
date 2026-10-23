@@ -1,6 +1,7 @@
 """Pydantic schemas for CallActivityEntry."""
 from __future__ import annotations
 
+from datetime import date
 from typing import Any, List, Optional
 
 from pydantic import BaseModel, Field, model_validator
@@ -54,6 +55,23 @@ class CallEntriesUpsert(BaseModel):
     entries: List[CallEntryBase]
 
 
+class CategoryCarryForward(BaseModel):
+    lead_category: str
+    prev_till_today: int = 0
+    prev_hp: int = 0
+    prev_p: int = 0
+    prev_fub: int = 0
+    prev_ni: int = 0
+
+
+class CarryForwardInfo(BaseModel):
+    employee_id: int
+    employee_name: Optional[str] = None
+    previous_report_date: Optional[date] = None
+    categories: dict[str, CategoryCarryForward] = {}
+
+
 class CallEntriesRead(BaseModel):
     report_id: int
     entries: List[CallEntryRead]
+    carry_forward: Optional[CarryForwardInfo] = None

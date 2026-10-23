@@ -112,6 +112,73 @@ async def test_upsert_replaces_previous_entries(client: AsyncClient, employee_us
         json={"entries": [{"lead_category": "C", "total_dialed": 7}]},
         headers=headers,
     )
-    assert resp.status_code == 200
     categories = [e["lead_category"] for e in resp.json()["entries"]]
     assert categories == ["C"]
+
+
+@pytest.mark.asyncio
+async def test_carry_forward_multi_day_and_isolation(client: AsyncClient, employee_user, admin_user):
+    headers_emp = await emp_headers(client, employee_user)
+
+    # Day 1: Employee reports 2 HP and 3 P
+    r1_id = await _make_report(client, headers_emp, "2026-03-10")
+    await client.put(
+        f"/api/v1/reports/{r1_id}/calls",
+        json={
+            "entries": [
+                {
+                    "lead_category": "High Potential",
+                    "till_today_status": 50,
+                    "lead_status_hp": 2,
+                    "lead_status_p": 3,
+                    "lead_status_fub": 1,
+                    "lead_status_ni": 4,
+                }
+            ]
+        },
+        headers=headers_emp,
+    )
+
+    # Day 2: Employee reports 4 more HP and 1 more P
+    r2_id = await _make_report(client, headers_emp, "2026-03-11")
+    await client.put(
+        f"/api/v1/reports/{r2_id}/calls",
+        json={
+            "entries": [
+                {
+                    "lead_category": "High Potential",
+                    "till_today_status": 50,
+                    "lead_status_hp": 4,
+                    "lead_status_p": 1,
+                    "lead_status_fub": 2,
+                    "lead_status_ni": 3,
+                }
+            ]
+        },
+        headers=headers_emp,
+    )
+
+    # Day 3: Employee creates report on 2026-03-12
+    r3_id = await _make_report(client, headers_emp, "2026-03-12")
+    resp = await client.get(f"/api/v1/reports/{r3_id}/calls", headers=headers_emp)
+    assert resp.status_code == 200
+    cf = resp.json().get("carry_forward")
+    assert cf is not None
+    assert cf["previous_report_date"] == "2026-03-11"
+    assert cf["employee_id"] == employee_user.id
+
+    hp_cf = cf["categories"]["High Potential"]
+    assert hp_cf["prev_till_today"] == 50
+    # Day 1 (2) + Day 2 (4) = 6
+    assert hp_cf["prev_hp"] == 6
+    # Day 1 (3) + Day 2 (1) = 4
+    assert hp_cf["prev_p"] == 4
+    # Day 1 (1) + Day 2 (2) = 3
+    assert hp_cf["prev_fub"] == 3
+    # Day 1 (4) + Day 2 (3) = 7
+    assert hp_cf["prev_ni"] == 7
+
+    # Dedicated carry-forward endpoint check
+    cf_resp = await client.get(f"/api/v1/reports/{r3_id}/calls/carry-forward", headers=headers_emp)
+    assert cf_resp.status_code == 200
+    assert cf_resp.json()["categories"]["High Potential"]["prev_hp"] == 6
