@@ -30,7 +30,9 @@ export interface Report {
   created_at: string;
   updated_at: string;
   employee_name?: string;
+  notes?: string | null;
 }
+
 
 export type TimeSlot = "10_to_1" | "2_to_5" | "5_to_6";
 
@@ -67,7 +69,18 @@ export interface CallActivityEntry {
   notes?: string | null;
 }
 
+export interface ClientContactEntry {
+  id?: string;
+  client_name: string;
+  phone_number?: string;
+  category: "HP" | "P" | "FUB" | "NI" | "CX" | "Other";
+  follow_up_date?: string;
+  discussion_notes?: string;
+}
+
 export interface CallSlotTotals {
+
+
   total_dialed_10_to_1: number;
   total_dialed_2_to_5: number;
   total_dialed_5_to_6: number;

@@ -55,8 +55,9 @@ class SalesCollectionEntry(Base):
     # Payment sequence for commitment tracking (e.g. 1st, 2nd, 3rd payment)
     payment_sequence: Mapped[int | None] = mapped_column(nullable=True)
 
-    customer_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    customer_name: Mapped[str | None] = mapped_column(String(500), nullable=True)
     reference: Mapped[str | None] = mapped_column(String(200), nullable=True)
+
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(

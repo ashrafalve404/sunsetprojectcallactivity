@@ -20,6 +20,10 @@ import {
   XCircle,
   ChevronLeft,
   ChevronRight,
+  Users,
+  UserPlus,
+  Phone,
+  Edit2,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import {
@@ -42,8 +46,10 @@ import {
   Report,
   CarryForwardInfo,
   CategoryCarryForward,
+  ClientContactEntry,
 } from "@/types";
 import { getDhakaToday, formatReadableDate } from "@/lib/utils";
+
 
 function DailyCallActivityContent() {
   const searchParams = useSearchParams();
@@ -93,6 +99,71 @@ function DailyCallActivityContent() {
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<string>("all");
 
+  // Priority Client Follow-Up Directory (HP / FUB / P Leads)
+  const [clientContacts, setClientContacts] = useState<ClientContactEntry[]>([]);
+  const [clientModalOpen, setClientModalOpen] = useState(false);
+  const [editingClientIndex, setEditingClientIndex] = useState<number | null>(null);
+  const [clientFormName, setClientFormName] = useState("");
+  const [clientFormPhone, setClientFormPhone] = useState("");
+  const [clientFormCategory, setClientFormCategory] = useState<"HP" | "P" | "FUB" | "NI" | "CX" | "Other">("HP");
+  const [clientFormFollowUp, setClientFormFollowUp] = useState("");
+  const [clientFormNotes, setClientFormNotes] = useState("");
+  const [rawReportNotes, setRawReportNotes] = useState("");
+
+  const openAddClientModal = () => {
+    setEditingClientIndex(null);
+    setClientFormName("");
+    setClientFormPhone("");
+    setClientFormCategory("HP");
+    setClientFormFollowUp("");
+    setClientFormNotes("");
+    setClientModalOpen(true);
+  };
+
+  const openEditClientModal = (idx: number) => {
+    const c = clientContacts[idx];
+    if (!c) return;
+    setEditingClientIndex(idx);
+    setClientFormName(c.client_name);
+    setClientFormPhone(c.phone_number || "");
+    setClientFormCategory(c.category);
+    setClientFormFollowUp(c.follow_up_date || "");
+    setClientFormNotes(c.discussion_notes || "");
+    setClientModalOpen(true);
+  };
+
+  const handleSaveClientContact = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!clientFormName.trim()) return;
+
+    const newContact: ClientContactEntry = {
+      id:
+        editingClientIndex !== null && clientContacts[editingClientIndex]?.id
+          ? clientContacts[editingClientIndex].id
+          : `client_${Date.now()}`,
+      client_name: clientFormName.trim(),
+      phone_number: clientFormPhone.trim() || undefined,
+      category: clientFormCategory,
+      follow_up_date: clientFormFollowUp || undefined,
+      discussion_notes: clientFormNotes.trim() || undefined,
+    };
+
+    if (editingClientIndex !== null) {
+      setClientContacts((prev) => {
+        const next = [...prev];
+        next[editingClientIndex] = newContact;
+        return next;
+      });
+    } else {
+      setClientContacts((prev) => [...prev, newContact]);
+    }
+    setClientModalOpen(false);
+  };
+
+  const handleDeleteClientContact = (idx: number) => {
+    setClientContacts((prev) => prev.filter((_, i) => i !== idx));
+  };
+
   const handleDateStep = (days: number) => {
     try {
       const parts = reportDate.split("-").map(Number);
@@ -128,9 +199,27 @@ function DailyCallActivityContent() {
       }
       setReport(r);
 
+      // Parse client contacts from report.notes
+      let parsedContacts: ClientContactEntry[] = [];
+      let legacyNotes = "";
+      if (r.notes) {
+        try {
+          const parsed = JSON.parse(r.notes);
+          if (Array.isArray(parsed?.client_contacts)) {
+            parsedContacts = parsed.client_contacts;
+          }
+          legacyNotes = parsed?.general_notes || "";
+        } catch {
+          legacyNotes = r.notes;
+        }
+      }
+      setClientContacts(parsedContacts);
+      setRawReportNotes(legacyNotes);
+
       // Load call activity entries & carry-forward info
       const callData = await api.calls.get(r.id);
       setCarryForward(callData?.carry_forward || null);
+
 
       if (callData && callData.entries && callData.entries.length > 0) {
         const loaded: Record<string, CallActivityEntry> = {};
@@ -309,9 +398,18 @@ function DailyCallActivityContent() {
         (cat) => entries[cat.key]
       );
       await api.calls.upsert(report.id, payload);
+
+      // Persist client contacts in report notes
+      const serializedNotes = JSON.stringify({
+        client_contacts: clientContacts,
+        general_notes: rawReportNotes || null,
+      });
+      const updatedRep = await api.reports.update(report.id, { notes: serializedNotes });
+      setReport(updatedRep);
+
       setStatusMessage({
         type: "success",
-        text: "Daily call activity draft saved successfully.",
+        text: "Daily call activity and client directory draft saved successfully.",
       });
     } catch (err: unknown) {
       if (err instanceof ApiError) {
@@ -339,6 +437,13 @@ function DailyCallActivityContent() {
       );
       await api.calls.upsert(report.id, payload);
 
+      // Save client directory
+      const serializedNotes = JSON.stringify({
+        client_contacts: clientContacts,
+        general_notes: rawReportNotes || null,
+      });
+      await api.reports.update(report.id, { notes: serializedNotes });
+
       // Then submit report
       const updated = await api.reports.submit(report.id);
       setReport(updated);
@@ -347,6 +452,7 @@ function DailyCallActivityContent() {
         type: "success",
         text: "Report submitted successfully! The report is now locked.",
       });
+
     } catch (err: unknown) {
       if (err instanceof ApiError) {
         setStatusMessage({ type: "error", text: err.message });
@@ -1291,8 +1397,150 @@ function DailyCallActivityContent() {
           </Card>
         )}
 
+        {/* ── Hot & Follow-Up Client Directory (Priority Contacts) ───────────── */}
+        <Card className="overflow-hidden border-slate-200">
+
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/70 p-4">
+            <div>
+              <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <span className="p-1 rounded bg-amber-100 text-amber-800">
+                  <Flame className="w-4 h-4 text-orange-600" />
+                </span>
+                Hot & Follow-Up Client Directory (কাস্টমারদের নাম ও ফলো-আপ তালিকা)
+              </CardTitle>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Record specific customer names, phone numbers, and next follow-up dates for high priority leads.
+              </p>
+            </div>
+            {!isLocked && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={openAddClientModal}
+                className="flex items-center gap-1.5 text-xs font-bold"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                + Add Client Lead
+              </Button>
+            )}
+          </CardHeader>
+
+          <CardContent className="p-0">
+            {clientContacts.length === 0 ? (
+              <div className="p-6 text-center text-slate-500 text-xs">
+                <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                <p className="font-semibold text-slate-700">No priority clients logged yet today</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Click &quot;+ Add Client Lead&quot; to note down key customer names, contact numbers, and follow-up schedules.
+                </p>
+                {!isLocked && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={openAddClientModal}
+                    className="mt-3 text-xs"
+                  >
+                    <UserPlus className="w-3.5 h-3.5 mr-1 text-green-700" />
+                    Add First Client Lead
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-100/70 border-b border-slate-200 text-slate-700 font-bold text-[11px] uppercase tracking-wider">
+                      <th className="py-2.5 px-3">Customer Name</th>
+                      <th className="py-2.5 px-3">Phone</th>
+                      <th className="py-2.5 px-2 text-center">Status</th>
+                      <th className="py-2.5 px-3">Next Follow-Up</th>
+                      <th className="py-2.5 px-3">Discussion / Requirement</th>
+                      {!isLocked && <th className="py-2.5 px-3 text-right">Actions</th>}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {clientContacts.map((c, idx) => (
+                      <tr key={c.id || idx} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="py-2.5 px-3 font-bold text-slate-900">
+                          {c.client_name}
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-600 font-mono text-[11px]">
+                          {c.phone_number ? (
+                            <a
+                              href={`tel:${c.phone_number}`}
+                              className="text-green-800 hover:underline flex items-center gap-1 font-semibold"
+                            >
+                              <Phone className="w-3 h-3 text-green-700" />
+                              {c.phone_number}
+                            </a>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className="py-2.5 px-2 text-center">
+                          <span
+                            className={`inline-block font-extrabold text-[10px] px-2 py-0.5 rounded ${
+                              c.category === "HP"
+                                ? "bg-red-100 text-red-800 border border-red-200"
+                                : c.category === "FUB"
+                                ? "bg-blue-100 text-blue-800 border border-blue-200"
+                                : c.category === "P"
+                                ? "bg-amber-100 text-amber-800 border border-amber-200"
+                                : c.category === "CX"
+                                ? "bg-purple-100 text-purple-800 border border-purple-200"
+                                : "bg-slate-100 text-slate-700 border border-slate-200"
+                            }`}
+                          >
+                            {c.category}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-700 font-medium">
+                          {c.follow_up_date ? (
+                            <span className="flex items-center gap-1 text-[11px]">
+                              <Calendar className="w-3 h-3 text-slate-400" />
+                              {formatReadableDate(c.follow_up_date)}
+                            </span>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3 text-slate-600 max-w-xs truncate">
+                          {c.discussion_notes || "—"}
+                        </td>
+                        {!isLocked && (
+                          <td className="py-2.5 px-3 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                type="button"
+                                onClick={() => openEditClientModal(idx)}
+                                className="p-1 text-slate-400 hover:text-green-700 rounded transition-colors"
+                                title="Edit client"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteClientContact(idx)}
+                                className="p-1 text-slate-400 hover:text-red-700 rounded transition-colors"
+                                title="Remove client"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* ── Bottom Summary Breakdown Cards ───────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+
           <Card className="p-4">
             <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
               Total Dialed Today
@@ -1485,8 +1733,105 @@ function DailyCallActivityContent() {
             </div>
           </div>
         </Modal>
+
+        {/* ── Add / Edit Client Contact Modal ───────────────────────────────── */}
+        <Modal
+          isOpen={clientModalOpen}
+          onClose={() => setClientModalOpen(false)}
+          title={editingClientIndex !== null ? "Edit Client Lead Details" : "Add Priority Client Lead"}
+          description="Log important customer details and follow-up schedules discussed today."
+        >
+          <form onSubmit={handleSaveClientContact} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                Customer / Client Name *
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Mr. Mizanur Rahman"
+                value={clientFormName}
+                onChange={(e) => setClientFormName(e.target.value)}
+                className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  placeholder="e.g. 01711-xxxxxx"
+                  value={clientFormPhone}
+                  onChange={(e) => setClientFormPhone(e.target.value)}
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Lead Classification *
+                </label>
+                <select
+                  value={clientFormCategory}
+                  onChange={(e) => setClientFormCategory(e.target.value as any)}
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none"
+                >
+                  <option value="HP">HP — High Potential (উচ্চ আগ্রহী)</option>
+                  <option value="P">P — Potential (সাধারণ আগ্রহী)</option>
+                  <option value="FUB">FUB — Follow-Up Booked (পুনরায় কল)</option>
+                  <option value="CX">CX — Indoor CX / Site Meeting</option>
+                  <option value="NI">NI — Not Interested</option>
+                  <option value="Other">Other Lead</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                Next Follow-Up Date
+              </label>
+              <input
+                type="date"
+                value={clientFormFollowUp}
+                onChange={(e) => setClientFormFollowUp(e.target.value)}
+                className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                Discussion Topic / Requirements
+              </label>
+              <textarea
+                rows={2}
+                placeholder="e.g. Interested in 3-katha south plot, requested visit next Saturday."
+                value={clientFormNotes}
+                onChange={(e) => setClientFormNotes(e.target.value)}
+                className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setClientModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" size="sm">
+                Save Client Lead
+              </Button>
+            </div>
+          </form>
+        </Modal>
       </div>
     </DashboardLayout>
+
   );
 }
 

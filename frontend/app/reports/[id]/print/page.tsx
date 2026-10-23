@@ -29,6 +29,7 @@ import {
   LEAD_CATEGORIES,
   MEETING_METRICS,
   SALES_CATEGORIES,
+  ClientContactEntry,
 } from "@/types";
 import {
   formatReadableDate,
@@ -45,6 +46,7 @@ function PrintableReportContent() {
   const [report, setReport] = useState<Report | null>(null);
   const [summary, setSummary] = useState<Record<string, unknown> | null>(null);
   const [callEntries, setCallEntries] = useState<CallActivityEntry[]>([]);
+  const [clientContacts, setClientContacts] = useState<ClientContactEntry[]>([]);
   const [meetingEntries, setMeetingEntries] = useState<MeetingActivityEntry[]>([]);
   const [salesEntries, setSalesEntries] = useState<SalesCollectionEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,12 +69,27 @@ function PrintableReportContent() {
       const rep = await api.reports.getById(reportId);
       setReport(rep);
 
+      // Parse priority client contacts from report.notes
+      let parsedContacts: ClientContactEntry[] = [];
+      if (rep.notes) {
+        try {
+          const parsed = JSON.parse(rep.notes);
+          if (Array.isArray(parsed?.client_contacts)) {
+            parsedContacts = parsed.client_contacts;
+          }
+        } catch {
+          // ignore plain text notes
+        }
+      }
+      setClientContacts(parsedContacts);
+
       const [sumRes, callsRes, meetRes, salesRes] = await Promise.allSettled([
         api.reports.getSummary(reportId),
         api.calls.get(reportId),
         api.meetings.get(reportId),
         api.sales.get(reportId),
       ]);
+
 
       if (sumRes.status === "fulfilled") setSummary(sumRes.value);
       if (callsRes.status === "fulfilled") setCallEntries(callsRes.value.entries || []);
@@ -386,6 +403,52 @@ function PrintableReportContent() {
           </div>
         </div>
 
+        {/* Section 1.1: Priority Client Contacts & Follow-Up Leads */}
+        {clientContacts && clientContacts.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5 text-green-700" />
+              1.1 Priority Client Follow-Up Directory (HP / FUB / P Leads)
+            </h2>
+            <div className="border border-slate-300 rounded overflow-hidden">
+              <table className="w-full text-left border-collapse text-[11px]">
+                <thead>
+                  <tr className="bg-slate-100 border-b border-slate-300 text-slate-800 font-bold">
+                    <th className="py-2 px-3 w-8 text-center">#</th>
+                    <th className="py-2 px-3">Customer / Client Name</th>
+                    <th className="py-2 px-3">Phone Number</th>
+                    <th className="py-2 px-2 text-center">Lead Status</th>
+                    <th className="py-2 px-3">Next Follow-Up</th>
+                    <th className="py-2 px-3">Discussion Summary & Requirements</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {clientContacts.map((c, idx) => (
+                    <tr key={idx} className={idx % 2 === 1 ? "bg-slate-50/50" : ""}>
+                      <td className="py-1.5 px-3 text-center text-slate-500 font-mono text-[10px]">{idx + 1}</td>
+                      <td className="py-1.5 px-3 font-bold text-slate-900">{c.client_name}</td>
+                      <td className="py-1.5 px-3 text-slate-700 font-mono text-[10px]">{c.phone_number || "—"}</td>
+                      <td className="py-1.5 px-2 text-center">
+                        <span className={`inline-block font-bold text-[10px] px-1.5 py-0.5 rounded ${
+                          c.category === "HP" ? "bg-red-100 text-red-800" :
+                          c.category === "FUB" ? "bg-blue-100 text-blue-800" :
+                          c.category === "P" ? "bg-amber-100 text-amber-800" :
+                          c.category === "CX" ? "bg-purple-100 text-purple-800" :
+                          "bg-slate-100 text-slate-800"
+                        }`}>
+                          {c.category}
+                        </span>
+                      </td>
+                      <td className="py-1.5 px-3 text-slate-800 font-medium">{c.follow_up_date ? formatReadableDate(c.follow_up_date) : "—"}</td>
+                      <td className="py-1.5 px-3 text-slate-700">{c.discussion_notes || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {/* Section 2: Meetings & Client Interactions */}
         <div className="mb-6">
           <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2 flex items-center gap-1.5">
@@ -474,7 +537,21 @@ function PrintableReportContent() {
                           {formatBDT(s.amount)}
                         </td>
                         <td className="py-1.5 px-3 text-slate-800 font-medium">
-                          {s.customer_name || "—"}
+                          {s.customer_name ? (
+                            s.customer_name.includes(",") ? (
+                              <div className="flex flex-wrap gap-1">
+                                {s.customer_name.split(",").map((c, i) => (
+                                  <span key={i} className="inline-block bg-slate-100 text-slate-800 font-semibold px-1 py-0.5 rounded text-[10px] border border-slate-200">
+                                    {c.trim()}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              s.customer_name
+                            )
+                          ) : (
+                            "—"
+                          )}
                         </td>
                         <td className="py-1.5 px-2 text-center text-slate-600">
                           {s.payment_sequence ? `#${s.payment_sequence}` : "—"}

@@ -199,7 +199,9 @@ export const api = {
             : typeof item.employee_name === "string"
             ? item.employee_name
             : undefined,
+        notes: typeof item.notes === "string" ? item.notes : null,
       }));
+
     },
     getById: async (reportId: number): Promise<Report> => {
       return request<Report>(`/reports/${reportId}`);
@@ -225,11 +227,21 @@ export const api = {
     getSummary: async (reportId: number): Promise<Record<string, unknown>> => {
       return request<Record<string, unknown>>(`/reports/${reportId}/summary`);
     },
+    update: async (
+      reportId: number,
+      data: { notes?: string | null; status?: string }
+    ): Promise<Report> => {
+      return request<Report>(`/reports/${reportId}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      });
+    },
     delete: async (reportId: number): Promise<void> => {
       return request<void>(`/reports/${reportId}`, {
         method: "DELETE",
       });
     },
+
   },
 
   calls: {
