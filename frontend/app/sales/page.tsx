@@ -42,49 +42,49 @@ function getPaymentMethodBadge(method?: string | null) {
   switch (m) {
     case "cash":
       return (
-        <span className="inline-flex items-center gap-1 font-semibold text-[11px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
-          💵 Cash
+        <span className="inline-flex items-center font-semibold text-[11px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
+          Cash
         </span>
       );
     case "cheque":
       return (
-        <span className="inline-flex items-center gap-1 font-semibold text-[11px] px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200">
-          🏦 Cheque
+        <span className="inline-flex items-center font-semibold text-[11px] px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200">
+          Cheque
         </span>
       );
     case "bkash":
       return (
-        <span className="inline-flex items-center gap-1 font-semibold text-[11px] px-2 py-0.5 rounded bg-pink-50 text-pink-800 border border-pink-200">
-          📱 bKash
+        <span className="inline-flex items-center font-semibold text-[11px] px-2 py-0.5 rounded bg-pink-50 text-pink-800 border border-pink-200">
+          bKash
         </span>
       );
     case "nagad":
       return (
-        <span className="inline-flex items-center gap-1 font-semibold text-[11px] px-2 py-0.5 rounded bg-orange-50 text-orange-800 border border-orange-200">
-          📱 Nagad
+        <span className="inline-flex items-center font-semibold text-[11px] px-2 py-0.5 rounded bg-orange-50 text-orange-800 border border-orange-200">
+          Nagad
         </span>
       );
     case "rocket":
       return (
-        <span className="inline-flex items-center gap-1 font-semibold text-[11px] px-2 py-0.5 rounded bg-purple-50 text-purple-800 border border-purple-200">
-          📱 Rocket
+        <span className="inline-flex items-center font-semibold text-[11px] px-2 py-0.5 rounded bg-purple-50 text-purple-800 border border-purple-200">
+          Rocket
         </span>
       );
     case "bank_transfer":
       return (
-        <span className="inline-flex items-center gap-1 font-semibold text-[11px] px-2 py-0.5 rounded bg-indigo-50 text-indigo-800 border border-indigo-200">
-          🏛️ Bank Transfer
+        <span className="inline-flex items-center font-semibold text-[11px] px-2 py-0.5 rounded bg-indigo-50 text-indigo-800 border border-indigo-200">
+          Bank Transfer
         </span>
       );
     case "pos":
       return (
-        <span className="inline-flex items-center gap-1 font-semibold text-[11px] px-2 py-0.5 rounded bg-cyan-50 text-cyan-800 border border-cyan-200">
-          💳 POS / Card
+        <span className="inline-flex items-center font-semibold text-[11px] px-2 py-0.5 rounded bg-cyan-50 text-cyan-800 border border-cyan-200">
+          POS / Card
         </span>
       );
     default:
       return (
-        <span className="inline-flex items-center gap-1 font-semibold text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-200">
+        <span className="inline-flex items-center font-semibold text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-800 border border-slate-200">
           {method}
         </span>
       );
@@ -719,18 +719,18 @@ function SalesVsCollectionContent() {
                   onChange={(e) => setFormPaymentMethod(e.target.value)}
                   className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
                 >
-                  <option value="cash">💵 Cash</option>
-                  <option value="cheque">🏦 Cheque</option>
+                  <option value="cash">Cash</option>
+                  <option value="cheque">Cheque</option>
                   <optgroup label="Mobile Banking">
-                    <option value="bkash">📱 bKash</option>
-                    <option value="nagad">📱 Nagad</option>
-                    <option value="rocket">📱 Rocket</option>
+                    <option value="bkash">bKash</option>
+                    <option value="nagad">Nagad</option>
+                    <option value="rocket">Rocket</option>
                   </optgroup>
                   <optgroup label="Bank & Card">
-                    <option value="bank_transfer">🏛️ Online Bank Transfer / BEFTN</option>
-                    <option value="pos">💳 POS / Card Payment</option>
+                    <option value="bank_transfer">Online Bank Transfer / BEFTN</option>
+                    <option value="pos">POS / Card Payment</option>
                   </optgroup>
-                  <option value="other">📝 Other</option>
+                  <option value="other">Other</option>
                 </select>
               </div>
 
