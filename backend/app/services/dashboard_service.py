@@ -34,6 +34,9 @@ from app.schemas.dashboard import (
     ReportSummary,
     SlotBreakdown,
     TargetAchievement,
+    EmployeeLeaderboardItem,
+    KPIChampion,
+    PerformanceLeaderboardResponse,
 )
 from app.services.sales_service import SalesService
 
@@ -335,6 +338,129 @@ class DashboardService:
             by_slot=slot_breakdown,
             by_category=by_category_dict,
             lead_category_breakdown=list(category_map.values()),
+        )
+
+    async def get_performance_leaderboard(
+        self,
+        date_from: date,
+        date_to: date,
+        employee_id: Optional[int] = None,
+    ) -> PerformanceLeaderboardResponse:
+        from app.models.user import User, UserRole
+
+        # 1. Fetch active employees
+        user_query = select(User).where(User.is_active.is_(True))
+        if employee_id:
+            user_query = user_query.where(User.id == employee_id)
+        else:
+            user_query = user_query.where(User.role == UserRole.EMPLOYEE)
+
+        users_res = await self.db.execute(user_query.order_by(User.id))
+        employees = users_res.scalars().all()
+
+        rankings: list[EmployeeLeaderboardItem] = []
+
+        for emp in employees:
+            target = await self.targets_repo.get_effective_target(date_to, emp.id)
+            dialed_tgt = (target.dialed_calls_target if target and target.dialed_calls_target else 60)
+            connected_tgt = (target.connected_calls_target if target and target.connected_calls_target else 25)
+            outdoor_tgt = (target.outdoor_visit_target if target and target.outdoor_visit_target else 3)
+            collection_tgt = float(target.sales_target if target and target.sales_target else (target.tb_target if target and target.tb_target else 500000))
+
+            summary = await self.get_dashboard_summary(date_from, date_to, emp.id)
+            dialed = summary.total_calls_dialed
+            connected = summary.total_calls_connected
+            visits = summary.total_outdoor_visits
+            meet_dur = summary.total_meeting_time_minutes
+            colls = float(summary.actual_collection_bdt)
+
+            dialed_pct = min(200.0, round((dialed / dialed_tgt * 100), 1)) if dialed_tgt > 0 else 100.0
+            connected_pct = min(200.0, round((connected / connected_tgt * 100), 1)) if connected_tgt > 0 else 100.0
+            outdoor_pct = min(200.0, round((visits / outdoor_tgt * 100), 1)) if outdoor_tgt > 0 else 100.0
+            colls_pct = min(200.0, round((colls / collection_tgt * 100), 1)) if collection_tgt > 0 else 100.0
+
+            overall = round((dialed_pct * 0.25 + connected_pct * 0.35 + outdoor_pct * 0.20 + colls_pct * 0.20), 1)
+
+            if overall >= 100.0:
+                status = "achieved"
+            elif overall >= 75.0:
+                status = "on_track"
+            elif overall >= 50.0:
+                status = "needs_attention"
+            else:
+                status = "behind_pace"
+
+            rankings.append(
+                EmployeeLeaderboardItem(
+                    rank=0,
+                    employee_id=emp.id,
+                    employee_name=emp.full_name,
+                    username=emp.username,
+                    reports_count=summary.total_reports,
+                    dialed_calls=dialed,
+                    dialed_target=dialed_tgt,
+                    dialed_pct=dialed_pct,
+                    connected_calls=connected,
+                    connected_target=connected_tgt,
+                    connected_pct=connected_pct,
+                    outdoor_visits=visits,
+                    outdoor_target=outdoor_tgt,
+                    outdoor_pct=outdoor_pct,
+                    meeting_minutes=meet_dur,
+                    actual_collections=colls,
+                    collection_target=collection_tgt,
+                    collection_pct=colls_pct,
+                    overall_score_pct=overall,
+                    status=status,
+                )
+            )
+
+        rankings.sort(key=lambda r: (r.overall_score_pct, r.connected_calls, r.dialed_calls), reverse=True)
+        for idx, item in enumerate(rankings, 1):
+            item.rank = idx
+
+        champions: list[KPIChampion] = []
+        if rankings:
+            top_caller = max(rankings, key=lambda r: r.dialed_calls)
+            top_conn = max(rankings, key=lambda r: r.connected_calls)
+            top_visits = max(rankings, key=lambda r: r.outdoor_visits)
+            top_closer = max(rankings, key=lambda r: r.actual_collections)
+
+            champions = [
+                KPIChampion(
+                    title="Top Caller",
+                    metric="Most Dialed Calls",
+                    employee_name=top_caller.employee_name,
+                    value=f"{top_caller.dialed_calls} calls ({top_caller.dialed_pct}%)",
+                ),
+                KPIChampion(
+                    title="Top Connector",
+                    metric="Connected Conversations",
+                    employee_name=top_conn.employee_name,
+                    value=f"{top_conn.connected_calls} connected ({top_conn.connected_pct}%)",
+                ),
+                KPIChampion(
+                    title="Meeting Star",
+                    metric="Client Outdoor Visits",
+                    employee_name=top_visits.employee_name,
+                    value=f"{top_visits.outdoor_visits} visits ({top_visits.outdoor_pct}%)",
+                ),
+                KPIChampion(
+                    title="Top Closer",
+                    metric="Actual Collections",
+                    employee_name=top_closer.employee_name,
+                    value=f"৳{top_closer.actual_collections:,.0f} ({top_closer.collection_pct}%)",
+                ),
+            ]
+
+        avg_team_score = round(sum(r.overall_score_pct for r in rankings) / len(rankings), 1) if rankings else 0.0
+
+        return PerformanceLeaderboardResponse(
+            period_start=date_from,
+            period_end=date_to,
+            team_overall_score_pct=avg_team_score,
+            champions=champions,
+            rankings=rankings,
         )
 
 

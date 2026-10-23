@@ -17,6 +17,7 @@ import {
   SystemSetting,
   User,
   RemindersResponse,
+  PerformanceLeaderboardResponse,
 } from "@/types";
 
 const API_BASE =
@@ -426,6 +427,26 @@ export const api = {
       const q = search.toString();
       return request<DashboardSummary>(
         `/dashboard/employee/${employeeId}${q ? `?${q}` : ""}`
+      );
+    },
+    getLeaderboard: async (params?: {
+      start_date?: string;
+      end_date?: string;
+      employee_id?: number;
+    }): Promise<PerformanceLeaderboardResponse> => {
+      const search = new URLSearchParams();
+      if (params?.start_date) {
+        search.set("start_date", params.start_date);
+        search.set("date_from", params.start_date);
+      }
+      if (params?.end_date) {
+        search.set("end_date", params.end_date);
+        search.set("date_to", params.end_date);
+      }
+      if (params?.employee_id) search.set("employee_id", String(params.employee_id));
+      const q = search.toString();
+      return request<PerformanceLeaderboardResponse>(
+        `/dashboard/performance-leaderboard${q ? `?${q}` : ""}`
       );
     },
   },

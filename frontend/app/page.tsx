@@ -20,6 +20,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { KPILeaderboard } from "@/components/dashboard/kpi-leaderboard";
 import {
   Card,
   CardHeader,
@@ -340,6 +341,13 @@ function DashboardContent() {
             </>
           )}
         </div>
+
+        {/* ── KPI Targets Achievement & Team Leaderboard ───────────────────── */}
+        <KPILeaderboard
+          startDate={startDate}
+          endDate={endDate}
+          employeeId={selectedEmployeeId}
+        />
 
         {/* ── Financial Split & Activity Section ───────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

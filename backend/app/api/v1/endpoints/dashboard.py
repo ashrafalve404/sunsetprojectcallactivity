@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.permissions import get_current_user, require_admin
 from app.db.session import get_db
 from app.models.user import User, UserRole
-from app.schemas.dashboard import DashboardSummary
+from app.schemas.dashboard import DashboardSummary, PerformanceLeaderboardResponse
 from app.services.dashboard_service import DashboardService
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
@@ -114,3 +114,24 @@ async def employee_performance(
     dt = date_to or end_date or date.today()
     svc = DashboardService(db)
     return await svc.get_dashboard_summary(df, dt, employee_id)
+
+
+@router.get("/performance-leaderboard", response_model=PerformanceLeaderboardResponse)
+async def performance_leaderboard(
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    employee_id: Optional[int] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Team KPI performance leaderboard and target achievement."""
+    df = date_from or start_date or _default_from()
+    dt = date_to or end_date or date.today()
+    target_emp_id = employee_id
+    if current_user.role != UserRole.ADMIN and employee_id is not None:
+        target_emp_id = current_user.id
+    svc = DashboardService(db)
+    return await svc.get_performance_leaderboard(df, dt, target_emp_id)
+

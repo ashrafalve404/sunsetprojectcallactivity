@@ -146,3 +146,41 @@ class DashboardSummary(BaseModel):
     by_slot: dict[str, dict[str, int]] = {}
     by_category: dict[str, dict[str, int]] = {}
     lead_category_breakdown: list[LeadCategoryBreakdown] = []
+
+
+class EmployeeLeaderboardItem(BaseModel):
+    rank: int
+    employee_id: int
+    employee_name: str
+    username: str
+    reports_count: int
+    dialed_calls: int
+    dialed_target: int
+    dialed_pct: float
+    connected_calls: int
+    connected_target: int
+    connected_pct: float
+    outdoor_visits: int
+    outdoor_target: int
+    outdoor_pct: float
+    meeting_minutes: int
+    actual_collections: float
+    collection_target: float
+    collection_pct: float
+    overall_score_pct: float
+    status: str  # "achieved" | "on_track" | "needs_attention" | "behind_pace"
+
+
+class KPIChampion(BaseModel):
+    title: str
+    metric: str
+    employee_name: str
+    value: str
+
+
+class PerformanceLeaderboardResponse(BaseModel):
+    period_start: date
+    period_end: date
+    team_overall_score_pct: float
+    champions: list[KPIChampion]
+    rankings: list[EmployeeLeaderboardItem]

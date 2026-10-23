@@ -8,8 +8,10 @@ import {
   Edit2,
   Trash2,
   Users,
+  Trophy,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { KPILeaderboard } from "@/components/dashboard/kpi-leaderboard";
 import {
   Card,
   CardHeader,
@@ -25,6 +27,7 @@ import { DailyTarget, User } from "@/types";
 import { formatBDT, getDhakaToday, formatReadableDate } from "@/lib/utils";
 
 function SettingsContent() {
+  const [activeTargetTab, setActiveTargetTab] = useState<"performance" | "config">("performance");
   // Targets state
   const [targets, setTargets] = useState<DailyTarget[]>([]);
   const [employees, setEmployees] = useState<User[]>([]);
@@ -201,30 +204,87 @@ function SettingsContent() {
         )}
 
         {/* ── Daily Performance Targets Section ───────────────────────────── */}
-        <Card>
-          <CardHeader>
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="w-4 h-4 text-green-700" />
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <Target className="w-5 h-5 text-emerald-700" />
                 Daily KPI Performance Targets
-              </CardTitle>
+              </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Target thresholds used to calculate achievement percentages on the dashboard
+                Track live employee target achievements against benchmarks, or customize quota thresholds.
               </p>
             </div>
-            <Button variant="primary" size="sm" onClick={openCreateTarget}>
-              <Plus className="w-3.5 h-3.5 mr-1" />
-              Set Target
-            </Button>
-          </CardHeader>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-slate-100/70 border-b border-slate-200 text-slate-700 text-[11px] font-semibold">
-                  <th className="py-2.5 px-4">Scope</th>
-                  <th className="py-2.5 px-3">Date</th>
-                  <th className="py-2.5 px-3 text-right">Dialed Calls</th>
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="bg-slate-100 p-1 rounded-lg flex items-center gap-1 border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setActiveTargetTab("performance")}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                    activeTargetTab === "performance"
+                      ? "bg-white text-emerald-900 shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <Trophy className="w-3.5 h-3.5 text-amber-500" />
+                  Live Achievements & Leaderboard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTargetTab("config")}
+                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                    activeTargetTab === "config"
+                      ? "bg-white text-emerald-900 shadow-xs"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  <Sliders className="w-3.5 h-3.5 text-slate-500" />
+                  Configure Thresholds ({targets.length})
+                </button>
+              </div>
+
+              {activeTargetTab === "config" && (
+                <Button variant="primary" size="sm" onClick={openCreateTarget}>
+                  <Plus className="w-3.5 h-3.5 mr-1" />
+                  Set Target
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {activeTargetTab === "performance" ? (
+            <KPILeaderboard
+              startDate={getDhakaToday()}
+              endDate={getDhakaToday()}
+              title="Today's Target Achievement & Performance Ranking"
+              subtitle="Live real-time comparison of employee activities against assigned targets"
+            />
+          ) : (
+            <Card>
+              <CardHeader>
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sliders className="w-4 h-4 text-emerald-700" />
+                    Target Threshold Configurations
+                  </CardTitle>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Target values used to calculate achievement percentages and leaderboard scores
+                  </p>
+                </div>
+                <Button variant="primary" size="sm" onClick={openCreateTarget}>
+                  <Plus className="w-3.5 h-3.5 mr-1" />
+                  Set Target
+                </Button>
+              </CardHeader>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-100/70 border-b border-slate-200 text-slate-700 text-[11px] font-semibold">
+                      <th className="py-2.5 px-4">Scope</th>
+                      <th className="py-2.5 px-3">Date</th>
+                      <th className="py-2.5 px-3 text-right">Dialed Calls</th>
                   <th className="py-2.5 px-3 text-right">Connected</th>
                   <th className="py-2.5 px-3 text-right">Outdoor Visits</th>
                   <th className="py-2.5 px-3 text-right">Meeting Time</th>
@@ -308,6 +368,8 @@ function SettingsContent() {
             </table>
           </div>
         </Card>
+      )}
+    </div>
 
         {/* ── Business Hours & System Parameters Section ──────────────────── */}
         <Card>

@@ -311,3 +311,42 @@ export interface RemindersResponse {
   summary: ReminderSummary;
   reminders: ReminderItem[];
 }
+
+export interface EmployeeLeaderboardItem {
+  rank: number;
+  employee_id: number;
+  employee_name: string;
+  username: string;
+  reports_count: number;
+  dialed_calls: number;
+  dialed_target: number;
+  dialed_pct: number;
+  connected_calls: number;
+  connected_target: number;
+  connected_pct: number;
+  outdoor_visits: number;
+  outdoor_target: number;
+  outdoor_pct: number;
+  meeting_minutes: number;
+  actual_collections: number;
+  collection_target: number;
+  collection_pct: number;
+  overall_score_pct: number;
+  status: "achieved" | "on_track" | "needs_attention" | "behind_pace";
+}
+
+export interface KPIChampion {
+  title: string;
+  metric: string;
+  employee_name: string;
+  value: string;
+}
+
+export interface PerformanceLeaderboardResponse {
+  period_start: string;
+  period_end: string;
+  team_overall_score_pct: number;
+  champions: KPIChampion[];
+  rankings: EmployeeLeaderboardItem[];
+}
+
