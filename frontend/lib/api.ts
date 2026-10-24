@@ -477,7 +477,7 @@ export const api = {
       email: string;
       username: string;
       password: string;
-      role: "admin" | "employee";
+      role: "admin" | "sub_admin" | "employee";
     }): Promise<User> => {
       return request<User>("/employees", {
         method: "POST",
@@ -489,7 +489,7 @@ export const api = {
       data: Partial<{
         full_name: string;
         email: string;
-        role: "admin" | "employee";
+        role: "admin" | "sub_admin" | "employee";
         is_active: boolean;
         password?: string;
       }>

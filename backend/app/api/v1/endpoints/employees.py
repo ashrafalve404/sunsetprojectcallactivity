@@ -67,8 +67,8 @@ async def get_employee(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # Admins can read any; employees can only read themselves
-    if current_user.role != UserRole.ADMIN and current_user.id != user_id:
+    # Admins and sub-admins can read any; employees can only read themselves
+    if current_user.role not in (UserRole.ADMIN, UserRole.SUB_ADMIN) and current_user.id != user_id:
         raise HTTPException(status_code=403, detail="Access denied")
     repo = UserRepository(db)
     user = await repo.get_by_id(user_id)
@@ -81,13 +81,15 @@ async def get_employee(
 async def update_employee(
     user_id: int,
     data: UserUpdate,
-    _: User = Depends(require_admin),
+    current_admin: User = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
     repo = UserRepository(db)
     user = await repo.get_by_id(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    if current_admin.role == UserRole.SUB_ADMIN and user.role == UserRole.ADMIN and current_admin.id != user.id:
+        raise HTTPException(status_code=403, detail="Sub-admin cannot modify an administrator account")
     update_data = data.model_dump(exclude_unset=True)
     if "password" in update_data:
         update_data["password_hash"] = hash_password(update_data.pop("password"))
@@ -108,4 +110,6 @@ async def delete_employee(
     user = await repo.get_by_id(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    if current_admin.role == UserRole.SUB_ADMIN and user.role == UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Sub-admin cannot delete an administrator account")
     await repo.delete(user)

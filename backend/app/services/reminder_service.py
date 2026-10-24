@@ -30,7 +30,7 @@ class ReminderService:
     ) -> RemindersResponse:
         # Determine employee id: if employee, always their own; if admin, either target or own
         emp_id = current_user.id
-        if current_user.role == UserRole.ADMIN and target_employee_id:
+        if current_user.role in (UserRole.ADMIN, UserRole.SUB_ADMIN) and target_employee_id:
             emp_id = target_employee_id
 
         dhaka_now = get_dhaka_now()

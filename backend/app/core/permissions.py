@@ -72,21 +72,21 @@ async def get_current_user(
 async def require_admin(
     user: User = Depends(_get_current_user),
 ) -> User:
-    """Raise 403 if the current user is not an admin."""
-    if user.role != UserRole.ADMIN:
+    """Raise 403 if the current user is not an admin or sub-admin."""
+    if user.role not in (UserRole.ADMIN, UserRole.SUB_ADMIN):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required",
+            detail="Admin or Sub-admin access required",
         )
     return user
 
 
 def require_report_access(report_employee_id: int, current_user: User) -> None:
     """
-    Raise 403 if current_user is not an admin and does not own the report.
+    Raise 403 if current_user is not an admin/sub-admin and does not own the report.
     Call this helper inside endpoint handlers after loading the report.
     """
-    if current_user.role == UserRole.ADMIN:
+    if current_user.role in (UserRole.ADMIN, UserRole.SUB_ADMIN):
         return
     if current_user.id != report_employee_id:
         raise HTTPException(

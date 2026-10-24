@@ -63,10 +63,15 @@ export function Topbar({ title, subtitle, onOpenMobileMenu }: TopbarProps) {
                 {user.full_name}
               </span>
               <span className="text-[10px] text-slate-500 uppercase tracking-wide flex items-center justify-end gap-1 mt-0.5">
-                {isAdmin ? (
+                {user.role === "admin" ? (
                   <>
                     <ShieldCheck className="w-3 h-3 text-green-700" />
                     Admin
+                  </>
+                ) : user.role === "sub_admin" ? (
+                  <>
+                    <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                    Sub Admin
                   </>
                 ) : (
                   <>

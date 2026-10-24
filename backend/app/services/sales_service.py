@@ -150,13 +150,13 @@ class SalesService:
         report = await self.report_repo.get_by_id(report_id)
         if not report:
             raise HTTPException(status_code=404, detail="Report not found")
-        if current_user.role != UserRole.ADMIN and report.employee_id != current_user.id:
+        if current_user.role not in (UserRole.ADMIN, UserRole.SUB_ADMIN) and report.employee_id != current_user.id:
             raise HTTPException(status_code=403, detail="Access denied")
         return report
 
     @staticmethod
     def _guard_submitted(report: DailyActivityReport, user: User) -> None:
-        if report.status == ReportStatus.SUBMITTED and user.role != UserRole.ADMIN:
+        if report.status == ReportStatus.SUBMITTED and user.role not in (UserRole.ADMIN, UserRole.SUB_ADMIN):
             raise HTTPException(
                 status_code=403, detail="Cannot edit entries in a submitted report."
             )

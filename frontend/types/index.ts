@@ -3,7 +3,7 @@
  * Aligned with FastAPI backend schemas.
  */
 
-export type UserRole = "admin" | "employee";
+export type UserRole = "admin" | "sub_admin" | "employee";
 
 export interface User {
   id: number;

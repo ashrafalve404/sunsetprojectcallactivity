@@ -36,7 +36,7 @@ async def dashboard_summary(
     """
     df = date_from or start_date or _default_from()
     dt = date_to or end_date or date.today()
-    if current_user.role != UserRole.ADMIN:
+    if current_user.role not in (UserRole.ADMIN, UserRole.SUB_ADMIN):
         employee_id = current_user.id
     svc = DashboardService(db)
     return await svc.get_dashboard_summary(df, dt, employee_id)
@@ -55,7 +55,7 @@ async def call_trends(
     """Call activity trends — same as summary but semantically for call data."""
     df = date_from or start_date or _default_from()
     dt = date_to or end_date or date.today()
-    if current_user.role != UserRole.ADMIN:
+    if current_user.role not in (UserRole.ADMIN, UserRole.SUB_ADMIN):
         employee_id = current_user.id
     svc = DashboardService(db)
     return await svc.get_dashboard_summary(df, dt, employee_id)
@@ -74,7 +74,7 @@ async def lead_breakdown(
     """Lead category breakdown for the given period."""
     df = date_from or start_date or _default_from()
     dt = date_to or end_date or date.today()
-    if current_user.role != UserRole.ADMIN:
+    if current_user.role not in (UserRole.ADMIN, UserRole.SUB_ADMIN):
         employee_id = current_user.id
     svc = DashboardService(db)
     return await svc.get_dashboard_summary(df, dt, employee_id)
@@ -93,7 +93,7 @@ async def sales_collection_summary(
     """Sales and collection summary for the given period."""
     df = date_from or start_date or _default_from()
     dt = date_to or end_date or date.today()
-    if current_user.role != UserRole.ADMIN:
+    if current_user.role not in (UserRole.ADMIN, UserRole.SUB_ADMIN):
         employee_id = current_user.id
     svc = DashboardService(db)
     return await svc.get_dashboard_summary(df, dt, employee_id)
@@ -130,7 +130,7 @@ async def performance_leaderboard(
     df = date_from or start_date or _default_from()
     dt = date_to or end_date or date.today()
     target_emp_id = employee_id
-    if current_user.role != UserRole.ADMIN:
+    if current_user.role not in (UserRole.ADMIN, UserRole.SUB_ADMIN):
         target_emp_id = current_user.id
     svc = DashboardService(db)
     return await svc.get_performance_leaderboard(df, dt, target_emp_id)

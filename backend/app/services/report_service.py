@@ -25,7 +25,7 @@ class ReportService:
         self, data: ReportCreate, current_user: User
     ) -> DailyActivityReport:
         target_emp_id = current_user.id
-        if data.employee_id and current_user.role == UserRole.ADMIN:
+        if data.employee_id and current_user.role in (UserRole.ADMIN, UserRole.SUB_ADMIN):
             target_emp_id = data.employee_id
 
         # Check for duplicate; return existing if already present
@@ -50,7 +50,7 @@ class ReportService:
         employee_id: Optional[int] = None,
     ) -> DailyActivityReport:
         target_emp_id = current_user.id
-        if employee_id and current_user.role == UserRole.ADMIN:
+        if employee_id and current_user.role in (UserRole.ADMIN, UserRole.SUB_ADMIN):
             target_emp_id = employee_id
 
         report = await self.repo.get_by_employee_and_date(target_emp_id, report_date)
@@ -82,7 +82,7 @@ class ReportService:
         limit: int = 50,
     ):
         # Non-admins can only see their own reports
-        if current_user.role != UserRole.ADMIN:
+        if current_user.role not in (UserRole.ADMIN, UserRole.SUB_ADMIN):
             employee_id = current_user.id
 
         total = await self.repo.count_reports(employee_id, date_from, date_to, status_filter)
@@ -103,7 +103,7 @@ class ReportService:
         if not report:
             raise HTTPException(status_code=404, detail="Report not found")
         _assert_access(report, current_user)
-        if report.status == ReportStatus.SUBMITTED and current_user.role != UserRole.ADMIN:
+        if report.status == ReportStatus.SUBMITTED and current_user.role not in (UserRole.ADMIN, UserRole.SUB_ADMIN):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Cannot edit a submitted report. Contact admin.",
@@ -136,7 +136,7 @@ class ReportService:
         if not report:
             raise HTTPException(status_code=404, detail="Report not found")
         _assert_access(report, current_user)
-        if report.status == ReportStatus.SUBMITTED and current_user.role != UserRole.ADMIN:
+        if report.status == ReportStatus.SUBMITTED and current_user.role not in (UserRole.ADMIN, UserRole.SUB_ADMIN):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Cannot delete a submitted report. Contact admin.",
@@ -146,7 +146,7 @@ class ReportService:
 
 def _assert_access(report: DailyActivityReport, user: User) -> None:
     """Raise 403 if user may not access this report."""
-    if user.role != UserRole.ADMIN and report.employee_id != user.id:
+    if user.role not in (UserRole.ADMIN, UserRole.SUB_ADMIN) and report.employee_id != user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have access to this report.",

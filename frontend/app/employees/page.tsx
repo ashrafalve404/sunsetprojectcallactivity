@@ -261,6 +261,7 @@ export default function EmployeesPage() {
                   >
                     <option value="all">All Roles</option>
                     <option value="employee">Employee</option>
+                    <option value="sub_admin">Sub Admin</option>
                     <option value="admin">Administrator</option>
                   </select>
                 </div>
@@ -357,8 +358,8 @@ export default function EmployeesPage() {
                       </td>
                       <td className="py-3 px-3 text-slate-600">{emp.email}</td>
                       <td className="py-3 px-3 text-center">
-                        <Badge variant={emp.role === "admin" ? "warning" : "neutral"}>
-                          {emp.role === "admin" ? "Admin" : "Employee"}
+                        <Badge variant={emp.role === "admin" ? "warning" : emp.role === "sub_admin" ? "info" : "neutral"}>
+                          {emp.role === "admin" ? "Admin" : emp.role === "sub_admin" ? "Sub Admin" : "Employee"}
                         </Badge>
                       </td>
                       <td className="py-3 px-3 text-center">
@@ -494,6 +495,7 @@ export default function EmployeesPage() {
                   className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
                 >
                   <option value="employee">Employee</option>
+                  <option value="sub_admin">Sub Admin</option>
                   <option value="admin">Administrator</option>
                 </select>
               </div>
