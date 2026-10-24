@@ -11,6 +11,13 @@ import {
   Clock,
   MapPin,
   UserCheck,
+  ChevronUp,
+  ChevronDown,
+  LayoutGrid,
+  Table2,
+  Briefcase,
+  Layers,
+  Sparkles,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import {
@@ -32,6 +39,136 @@ import {
   Report,
 } from "@/types";
 import { getDhakaToday, formatReadableDate, formatMinutes } from "@/lib/utils";
+
+/**
+ * Mobile-friendly touch stepper input with prominent up/down increaser arrows.
+ */
+function MobileNumberInput({
+  value,
+  onChange,
+  onStep,
+  disabled,
+  placeholder = "—",
+  step = 1,
+  borderColor = "border-slate-300",
+  arrowColor = "text-slate-600 hover:text-slate-900",
+  textSize = "text-base",
+}: {
+  value: number | null | undefined;
+  onChange: (val: string) => void;
+  onStep: (delta: number) => void;
+  disabled?: boolean;
+  placeholder?: string;
+  step?: number;
+  borderColor?: string;
+  arrowColor?: string;
+  textSize?: string;
+}) {
+  return (
+    <div className="relative flex items-center w-full">
+      <input
+        type="number"
+        min="0"
+        disabled={disabled}
+        value={value ?? ""}
+        onChange={(ev) => onChange(ev.target.value)}
+        placeholder={placeholder}
+        className={`w-full text-center pl-2 pr-7 py-2 ${textSize} font-bold bg-white border ${borderColor} rounded-xl focus:ring-2 focus:ring-green-600 focus:outline-none text-slate-900 shadow-2xs disabled:bg-slate-50 disabled:text-slate-500`}
+      />
+      <div className="absolute right-0.5 inset-y-0 flex flex-col justify-center -space-y-1">
+        <button
+          type="button"
+          tabIndex={-1}
+          disabled={disabled}
+          onClick={(ev) => {
+            ev.preventDefault();
+            onStep(step);
+          }}
+          className={`px-1 py-0.5 ${arrowColor} hover:bg-slate-100 rounded active:scale-125 transition-all disabled:opacity-30`}
+          title={`Increase by ${step}`}
+          aria-label="Increase"
+        >
+          <ChevronUp className="w-3.5 h-3.5 stroke-[2.5]" />
+        </button>
+        <button
+          type="button"
+          tabIndex={-1}
+          disabled={disabled}
+          onClick={(ev) => {
+            ev.preventDefault();
+            onStep(-step);
+          }}
+          className={`px-1 py-0.5 ${arrowColor} hover:bg-slate-100 rounded active:scale-125 transition-all disabled:opacity-30`}
+          title={`Decrease by ${step}`}
+          aria-label="Decrease"
+        >
+          <ChevronDown className="w-3.5 h-3.5 stroke-[2.5]" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const METRIC_THEMES: Record<
+  MeetingMetricType,
+  {
+    icon: typeof MapPin;
+    iconBg: string;
+    iconColor: string;
+    badge: string;
+    group: "outdoor" | "indoor" | "meetings";
+  }
+> = {
+  outdoor_visit_count: {
+    icon: MapPin,
+    iconBg: "bg-emerald-100 text-emerald-800",
+    iconColor: "text-emerald-700",
+    badge: "bg-emerald-50 text-emerald-800 border border-emerald-200",
+    group: "outdoor",
+  },
+  outdoor_time_minutes: {
+    icon: Clock,
+    iconBg: "bg-emerald-100 text-emerald-800",
+    iconColor: "text-emerald-700",
+    badge: "bg-emerald-50 text-emerald-800 border border-emerald-200",
+    group: "outdoor",
+  },
+  indoor_cx_count: {
+    icon: UserCheck,
+    iconBg: "bg-blue-100 text-blue-800",
+    iconColor: "text-blue-700",
+    badge: "bg-blue-50 text-blue-800 border border-blue-200",
+    group: "indoor",
+  },
+  indoor_cx_time_minutes: {
+    icon: Clock,
+    iconBg: "bg-blue-100 text-blue-800",
+    iconColor: "text-blue-700",
+    badge: "bg-blue-50 text-blue-800 border border-blue-200",
+    group: "indoor",
+  },
+  mg_time_minutes: {
+    icon: Briefcase,
+    iconBg: "bg-amber-100 text-amber-800",
+    iconColor: "text-amber-700",
+    badge: "bg-amber-50 text-amber-800 border border-amber-200",
+    group: "meetings",
+  },
+  team_meeting_time_minutes: {
+    icon: Users,
+    iconBg: "bg-purple-100 text-purple-800",
+    iconColor: "text-purple-700",
+    badge: "bg-purple-50 text-purple-800 border border-purple-200",
+    group: "meetings",
+  },
+};
+
+const FILTER_TABS = [
+  { key: "all", label: "All Activities", count: 6 },
+  { key: "outdoor", label: "Outdoor", count: 2 },
+  { key: "indoor", label: "Indoor CX", count: 2 },
+  { key: "meetings", label: "Meetings", count: 2 },
+];
 
 function MeetingTimeDailyContent() {
   const searchParams = useSearchParams();
@@ -69,6 +206,26 @@ function MeetingTimeDailyContent() {
     type: "success" | "error" | "info";
     text: string;
   } | null>(null);
+
+  // View Mode: Table on PC (>= 768px), Cards on mobile (< 768px)
+  const [viewMode, setViewMode] = useState<"cards" | "table">("table");
+  const [hasUserSwitchedView, setHasUserSwitchedView] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<string>("all");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleResize = () => {
+      if (!hasUserSwitchedView) {
+        const isMobile = window.innerWidth < 768;
+        setViewMode(isMobile ? "cards" : "table");
+      }
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [hasUserSwitchedView]);
 
   // Load report & meeting entries
   const loadMeetingData = useCallback(async (dateStr: string, empId?: number) => {
@@ -148,6 +305,18 @@ function MeetingTimeDailyContent() {
         [field]: isNaN(num as number) ? null : num,
       },
     }));
+  };
+
+  const handleStep = (
+    metricKey: MeetingMetricType,
+    field: keyof MeetingActivityEntry,
+    delta: number
+  ) => {
+    if (report?.is_submitted) return;
+    const current = entries[metricKey]?.[field];
+    const curNum = typeof current === "number" ? current : 0;
+    const next = Math.max(0, curNum + delta);
+    handleCellChange(metricKey, field, String(next));
   };
 
   // Calculations: Separate count totals from minutes totals
@@ -240,12 +409,19 @@ function MeetingTimeDailyContent() {
 
   const isLocked = report?.is_submitted ?? false;
 
+  const filteredMetrics = useMemo(() => {
+    if (activeFilter === "all") return MEETING_METRICS;
+    return MEETING_METRICS.filter(
+      (m) => METRIC_THEMES[m.key]?.group === activeFilter
+    );
+  }, [activeFilter]);
+
   return (
     <DashboardLayout
       title="Meeting Time Daily"
       subtitle="Customer meetings, outdoor site visits, and team coordination tracking"
     >
-      <div className="space-y-6">
+      <div className="space-y-6 pb-20 sm:pb-6">
         {/* ── Header Controls Card ────────────────────────────────────────── */}
         <Card>
           <CardContent className="p-4 sm:p-5">
@@ -278,9 +454,47 @@ function MeetingTimeDailyContent() {
                 </Badge>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {/* View Mode Toggle */}
+                <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHasUserSwitchedView(true);
+                      setViewMode("cards");
+                    }}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                      viewMode === "cards"
+                        ? "bg-white text-green-800 shadow-2xs font-bold"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                    title="Mobile-friendly card view"
+                  >
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                    <span>Cards</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHasUserSwitchedView(true);
+                      setViewMode("table");
+                    }}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all ${
+                      viewMode === "table"
+                        ? "bg-white text-green-800 shadow-2xs font-bold"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                    title="Desktop spreadsheet table"
+                  >
+                    <Table2 className="w-3.5 h-3.5" />
+                    <span>Table</span>
+                  </button>
+                </div>
+
+                <div className="h-4 w-px bg-slate-200 hidden sm:block" />
+
                 {!isLocked && (
-                  <>
+                  <div className="hidden sm:flex items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
@@ -300,7 +514,7 @@ function MeetingTimeDailyContent() {
                       <Send className="w-4 h-4 mr-1.5" />
                       Submit Report
                     </Button>
-                  </>
+                  </div>
                 )}
                 {isLocked && (
                   <div className="flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded border border-emerald-200 font-medium">
@@ -332,134 +546,428 @@ function MeetingTimeDailyContent() {
           </Alert>
         )}
 
-        {/* ── Meeting Activity Table ───────────────────────────────────────── */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-green-700" />
-              Meeting Time Daily Breakdown
-            </CardTitle>
-            <span className="text-xs text-slate-500">
-              {formatReadableDate(reportDate)}
-            </span>
-          </CardHeader>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-slate-100/70 border-b border-slate-200 text-slate-700 text-[11px] font-semibold">
-                  <th className="py-2.5 px-4 min-w-[220px]">Activity Metric</th>
-                  <th className="py-2.5 px-3 text-center w-28">Unit</th>
-                  <th className="py-2.5 px-3 text-center w-28">Till Today</th>
-                  <th className="py-2.5 px-3 text-center w-28 bg-green-50/50">10am – 1pm</th>
-                  <th className="py-2.5 px-3 text-center w-28 bg-green-50/50">2pm – 5pm</th>
-                  <th className="py-2.5 px-3 text-center w-28 bg-green-50/50">5pm – 6pm</th>
-                  <th className="py-2.5 px-3 text-center w-28 bg-slate-50 font-bold">Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {MEETING_METRICS.map((metric) => {
-                  const e = entries[metric.key];
-                  const rowSum =
-                    (e.slot_10_to_1 || 0) +
-                    (e.slot_2_to_5 || 0) +
-                    (e.slot_5_to_6 || 0);
-
-                  return (
-                    <tr
-                      key={metric.key}
-                      className="hover:bg-slate-50/80 transition-colors"
+        {/* ═══════════════════════════════════════════════════════════════════
+            MOBILE APP-STYLE CARD VIEW (Optimized for fast phone data entry)
+           ═══════════════════════════════════════════════════════════════════ */}
+        {viewMode === "cards" && (
+          <div className="space-y-4">
+            {/* Quick Filter Pill Buttons */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+              {FILTER_TABS.map((tab) => {
+                const isActive = activeFilter === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setActiveFilter(tab.key)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                      isActive
+                        ? "bg-green-700 text-white shadow-xs"
+                        : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span>{tab.label}</span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${
+                        isActive
+                          ? "bg-green-800 text-green-100"
+                          : "bg-slate-100 text-slate-500"
+                      }`}
                     >
-                      <td className="py-2.5 px-4 font-semibold text-slate-900">
-                        {metric.label}
-                      </td>
+                      {tab.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
 
-                      <td className="py-2.5 px-3 text-center">
-                        <span
-                          className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
-                            metric.unit === "minutes"
-                              ? "bg-green-50 text-green-800 border border-green-200"
-                              : "bg-slate-100 text-slate-700 border border-slate-200"
-                          }`}
+            {/* Mobile Metric Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredMetrics.map((metric) => {
+                const e = entries[metric.key];
+                const theme = METRIC_THEMES[metric.key];
+                const Icon = theme.icon;
+                const isMinutes = metric.unit === "minutes";
+                const rowSum =
+                  (e.slot_10_to_1 || 0) +
+                  (e.slot_2_to_5 || 0) +
+                  (e.slot_5_to_6 || 0);
+
+                return (
+                  <div
+                    key={metric.key}
+                    className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden transition-all hover:border-slate-300"
+                  >
+                    {/* Header */}
+                    <div className="p-3.5 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${theme.iconBg}`}
                         >
-                          {metric.unit === "minutes" ? "Minutes" : "Count"}
+                          <Icon className={`w-4 h-4 ${theme.iconColor}`} />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-slate-900 text-sm">
+                            {metric.label}
+                          </h3>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span
+                              className={`text-[10px] font-semibold px-2 py-0.2 rounded-full ${theme.badge}`}
+                            >
+                              {isMinutes ? "Minutes" : "Count"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">
+                          Total Today
                         </span>
-                      </td>
+                        <span className="font-extrabold text-sm text-slate-900">
+                          {rowSum > 0
+                            ? isMinutes
+                              ? `${rowSum} min`
+                              : `${rowSum}`
+                            : "—"}
+                        </span>
+                      </div>
+                    </div>
 
-                      {/* Till Today */}
-                      <td className="p-1.5 text-center">
-                        <input
-                          type="number"
-                          min="0"
-                          disabled={isLocked || loading}
-                          value={e.till_today ?? ""}
-                          onChange={(ev) =>
-                            handleCellChange(metric.key, "till_today", ev.target.value)
-                          }
-                          placeholder="—"
-                          className="w-full text-center py-1 border border-slate-300 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
-                        />
-                      </td>
+                    <div className="p-4 space-y-4">
+                      {/* Till Today (Cumulative prior entry) */}
+                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/80 flex items-center justify-between gap-3">
+                        <div>
+                          <span className="text-xs font-bold text-slate-700 block">
+                            Till Today
+                          </span>
+                          <span className="text-[10px] text-slate-500">
+                            {isMinutes ? "Cumulative prior minutes" : "Cumulative prior count"}
+                          </span>
+                        </div>
+                        <div className="w-28 sm:w-32">
+                          <MobileNumberInput
+                            value={e.till_today}
+                            disabled={isLocked || loading}
+                            onChange={(val) =>
+                              handleCellChange(metric.key, "till_today", val)
+                            }
+                            onStep={(delta) =>
+                              handleStep(metric.key, "till_today", delta)
+                            }
+                            placeholder="0"
+                            step={isMinutes ? 5 : 1}
+                            textSize="text-sm"
+                          />
+                        </div>
+                      </div>
 
-                      {/* 10 AM to 1 PM */}
-                      <td className="p-1.5 text-center bg-green-50/20">
-                        <input
-                          type="number"
-                          min="0"
-                          disabled={isLocked || loading}
-                          value={e.slot_10_to_1 ?? ""}
-                          onChange={(ev) =>
-                            handleCellChange(metric.key, "slot_10_to_1", ev.target.value)
-                          }
-                          placeholder="—"
-                          className="w-full text-center py-1 border border-slate-300 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
-                        />
-                      </td>
+                      {/* Today's 3 Time Slots */}
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-green-700" />
+                            Today's Time Slots
+                          </label>
+                          <span className="text-[10px] text-slate-500">
+                            {isMinutes ? "Minutes spent" : "Visits done"}
+                          </span>
+                        </div>
 
-                      {/* 2 PM to 5 PM */}
-                      <td className="p-1.5 text-center bg-green-50/20">
-                        <input
-                          type="number"
-                          min="0"
-                          disabled={isLocked || loading}
-                          value={e.slot_2_to_5 ?? ""}
-                          onChange={(ev) =>
-                            handleCellChange(metric.key, "slot_2_to_5", ev.target.value)
-                          }
-                          placeholder="—"
-                          className="w-full text-center py-1 border border-slate-300 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
-                        />
-                      </td>
+                        <div className="grid grid-cols-3 gap-2">
+                          {/* 10am – 1pm */}
+                          <div className="bg-green-50/40 p-2 sm:p-2.5 rounded-xl border border-green-200/70 text-center flex flex-col justify-between">
+                            <span className="text-[10px] font-bold uppercase text-slate-700 block mb-1">
+                              10am – 1pm
+                            </span>
+                            <MobileNumberInput
+                              value={e.slot_10_to_1}
+                              disabled={isLocked || loading}
+                              onChange={(val) =>
+                                handleCellChange(metric.key, "slot_10_to_1", val)
+                              }
+                              onStep={(delta) =>
+                                handleStep(metric.key, "slot_10_to_1", delta)
+                              }
+                              placeholder="0"
+                              step={isMinutes ? 5 : 1}
+                              borderColor="border-green-300"
+                              arrowColor="text-green-800 hover:text-green-950"
+                              textSize="text-base"
+                            />
+                            {isMinutes && !isLocked && (
+                              <div className="flex justify-center gap-1 mt-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleStep(metric.key, "slot_10_to_1", 15)
+                                  }
+                                  className="text-[9px] font-bold px-1.5 py-0.5 bg-green-100/80 hover:bg-green-200 text-green-900 rounded active:scale-95 transition-all"
+                                  title="Add 15 minutes"
+                                >
+                                  +15m
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleStep(metric.key, "slot_10_to_1", 30)
+                                  }
+                                  className="text-[9px] font-bold px-1.5 py-0.5 bg-green-100/80 hover:bg-green-200 text-green-900 rounded active:scale-95 transition-all"
+                                  title="Add 30 minutes"
+                                >
+                                  +30m
+                                </button>
+                              </div>
+                            )}
+                          </div>
 
-                      {/* 5 PM to 6 PM */}
-                      <td className="p-1.5 text-center bg-green-50/20">
-                        <input
-                          type="number"
-                          min="0"
-                          disabled={isLocked || loading}
-                          value={e.slot_5_to_6 ?? ""}
-                          onChange={(ev) =>
-                            handleCellChange(metric.key, "slot_5_to_6", ev.target.value)
-                          }
-                          placeholder="—"
-                          className="w-full text-center py-1 border border-slate-300 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
-                        />
-                      </td>
+                          {/* 2pm – 5pm */}
+                          <div className="bg-green-50/40 p-2 sm:p-2.5 rounded-xl border border-green-200/70 text-center flex flex-col justify-between">
+                            <span className="text-[10px] font-bold uppercase text-slate-700 block mb-1">
+                              2pm – 5pm
+                            </span>
+                            <MobileNumberInput
+                              value={e.slot_2_to_5}
+                              disabled={isLocked || loading}
+                              onChange={(val) =>
+                                handleCellChange(metric.key, "slot_2_to_5", val)
+                              }
+                              onStep={(delta) =>
+                                handleStep(metric.key, "slot_2_to_5", delta)
+                              }
+                              placeholder="0"
+                              step={isMinutes ? 5 : 1}
+                              borderColor="border-green-300"
+                              arrowColor="text-green-800 hover:text-green-950"
+                              textSize="text-base"
+                            />
+                            {isMinutes && !isLocked && (
+                              <div className="flex justify-center gap-1 mt-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleStep(metric.key, "slot_2_to_5", 15)
+                                  }
+                                  className="text-[9px] font-bold px-1.5 py-0.5 bg-green-100/80 hover:bg-green-200 text-green-900 rounded active:scale-95 transition-all"
+                                  title="Add 15 minutes"
+                                >
+                                  +15m
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleStep(metric.key, "slot_2_to_5", 30)
+                                  }
+                                  className="text-[9px] font-bold px-1.5 py-0.5 bg-green-100/80 hover:bg-green-200 text-green-900 rounded active:scale-95 transition-all"
+                                  title="Add 30 minutes"
+                                >
+                                  +30m
+                                </button>
+                              </div>
+                            )}
+                          </div>
 
-                      {/* Row Total */}
-                      <td className="py-2.5 px-3 text-center font-bold text-slate-900 bg-slate-50">
-                        {rowSum > 0
-                          ? metric.unit === "minutes"
-                            ? `${rowSum} min`
-                            : rowSum
-                          : "—"}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                          {/* 5pm – 6pm */}
+                          <div className="bg-green-50/40 p-2 sm:p-2.5 rounded-xl border border-green-200/70 text-center flex flex-col justify-between">
+                            <span className="text-[10px] font-bold uppercase text-slate-700 block mb-1">
+                              5pm – 6pm
+                            </span>
+                            <MobileNumberInput
+                              value={e.slot_5_to_6}
+                              disabled={isLocked || loading}
+                              onChange={(val) =>
+                                handleCellChange(metric.key, "slot_5_to_6", val)
+                              }
+                              onStep={(delta) =>
+                                handleStep(metric.key, "slot_5_to_6", delta)
+                              }
+                              placeholder="0"
+                              step={isMinutes ? 5 : 1}
+                              borderColor="border-green-300"
+                              arrowColor="text-green-800 hover:text-green-950"
+                              textSize="text-base"
+                            />
+                            {isMinutes && !isLocked && (
+                              <div className="flex justify-center gap-1 mt-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleStep(metric.key, "slot_5_to_6", 15)
+                                  }
+                                  className="text-[9px] font-bold px-1.5 py-0.5 bg-green-100/80 hover:bg-green-200 text-green-900 rounded active:scale-95 transition-all"
+                                  title="Add 15 minutes"
+                                >
+                                  +15m
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleStep(metric.key, "slot_5_to_6", 30)
+                                  }
+                                  className="text-[9px] font-bold px-1.5 py-0.5 bg-green-100/80 hover:bg-green-200 text-green-900 rounded active:scale-95 transition-all"
+                                  title="Add 30 minutes"
+                                >
+                                  +30m
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Card Footer: Summary of this metric */}
+                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                        <span className="text-slate-500 font-medium">
+                          {isMinutes ? "Today's Duration:" : "Today's Visits:"}
+                        </span>
+                        <span className="font-extrabold text-green-950 bg-green-50 px-2.5 py-1 rounded-lg border border-green-200">
+                          {isMinutes
+                            ? `${rowSum} min (${formatMinutes(rowSum)})`
+                            : `${rowSum} visits`}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </Card>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            PC SPREADSHEET TABLE VIEW (Unchanged, Excel-style for desktop)
+           ═══════════════════════════════════════════════════════════════════ */}
+        {viewMode === "table" && (
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-green-700" />
+                  Meeting Time Daily Breakdown
+                </CardTitle>
+                <span className="text-xs text-slate-500">
+                  {formatReadableDate(reportDate)}
+                </span>
+              </div>
+            </CardHeader>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-100/70 border-b border-slate-200 text-slate-700 text-[11px] font-semibold">
+                    <th className="py-2.5 px-4 min-w-[220px]">Activity Metric</th>
+                    <th className="py-2.5 px-3 text-center w-28">Unit</th>
+                    <th className="py-2.5 px-3 text-center w-28">Till Today</th>
+                    <th className="py-2.5 px-3 text-center w-28 bg-green-50/50">10am – 1pm</th>
+                    <th className="py-2.5 px-3 text-center w-28 bg-green-50/50">2pm – 5pm</th>
+                    <th className="py-2.5 px-3 text-center w-28 bg-green-50/50">5pm – 6pm</th>
+                    <th className="py-2.5 px-3 text-center w-28 bg-slate-50 font-bold">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {MEETING_METRICS.map((metric) => {
+                    const e = entries[metric.key];
+                    const rowSum =
+                      (e.slot_10_to_1 || 0) +
+                      (e.slot_2_to_5 || 0) +
+                      (e.slot_5_to_6 || 0);
+
+                    return (
+                      <tr
+                        key={metric.key}
+                        className="hover:bg-slate-50/80 transition-colors"
+                      >
+                        <td className="py-2.5 px-4 font-semibold text-slate-900">
+                          {metric.label}
+                        </td>
+
+                        <td className="py-2.5 px-3 text-center">
+                          <span
+                            className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
+                              metric.unit === "minutes"
+                                ? "bg-green-50 text-green-800 border border-green-200"
+                                : "bg-slate-100 text-slate-700 border border-slate-200"
+                            }`}
+                          >
+                            {metric.unit === "minutes" ? "Minutes" : "Count"}
+                          </span>
+                        </td>
+
+                        {/* Till Today */}
+                        <td className="p-1.5 text-center">
+                          <input
+                            type="number"
+                            min="0"
+                            disabled={isLocked || loading}
+                            value={e.till_today ?? ""}
+                            onChange={(ev) =>
+                              handleCellChange(metric.key, "till_today", ev.target.value)
+                            }
+                            placeholder="—"
+                            className="w-full text-center py-1 border border-slate-300 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                          />
+                        </td>
+
+                        {/* 10 AM to 1 PM */}
+                        <td className="p-1.5 text-center bg-green-50/20">
+                          <input
+                            type="number"
+                            min="0"
+                            disabled={isLocked || loading}
+                            value={e.slot_10_to_1 ?? ""}
+                            onChange={(ev) =>
+                              handleCellChange(metric.key, "slot_10_to_1", ev.target.value)
+                            }
+                            placeholder="—"
+                            className="w-full text-center py-1 border border-slate-300 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                          />
+                        </td>
+
+                        {/* 2 PM to 5 PM */}
+                        <td className="p-1.5 text-center bg-green-50/20">
+                          <input
+                            type="number"
+                            min="0"
+                            disabled={isLocked || loading}
+                            value={e.slot_2_to_5 ?? ""}
+                            onChange={(ev) =>
+                              handleCellChange(metric.key, "slot_2_to_5", ev.target.value)
+                            }
+                            placeholder="—"
+                            className="w-full text-center py-1 border border-slate-300 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                          />
+                        </td>
+
+                        {/* 5 PM to 6 PM */}
+                        <td className="p-1.5 text-center bg-green-50/20">
+                          <input
+                            type="number"
+                            min="0"
+                            disabled={isLocked || loading}
+                            value={e.slot_5_to_6 ?? ""}
+                            onChange={(ev) =>
+                              handleCellChange(metric.key, "slot_5_to_6", ev.target.value)
+                            }
+                            placeholder="—"
+                            className="w-full text-center py-1 border border-slate-300 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                          />
+                        </td>
+
+                        {/* Row Total */}
+                        <td className="py-2.5 px-3 text-center font-bold text-slate-900 bg-slate-50">
+                          {rowSum > 0
+                            ? metric.unit === "minutes"
+                              ? `${rowSum} min`
+                              : rowSum
+                            : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
 
         {/* ── Key Metric Summary Cards ────────────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -571,6 +1079,33 @@ function MeetingTimeDailyContent() {
             </div>
           </div>
         </Modal>
+
+        {/* ── Mobile Sticky Bottom Action Bar ──────────────────────────────── */}
+        {!isLocked && (
+          <div className="sm:hidden fixed bottom-0 left-0 right-0 p-3 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-lg z-30 flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 font-semibold"
+              onClick={handleSaveDraft}
+              loading={saving}
+              disabled={loading}
+            >
+              <Save className="w-4 h-4 mr-1.5" />
+              Save Draft
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              className="flex-1 font-semibold"
+              onClick={() => setSubmitModalOpen(true)}
+              disabled={loading || saving}
+            >
+              <Send className="w-4 h-4 mr-1.5" />
+              Submit Report
+            </Button>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );
