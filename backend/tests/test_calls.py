@@ -117,84 +117,116 @@ async def test_upsert_replaces_previous_entries(client: AsyncClient, employee_us
 
 
 @pytest.mark.asyncio
-async def test_manual_daily_entry_isolation(client: AsyncClient, employee_user, admin_user):
+async def test_lead_status_update_and_next_day_carry_forward(client: AsyncClient, employee_user):
     """
-    Verify that each day's report is completely independent and manual.
-    Values entered on Day 1 are NOT automatically carried forward or injected into Day 2.
+    Test the exact user requirement and example:
+    If High Potential starts with 10 leads, the employee dials 8, connects with 6, and classifies 4 as HP and 2 as P:
+      - HP remaining: 8 (10 - 2 moved to P)
+      - P increases by 2
+      - The 2 unconnected leads remain in HP
+      - The next day starts with these updated totals.
     """
     headers_emp = await emp_headers(client, employee_user)
 
-    # Day 1: Employee reports manually
-    r1_id = await _make_report(client, headers_emp, "2026-03-10")
+    # Day 1: 2026-06-01
+    r1_id = await _make_report(client, headers_emp, "2026-06-01")
     await client.put(
         f"/api/v1/reports/{r1_id}/calls",
         json={
             "entries": [
                 {
-                    "lead_category": "High Potential",
-                    "till_today_status": 50,
-                    "slot_10am_1pm": 5,
-                    "slot_2pm_5pm": 5,
-                    "slot_5pm_6pm": 5,
-                    "total_connected": 8,
-                    "lead_status_hp": 2,
-                    "lead_status_p": 3,
-                    "lead_status_fub": 1,
-                    "lead_status_ni": 4,
-                }
+                    "lead_category": "high_potential",
+                    "till_today_status": 10,
+                    "slot_10am_1pm": 3,
+                    "slot_2pm_5pm": 3,
+                    "slot_5pm_6pm": 2,
+                    "total_connected": 6,
+                    "lead_status_hp": 4,
+                    "lead_status_p": 2,
+                    "lead_status_fub": 0,
+                    "lead_status_ni": 0,
+                },
+                {
+                    "lead_category": "potential",
+                    "till_today_status": 20,
+                    "slot_10am_1pm": 0,
+                    "slot_2pm_5pm": 0,
+                    "slot_5pm_6pm": 0,
+                    "total_connected": 0,
+                    "lead_status_hp": 0,
+                    "lead_status_p": 0,
+                    "lead_status_fub": 0,
+                    "lead_status_ni": 0,
+                },
             ]
         },
         headers=headers_emp,
     )
 
-    # Day 2: Employee creates report on 2026-03-11.
-    # Entries should be empty and carry_forward categories should be empty (no auto-fill).
-    r2_id = await _make_report(client, headers_emp, "2026-03-11")
-    resp = await client.get(f"/api/v1/reports/{r2_id}/calls", headers=headers_emp)
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["entries"] == []
-    cf = data.get("carry_forward")
+    # Day 2: 2026-06-02
+    r2_id = await _make_report(client, headers_emp, "2026-06-02")
+    resp2 = await client.get(f"/api/v1/reports/{r2_id}/calls", headers=headers_emp)
+    assert resp2.status_code == 200
+    cf = resp2.json().get("carry_forward")
     assert cf is not None
-    assert cf["categories"] == {}
-    assert cf["previous_report_date"] is None
+    assert cf["previous_report_date"] == "2026-06-01"
 
-    # Employee manually enters independent Day 2 data
+    # Verify High Potential has 8
+    hp_cf = cf["categories"]["high_potential"]
+    assert hp_cf["prev_till_today"] == 8
+
+    # Verify Potential increased by 2 (20 + 2 = 22)
+    p_cf = cf["categories"]["potential"]
+    assert p_cf["prev_till_today"] == 22
+
+
+@pytest.mark.asyncio
+async def test_facebook_pool_conversion_carry_forward(client: AsyncClient, employee_user):
+    """
+    Test lead acquisition pool (e.g. Facebook):
+    Facebook starts with 50 leads, connects with 6 (1 HP, 2 P, 3 FUB).
+    Facebook remaining = 44 (50 - 6).
+    Next day starts with Facebook = 44, HP gets +1, P gets +2, FUB gets +3.
+    """
+    headers_emp = await emp_headers(client, employee_user)
+
+    r1_id = await _make_report(client, headers_emp, "2026-07-01")
     await client.put(
-        f"/api/v1/reports/{r2_id}/calls",
+        f"/api/v1/reports/{r1_id}/calls",
         json={
             "entries": [
                 {
-                    "lead_category": "High Potential",
-                    "till_today_status": 10,
-                    "slot_10am_1pm": 2,
-                    "slot_2pm_5pm": 3,
-                    "slot_5pm_6pm": 1,
-                    "total_connected": 4,
+                    "lead_category": "facebook",
+                    "till_today_status": 50,
+                    "slot_10am_1pm": 5,
+                    "slot_2pm_5pm": 5,
+                    "slot_5pm_6pm": 0,
+                    "total_connected": 6,
                     "lead_status_hp": 1,
-                    "lead_status_p": 1,
-                    "lead_status_fub": 0,
-                    "lead_status_ni": 2,
-                }
+                    "lead_status_p": 2,
+                    "lead_status_fub": 3,
+                    "lead_status_ni": 0,
+                },
+                {
+                    "lead_category": "high_potential",
+                    "till_today_status": 10,
+                },
             ]
         },
         headers=headers_emp,
     )
 
-    # Verify Day 1 remains untouched
-    r1_resp = await client.get(f"/api/v1/reports/{r1_id}/calls", headers=headers_emp)
-    assert r1_resp.status_code == 200
-    r1_entry = r1_resp.json()["entries"][0]
-    assert r1_entry["till_today_status"] == 50
-    assert r1_entry["lead_status_hp"] == 2
-    assert r1_entry["total_connected"] == 8
+    r2_id = await _make_report(client, headers_emp, "2026-07-02")
+    resp2 = await client.get(f"/api/v1/reports/{r2_id}/calls", headers=headers_emp)
+    assert resp2.status_code == 200
+    cf = resp2.json()["carry_forward"]
 
-    # Verify Day 2 has its own manual numbers
-    r2_resp = await client.get(f"/api/v1/reports/{r2_id}/calls", headers=headers_emp)
-    assert r2_resp.status_code == 200
-    r2_entry = r2_resp.json()["entries"][0]
-    assert r2_entry["till_today_status"] == 10
-    assert r2_entry["lead_status_hp"] == 1
-    assert r2_entry["total_dialed"] == 6
-    assert r2_entry["total_connected"] == 4
+    # Facebook remaining = 50 - 6 = 44
+    assert cf["categories"]["facebook"]["prev_till_today"] == 44
+    # High Potential gets +1 = 11
+    assert cf["categories"]["high_potential"]["prev_till_today"] == 11
+    # Potential gets +2
+    assert cf["categories"]["potential"]["prev_till_today"] == 2
+    # Follow Up gets +3
+    assert cf["categories"]["follow_up"]["prev_till_today"] == 3
 

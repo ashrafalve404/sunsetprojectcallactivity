@@ -242,12 +242,19 @@ function DailyCallActivityContent() {
           const found = callData.entries.find(
             (e) => e.lead_category === cat.key || e.lead_category === cat.label
           );
+          const cf =
+            callData.carry_forward?.categories?.[cat.key] ||
+            callData.carry_forward?.categories?.[cat.label];
+          const fallbackStart = cf?.prev_till_today ?? null;
 
           loaded[cat.key] = found
-            ? { ...found }
+            ? {
+                ...found,
+                till_today_status: found.till_today_status ?? fallbackStart,
+              }
             : {
                 lead_category: cat.key,
-                till_today_status: null,
+                till_today_status: fallbackStart,
                 slot_10_to_1: null,
                 slot_2_to_5: null,
                 slot_5_to_6: null,
@@ -262,9 +269,12 @@ function DailyCallActivityContent() {
       } else {
         const reset: Record<string, CallActivityEntry> = {};
         for (const cat of LEAD_CATEGORIES) {
+          const cf =
+            callData?.carry_forward?.categories?.[cat.key] ||
+            callData?.carry_forward?.categories?.[cat.label];
           reset[cat.key] = {
             lead_category: cat.key,
-            till_today_status: null,
+            till_today_status: cf?.prev_till_today ?? null,
             slot_10_to_1: null,
             slot_2_to_5: null,
             slot_5_to_6: null,
@@ -313,6 +323,81 @@ function DailyCallActivityContent() {
     }));
   };
 
+  // Status mapping for transfer calculations
+  const CATEGORY_TO_STATUS: Record<string, "hp" | "p" | "fub" | "ni"> = useMemo(
+    () => ({
+      high_potential: "hp",
+      potential: "p",
+      follow_up: "fub",
+      other_not_reached: "ni",
+    }),
+    []
+  );
+
+  // Automatic lead status transfer and remaining totals calculation
+  const categoryCalculations = useMemo(() => {
+    const res: Record<
+      string,
+      {
+        start: number;
+        movedOut: number;
+        movedIn: number;
+        finalTotal: number;
+      }
+    > = {};
+
+    // 1. Starting leads and moved out for each category
+    for (const cat of LEAD_CATEGORIES) {
+      const e = entries[cat.key];
+      const start = e?.till_today_status ?? 0;
+      const hp = e?.hp_count ?? 0;
+      const p = e?.p_count ?? 0;
+      const fub = e?.fub_count ?? 0;
+      const ni = e?.ni_count ?? 0;
+      const selfStatus = CATEGORY_TO_STATUS[cat.key];
+
+      let movedOut = 0;
+      if (selfStatus) {
+        if (selfStatus !== "hp") movedOut += hp;
+        if (selfStatus !== "p") movedOut += p;
+        if (selfStatus !== "fub") movedOut += fub;
+        if (selfStatus !== "ni") movedOut += ni;
+      } else {
+        movedOut = hp + p + fub + ni;
+      }
+
+      res[cat.key] = {
+        start,
+        movedOut,
+        movedIn: 0,
+        finalTotal: start - movedOut,
+      };
+    }
+
+    // 2. Moved in from other categories to status categories
+    for (const cat of LEAD_CATEGORIES) {
+      const selfStatus = CATEGORY_TO_STATUS[cat.key];
+      if (selfStatus) {
+        let movedIn = 0;
+        for (const otherCat of LEAD_CATEGORIES) {
+          if (otherCat.key !== cat.key) {
+            const oe = entries[otherCat.key];
+            if (selfStatus === "hp") movedIn += oe?.hp_count ?? 0;
+            else if (selfStatus === "p") movedIn += oe?.p_count ?? 0;
+            else if (selfStatus === "fub") movedIn += oe?.fub_count ?? 0;
+            else if (selfStatus === "ni") movedIn += oe?.ni_count ?? 0;
+          }
+        }
+        res[cat.key].movedIn = movedIn;
+        res[cat.key].finalTotal = Math.max(0, res[cat.key].start - res[cat.key].movedOut + movedIn);
+      } else {
+        res[cat.key].finalTotal = Math.max(0, res[cat.key].start - res[cat.key].movedOut);
+      }
+    }
+
+    return res;
+  }, [entries, CATEGORY_TO_STATUS]);
+
   // Calculated totals across all categories (Call Activity)
   const totals = useMemo(() => {
     let slot1 = 0;
@@ -324,6 +409,7 @@ function DailyCallActivityContent() {
     let fub = 0;
     let ni = 0;
     let totalConnected = 0;
+    let totalUpdatedLeads = 0;
 
     for (const cat of LEAD_CATEGORIES) {
       const e = entries[cat.key];
@@ -343,6 +429,7 @@ function DailyCallActivityContent() {
             : (e.hp_count || 0) + (e.p_count || 0) + (e.fub_count || 0);
         totalConnected += rowConn;
       }
+      totalUpdatedLeads += categoryCalculations[cat.key]?.finalTotal ?? 0;
     }
 
     const totalDialed = slot1 + slot2 + slot3;
@@ -357,12 +444,13 @@ function DailyCallActivityContent() {
       totalConnected,
       connectionRate,
       tillToday,
+      totalUpdatedLeads,
       hp,
       p,
       fub,
       ni,
     };
-  }, [entries]);
+  }, [entries, categoryCalculations]);
 
   // Build API upsert payload from current state
   const buildPayload = (): CallActivityEntry[] => {
@@ -755,6 +843,33 @@ function DailyCallActivityContent() {
                       </div>
                     </div>
 
+                    {/* Starting Leads & Updated Leads Pill */}
+                    <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-100 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-600 font-semibold">Start Leads:</span>
+                        <input
+                          type="number"
+                          min="0"
+                          disabled={isLocked || loading}
+                          value={e.till_today_status ?? ""}
+                          onChange={(ev) =>
+                            handleCellChange(cat.key, "till_today_status", ev.target.value)
+                          }
+                          placeholder="0"
+                          className="w-16 text-center py-1 text-xs font-bold bg-white border border-slate-300 rounded focus:ring-1 focus:ring-emerald-600"
+                        />
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-slate-500 font-medium">Updated:</span>
+                        <span
+                          className="px-2.5 py-1 rounded bg-emerald-100 text-emerald-950 font-bold text-xs"
+                          title={`Start: ${categoryCalculations[cat.key]?.start ?? 0} | Out: -${categoryCalculations[cat.key]?.movedOut ?? 0} | In: +${categoryCalculations[cat.key]?.movedIn ?? 0}`}
+                        >
+                          {categoryCalculations[cat.key]?.finalTotal ?? 0}
+                        </span>
+                      </div>
+                    </div>
+
                     <div className="p-4 space-y-4">
                       {/* Section 1: Time Slots */}
                       <div>
@@ -922,20 +1037,12 @@ function DailyCallActivityContent() {
                         </div>
                       </div>
 
-                      {/* Section 3: Till Today Status Footer */}
+                      {/* Section 3: Carries forward to next day */}
                       <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                        <span className="text-slate-500 font-medium">Till Today Status:</span>
-                        <input
-                          type="number"
-                          min="0"
-                          disabled={isLocked || loading}
-                          value={e.till_today_status ?? ""}
-                          onChange={(ev) =>
-                            handleCellChange(cat.key, "till_today_status", ev.target.value)
-                          }
-                          placeholder="0"
-                          className="w-24 text-center py-1 text-xs font-bold bg-white border border-slate-300 rounded focus:ring-1 focus:ring-green-600"
-                        />
+                        <span className="text-slate-500 font-medium">Carries forward to next day:</span>
+                        <span className="font-extrabold text-emerald-900 bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200">
+                          {categoryCalculations[cat.key]?.finalTotal ?? 0} leads
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -967,8 +1074,8 @@ function DailyCallActivityContent() {
                       Lead Category
                     </th>
                     <th className="py-2.5 px-2 text-center w-24">
-                      <Tooltip content="Till Today Status" subcontent="Cumulative leads status worked or reached up to today.">
-                        <span className="border-b border-dotted border-slate-400 hover:text-slate-900">Till Today</span>
+                      <Tooltip content="Starting Leads" subcontent="Starting leads for today (automatically carried forward or entered manually).">
+                        <span className="border-b border-dotted border-slate-400 hover:text-slate-900 font-bold">Start Leads</span>
                       </Tooltip>
                     </th>
                     <th className="py-2.5 px-2 text-center w-24 bg-green-50/50">
@@ -1016,6 +1123,11 @@ function DailyCallActivityContent() {
                         <span className="font-bold text-emerald-900 border-b border-dotted border-emerald-700 hover:text-emerald-950">Connected</span>
                       </Tooltip>
                     </th>
+                    <th className="py-2.5 px-2 text-center w-24 bg-emerald-50/70 font-bold">
+                      <Tooltip content="Updated Total Leads" subcontent="Remaining leads after transfers and classification. Carries forward to next day.">
+                        <span className="font-bold text-emerald-950 border-b border-dotted border-emerald-700">Updated Total</span>
+                      </Tooltip>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -1040,7 +1152,7 @@ function DailyCallActivityContent() {
                           <div className="font-medium text-slate-900">{cat.label}</div>
                         </td>
 
-                        {/* Till Today Status */}
+                        {/* Starting Leads */}
                         <td className="p-1 text-center align-middle">
                           <input
                             type="number"
@@ -1179,6 +1291,16 @@ function DailyCallActivityContent() {
                             className="w-full text-center py-1 border border-emerald-300 rounded text-xs font-bold text-emerald-900 placeholder:text-slate-400 focus:ring-1 focus:ring-emerald-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                           />
                         </td>
+
+                        {/* Updated Total */}
+                        <td className="py-2.5 px-2 text-center font-bold text-emerald-900 bg-emerald-50/40 align-middle">
+                          <span
+                            className="inline-flex items-center justify-center px-2 py-0.5 rounded bg-emerald-100 text-emerald-950 font-bold text-xs"
+                            title={`Start: ${categoryCalculations[cat.key]?.start ?? 0} | Moved Out: -${categoryCalculations[cat.key]?.movedOut ?? 0} | Moved In: +${categoryCalculations[cat.key]?.movedIn ?? 0}`}
+                          >
+                            {categoryCalculations[cat.key]?.finalTotal ?? 0}
+                          </span>
+                        </td>
                       </tr>
                     );
                   })}
@@ -1201,6 +1323,9 @@ function DailyCallActivityContent() {
                     <td className="py-2.5 px-2 text-center text-slate-700 font-bold">{totals.ni || 0}</td>
                     <td className="py-2.5 px-2.5 text-center text-base font-extrabold text-emerald-800 bg-emerald-100/50">
                       {totals.totalConnected || 0}
+                    </td>
+                    <td className="py-2.5 px-2.5 text-center text-base font-extrabold text-emerald-950 bg-emerald-100/80">
+                      {totals.totalUpdatedLeads || 0}
                     </td>
                   </tr>
                 </tbody>
@@ -1390,13 +1515,13 @@ function DailyCallActivityContent() {
 
           <Card className="p-4">
             <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">
-              High Potential Leads
+              Updated Lead Stock
             </span>
-            <div className="text-2xl font-bold text-slate-900 mt-1">
-              {totals.hp}
+            <div className="text-2xl font-bold text-emerald-800 mt-1">
+              {totals.totalUpdatedLeads}
             </div>
             <p className="text-xs text-slate-600 font-medium mt-0.5">
-              Immediate closing priority
+              Carried forward to next day
             </p>
           </Card>
         </div>
@@ -1410,7 +1535,7 @@ function DailyCallActivityContent() {
               <span>Conn: <strong className="text-emerald-700">{totals.totalConnected}</strong></span>
             </div>
             <div className="text-[11px] text-slate-600 font-medium">
-              HP: {totals.hp}
+              Updated Stock: <strong className="text-emerald-800">{totals.totalUpdatedLeads}</strong>
             </div>
           </div>
 
