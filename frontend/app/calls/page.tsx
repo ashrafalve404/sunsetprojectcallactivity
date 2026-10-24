@@ -19,6 +19,8 @@ import {
   XCircle,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   Users,
   UserPlus,
   Phone,
@@ -47,6 +49,72 @@ import {
 } from "@/types";
 import { getDhakaToday, formatReadableDate } from "@/lib/utils";
 
+/**
+ * Mobile-friendly touch stepper input with prominent up/down increaser arrows.
+ */
+function MobileNumberInput({
+  value,
+  onChange,
+  onStep,
+  disabled,
+  placeholder = "0",
+  borderColor = "border-slate-300",
+  arrowColor = "text-slate-600 hover:text-slate-900",
+  textSize = "text-base",
+}: {
+  value: number | null | undefined;
+  onChange: (val: string) => void;
+  onStep: (delta: number) => void;
+  disabled?: boolean;
+  placeholder?: string;
+  borderColor?: string;
+  arrowColor?: string;
+  textSize?: string;
+}) {
+  return (
+    <div className="relative flex items-center w-full">
+      <input
+        type="number"
+        min="0"
+        disabled={disabled}
+        value={value ?? ""}
+        onChange={(ev) => onChange(ev.target.value)}
+        placeholder={placeholder}
+        className={`w-full text-center pl-1 pr-6 py-2 ${textSize} font-bold bg-white border ${borderColor} rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none text-slate-900 shadow-2xs disabled:bg-slate-50 disabled:text-slate-500`}
+      />
+      <div className="absolute right-0.5 inset-y-0 flex flex-col justify-center -space-y-1">
+        <button
+          type="button"
+          tabIndex={-1}
+          disabled={disabled}
+          onClick={(ev) => {
+            ev.preventDefault();
+            onStep(1);
+          }}
+          className={`px-1 py-0.5 ${arrowColor} hover:bg-slate-100 rounded active:scale-125 transition-all disabled:opacity-30`}
+          title="Increase amount"
+          aria-label="Increase"
+        >
+          <ChevronUp className="w-3.5 h-3.5 stroke-[2.5]" />
+        </button>
+        <button
+          type="button"
+          tabIndex={-1}
+          disabled={disabled}
+          onClick={(ev) => {
+            ev.preventDefault();
+            onStep(-1);
+          }}
+          className={`px-1 py-0.5 ${arrowColor} hover:bg-slate-100 rounded active:scale-125 transition-all disabled:opacity-30`}
+          title="Decrease amount"
+          aria-label="Decrease"
+        >
+          <ChevronDown className="w-3.5 h-3.5 stroke-[2.5]" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function DailyCallActivityContent() {
   const searchParams = useSearchParams();
@@ -321,6 +389,18 @@ function DailyCallActivityContent() {
         [field]: isNaN(num as number) ? null : num,
       },
     }));
+  };
+
+  const handleStep = (
+    category: LeadCategory,
+    field: keyof CallActivityEntry,
+    delta: number
+  ) => {
+    if (report?.is_submitted) return;
+    const current = entries[category]?.[field];
+    const curNum = typeof current === "number" ? current : 0;
+    const next = Math.max(0, curNum + delta);
+    handleCellChange(category, field, String(next));
   };
 
   // Status mapping for transfer calculations
@@ -847,17 +927,22 @@ function DailyCallActivityContent() {
                     <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-100 text-xs">
                       <div className="flex items-center gap-2">
                         <span className="text-slate-600 font-semibold">Start Leads:</span>
-                        <input
-                          type="number"
-                          min="0"
-                          disabled={isLocked || loading}
-                          value={e.till_today_status ?? ""}
-                          onChange={(ev) =>
-                            handleCellChange(cat.key, "till_today_status", ev.target.value)
-                          }
-                          placeholder="0"
-                          className="w-16 text-center py-1 text-xs font-bold bg-white border border-slate-300 rounded focus:ring-1 focus:ring-emerald-600"
-                        />
+                        <div className="w-24">
+                          <MobileNumberInput
+                            value={e.till_today_status}
+                            disabled={isLocked || loading}
+                            onChange={(val) =>
+                              handleCellChange(cat.key, "till_today_status", val)
+                            }
+                            onStep={(delta) =>
+                              handleStep(cat.key, "till_today_status", delta)
+                            }
+                            placeholder="0"
+                            borderColor="border-slate-300"
+                            arrowColor="text-slate-600 hover:text-emerald-700"
+                            textSize="text-xs"
+                          />
+                        </div>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <span className="text-slate-500 font-medium">Updated:</span>
@@ -886,16 +971,18 @@ function DailyCallActivityContent() {
                             <span className="text-[10px] font-bold uppercase text-slate-600 block mb-1">
                               10am – 1pm
                             </span>
-                            <input
-                              type="number"
-                              min="0"
+                            <MobileNumberInput
+                              value={e.slot_10_to_1}
                               disabled={isLocked || loading}
-                              value={e.slot_10_to_1 ?? ""}
-                              onChange={(ev) =>
-                                handleCellChange(cat.key, "slot_10_to_1", ev.target.value)
+                              onChange={(val) =>
+                                handleCellChange(cat.key, "slot_10_to_1", val)
+                              }
+                              onStep={(delta) =>
+                                handleStep(cat.key, "slot_10_to_1", delta)
                               }
                               placeholder="0"
-                              className="w-full text-center py-2 text-base font-bold bg-white border border-green-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:outline-none text-slate-900 shadow-2xs"
+                              borderColor="border-green-300"
+                              arrowColor="text-green-800 hover:text-green-950"
                             />
                           </div>
 
@@ -903,16 +990,18 @@ function DailyCallActivityContent() {
                             <span className="text-[10px] font-bold uppercase text-slate-600 block mb-1">
                               2pm – 5pm
                             </span>
-                            <input
-                              type="number"
-                              min="0"
+                            <MobileNumberInput
+                              value={e.slot_2_to_5}
                               disabled={isLocked || loading}
-                              value={e.slot_2_to_5 ?? ""}
-                              onChange={(ev) =>
-                                handleCellChange(cat.key, "slot_2_to_5", ev.target.value)
+                              onChange={(val) =>
+                                handleCellChange(cat.key, "slot_2_to_5", val)
+                              }
+                              onStep={(delta) =>
+                                handleStep(cat.key, "slot_2_to_5", delta)
                               }
                               placeholder="0"
-                              className="w-full text-center py-2 text-base font-bold bg-white border border-green-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:outline-none text-slate-900 shadow-2xs"
+                              borderColor="border-green-300"
+                              arrowColor="text-green-800 hover:text-green-950"
                             />
                           </div>
 
@@ -920,16 +1009,18 @@ function DailyCallActivityContent() {
                             <span className="text-[10px] font-bold uppercase text-slate-600 block mb-1">
                               5pm – 6pm
                             </span>
-                            <input
-                              type="number"
-                              min="0"
+                            <MobileNumberInput
+                              value={e.slot_5_to_6}
                               disabled={isLocked || loading}
-                              value={e.slot_5_to_6 ?? ""}
-                              onChange={(ev) =>
-                                handleCellChange(cat.key, "slot_5_to_6", ev.target.value)
+                              onChange={(val) =>
+                                handleCellChange(cat.key, "slot_5_to_6", val)
+                              }
+                              onStep={(delta) =>
+                                handleStep(cat.key, "slot_5_to_6", delta)
                               }
                               placeholder="0"
-                              className="w-full text-center py-2 text-base font-bold bg-white border border-green-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:outline-none text-slate-900 shadow-2xs"
+                              borderColor="border-green-300"
+                              arrowColor="text-green-800 hover:text-green-950"
                             />
                           </div>
                         </div>
@@ -950,16 +1041,19 @@ function DailyCallActivityContent() {
                                 <Flame className="w-3.5 h-3.5 text-emerald-600" /> HP
                               </span>
                             </div>
-                            <input
-                              type="number"
-                              min="0"
+                            <MobileNumberInput
+                              value={e.hp_count}
                               disabled={isLocked || loading}
-                              value={e.hp_count ?? ""}
-                              onChange={(ev) =>
-                                handleCellChange(cat.key, "hp_count", ev.target.value)
+                              onChange={(val) =>
+                                handleCellChange(cat.key, "hp_count", val)
+                              }
+                              onStep={(delta) =>
+                                handleStep(cat.key, "hp_count", delta)
                               }
                               placeholder="0"
-                              className="w-full text-center py-2 text-lg font-bold bg-white border border-emerald-300 rounded-lg focus:ring-2 focus:ring-emerald-600 text-slate-900 shadow-2xs"
+                              borderColor="border-emerald-300"
+                              arrowColor="text-emerald-800 hover:text-emerald-950"
+                              textSize="text-lg"
                             />
                             <div className="text-[10px] text-emerald-800 text-center font-medium mt-1">
                               High Potential
@@ -973,16 +1067,19 @@ function DailyCallActivityContent() {
                                 <Target className="w-3.5 h-3.5 text-blue-600" /> P
                               </span>
                             </div>
-                            <input
-                              type="number"
-                              min="0"
+                            <MobileNumberInput
+                              value={e.p_count}
                               disabled={isLocked || loading}
-                              value={e.p_count ?? ""}
-                              onChange={(ev) =>
-                                handleCellChange(cat.key, "p_count", ev.target.value)
+                              onChange={(val) =>
+                                handleCellChange(cat.key, "p_count", val)
+                              }
+                              onStep={(delta) =>
+                                handleStep(cat.key, "p_count", delta)
                               }
                               placeholder="0"
-                              className="w-full text-center py-2 text-lg font-bold bg-white border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-600 text-slate-900 shadow-2xs"
+                              borderColor="border-blue-300"
+                              arrowColor="text-blue-800 hover:text-blue-950"
+                              textSize="text-lg"
                             />
                             <div className="text-[10px] text-blue-800 text-center font-medium mt-1">
                               Potential
@@ -996,16 +1093,19 @@ function DailyCallActivityContent() {
                                 <Clock className="w-3.5 h-3.5 text-amber-600" /> Fub
                               </span>
                             </div>
-                            <input
-                              type="number"
-                              min="0"
+                            <MobileNumberInput
+                              value={e.fub_count}
                               disabled={isLocked || loading}
-                              value={e.fub_count ?? ""}
-                              onChange={(ev) =>
-                                handleCellChange(cat.key, "fub_count", ev.target.value)
+                              onChange={(val) =>
+                                handleCellChange(cat.key, "fub_count", val)
+                              }
+                              onStep={(delta) =>
+                                handleStep(cat.key, "fub_count", delta)
                               }
                               placeholder="0"
-                              className="w-full text-center py-2 text-lg font-bold bg-white border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-600 text-slate-900 shadow-2xs"
+                              borderColor="border-amber-300"
+                              arrowColor="text-amber-800 hover:text-amber-950"
+                              textSize="text-lg"
                             />
                             <div className="text-[10px] text-amber-800 text-center font-medium mt-1">
                               Follow-Up
@@ -1019,16 +1119,19 @@ function DailyCallActivityContent() {
                                 <XCircle className="w-3.5 h-3.5 text-slate-500" /> NI
                               </span>
                             </div>
-                            <input
-                              type="number"
-                              min="0"
+                            <MobileNumberInput
+                              value={e.ni_count}
                               disabled={isLocked || loading}
-                              value={e.ni_count ?? ""}
-                              onChange={(ev) =>
-                                handleCellChange(cat.key, "ni_count", ev.target.value)
+                              onChange={(val) =>
+                                handleCellChange(cat.key, "ni_count", val)
+                              }
+                              onStep={(delta) =>
+                                handleStep(cat.key, "ni_count", delta)
                               }
                               placeholder="0"
-                              className="w-full text-center py-2 text-lg font-bold bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 text-slate-900 shadow-2xs"
+                              borderColor="border-slate-300"
+                              arrowColor="text-slate-600 hover:text-slate-900"
+                              textSize="text-lg"
                             />
                             <div className="text-[10px] text-slate-600 text-center font-medium mt-1">
                               Not Interested
