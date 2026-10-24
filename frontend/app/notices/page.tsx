@@ -90,6 +90,18 @@ export default function NoticesPage() {
     try {
       const data = await api.notices.list();
       setNotices(data);
+      if (typeof window !== "undefined" && data && data.length > 0) {
+        const published = data.filter((n) => n.status === "published");
+        if (published.length > 0) {
+          const maxId = Math.max(...published.map((n) => n.id), 0);
+          const allIds = published.map((n) => n.id);
+          const storageKey = user ? `sunset_notices_last_read_${user.id}` : "sunset_notices_last_read";
+          const readListKey = user ? `sunset_notices_read_ids_${user.id}` : "sunset_notices_read_ids";
+          localStorage.setItem(storageKey, maxId.toString());
+          localStorage.setItem(readListKey, JSON.stringify(allIds));
+          window.dispatchEvent(new Event("sunset_notices_read"));
+        }
+      }
     } catch (err: unknown) {
       if (err instanceof ApiError) {
         setStatusMessage({ type: "error", text: err.message });
@@ -102,7 +114,7 @@ export default function NoticesPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     loadNotices();

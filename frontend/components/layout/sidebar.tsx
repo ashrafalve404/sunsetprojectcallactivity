@@ -16,6 +16,7 @@ import {
   BellRing,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { useNoticesBadge } from "@/lib/use-notices-badge";
 import { cn } from "@/lib/utils";
 
 interface SidebarProps {
@@ -25,7 +26,8 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isSubAdmin } = useAuth();
+  const { unreadCount, pendingReviewCount } = useNoticesBadge();
 
   const navigation = [
     { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -98,6 +100,28 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                 )}
               />
               <span className="truncate">{item.name}</span>
+              {item.href === "/notices" && unreadCount > 0 && (
+                <span className="ml-auto flex items-center gap-1.5" title={`${unreadCount} unread notice${unreadCount > 1 ? "s" : ""}`}>
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                  </span>
+                  <span className="text-[10px] font-bold bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded-full">
+                    {unreadCount}
+                  </span>
+                </span>
+              )}
+              {item.href === "/notices" && unreadCount === 0 && isSubAdmin && pendingReviewCount > 0 && (
+                <span className="ml-auto flex items-center gap-1.5" title={`${pendingReviewCount} notice${pendingReviewCount > 1 ? "s" : ""} pending review`}>
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                  </span>
+                  <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full">
+                    {pendingReviewCount}
+                  </span>
+                </span>
+              )}
               {item.adminOnly && (
                 <span className="ml-auto text-[10px] font-semibold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">
                   Admin

@@ -15,9 +15,12 @@ import {
   ExternalLink,
   ChevronRight,
   Sparkles,
+  Megaphone,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { ReminderItem, ReminderSummary } from "@/types";
+import { useAuth } from "@/lib/auth-context";
+import { useNoticesBadge } from "@/lib/use-notices-badge";
 
 export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
@@ -25,6 +28,16 @@ export function NotificationBell() {
   const [summary, setSummary] = useState<ReminderSummary | null>(null);
   const [dismissedIds, setDismissedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const { isSubAdmin } = useAuth();
+  const {
+    unreadNotices,
+    unreadCount,
+    pendingReviewCount,
+    pendingReviewNotices,
+    markAllAsRead: markAllNoticesAsRead,
+    markOneAsRead: markOneNoticeAsRead,
+  } = useNoticesBadge();
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -93,6 +106,7 @@ export function NotificationBell() {
     const allIds = reminders.map((r) => r.id);
     const updated = Array.from(new Set([...dismissedIds, ...allIds]));
     setDismissedIds(updated);
+    markAllNoticesAsRead();
     if (typeof window !== "undefined") {
       try {
         localStorage.setItem("sunset_dismissed_reminders", JSON.stringify(updated));
@@ -105,6 +119,7 @@ export function NotificationBell() {
   // Filter active reminders
   const activeReminders = reminders.filter((r) => !dismissedIds.includes(r.id));
   const activeCount = activeReminders.length;
+  const totalUnread = activeCount + unreadCount + (isSubAdmin ? pendingReviewCount : 0);
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -117,9 +132,9 @@ export function NotificationBell() {
         aria-label="Notifications"
       >
         <Bell className="w-5 h-5" />
-        {activeCount > 0 && (
+        {totalUnread > 0 && (
           <span className="absolute top-1 right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-rose-600 rounded-full shadow-xs animate-pulse">
-            {activeCount > 9 ? "9+" : activeCount}
+            {totalUnread > 9 ? "9+" : totalUnread}
           </span>
         )}
       </button>
@@ -134,13 +149,13 @@ export function NotificationBell() {
               <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                 Reminders & Alerts
               </h3>
-              {activeCount > 0 && (
+              {totalUnread > 0 && (
                 <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.2 rounded-full">
-                  {activeCount} new
+                  {totalUnread} new
                 </span>
               )}
             </div>
-            {activeCount > 0 && (
+            {totalUnread > 0 && (
               <button
                 type="button"
                 onClick={handleClearAll}
@@ -150,6 +165,83 @@ export function NotificationBell() {
               </button>
             )}
           </div>
+
+          {/* Sub-admin Notice Approvals Banner */}
+          {isSubAdmin && pendingReviewNotices.length > 0 && (
+            <div className="bg-amber-50 border-b border-amber-200 px-3.5 py-2.5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                <div>
+                  <p className="text-xs font-bold text-amber-950">
+                    {pendingReviewNotices.length} Notice{pendingReviewNotices.length > 1 ? "s" : ""} Pending Review
+                  </p>
+                  <p className="text-[10px] text-amber-700">Sub-Admin approval required</p>
+                </div>
+              </div>
+              <Link
+                href="/notices"
+                onClick={() => setIsOpen(false)}
+                className="text-xs font-bold text-amber-900 bg-amber-200/70 hover:bg-amber-200 px-2.5 py-1 rounded-md transition-colors"
+              >
+                Review →
+              </Link>
+            </div>
+          )}
+
+          {/* Unread Company Notices */}
+          {unreadNotices.length > 0 && (
+            <div className="bg-rose-50/60 border-b border-rose-100 p-3">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5">
+                  <Megaphone className="w-3.5 h-3.5 text-rose-600" />
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-rose-900">
+                    New Notice{unreadNotices.length > 1 ? "s" : ""} ({unreadNotices.length})
+                  </span>
+                </div>
+                <Link
+                  href="/notices"
+                  onClick={() => {
+                    setIsOpen(false);
+                    markAllNoticesAsRead();
+                  }}
+                  className="text-[11px] font-bold text-rose-700 hover:text-rose-900 hover:underline"
+                >
+                  View All →
+                </Link>
+              </div>
+              <div className="space-y-1.5">
+                {unreadNotices.slice(0, 2).map((notice) => (
+                  <Link
+                    key={notice.id}
+                    href="/notices"
+                    onClick={() => {
+                      setIsOpen(false);
+                      markOneNoticeAsRead(notice.id);
+                    }}
+                    className="block p-2 bg-white rounded-lg border border-rose-200/80 hover:border-rose-400 hover:shadow-xs transition-all"
+                  >
+                    <div className="flex items-center justify-between gap-1 mb-0.5">
+                      <span className="text-xs font-bold text-slate-900 truncate">
+                        {notice.title}
+                      </span>
+                      <span
+                        className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full uppercase ${
+                          notice.priority === "urgent"
+                            ? "bg-rose-100 text-rose-700 font-extrabold"
+                            : "bg-slate-100 text-slate-700"
+                        }`}
+                      >
+                        {notice.priority}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 line-clamp-1">
+                      {notice.content || (notice.notice_type === "pdf" ? `PDF Document: ${notice.file_name || "Attachment"}` : "")}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Current Slot Info */}
           {summary?.slot_nudge && (
