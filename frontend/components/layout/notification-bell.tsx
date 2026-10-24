@@ -293,6 +293,10 @@ export function NotificationBell() {
                               : "bg-amber-100 text-amber-700"
                             : r.type === "report_submission"
                             ? "bg-blue-100 text-blue-700"
+                            : r.type === "commitment_due_today"
+                            ? "bg-emerald-100 text-emerald-800 ring-2 ring-emerald-400"
+                            : r.type === "commitment_overdue"
+                            ? "bg-rose-100 text-rose-800 ring-2 ring-rose-300"
                             : "bg-emerald-100 text-emerald-700"
                         }`}
                       >

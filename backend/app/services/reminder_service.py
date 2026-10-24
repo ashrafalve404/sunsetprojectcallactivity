@@ -144,32 +144,119 @@ class ReminderService:
             except Exception:
                 continue
 
-        # ── 3. Check Recent Commitments (Sales & TB) ─────────────────────────
-        commit_q = await self.db.execute(
-            select(SalesCollectionEntry)
-            .join(DailyActivityReport)
-            .where(
-                DailyActivityReport.employee_id == emp_id,
-                DailyActivityReport.report_date >= (today - timedelta(days=7)),
-                SalesCollectionEntry.category.like("%commit%"),
-            )
+        # ── 3. Check Promised Payment Commitments (Due Today, Overdue, Soon) ──
+        is_admin_all = current_user.role in (UserRole.ADMIN, UserRole.SUB_ADMIN) and not target_employee_id
+
+        # Query commitments where expected_payment_date is set (from 30 days overdue to 2 days upcoming)
+        comm_filters = [
+            SalesCollectionEntry.expected_payment_date.isnot(None),
+            SalesCollectionEntry.expected_payment_date <= today + timedelta(days=2),
+            SalesCollectionEntry.expected_payment_date >= today - timedelta(days=30),
+        ]
+        if not is_admin_all:
+            comm_filters.append(DailyActivityReport.employee_id == emp_id)
+
+        comm_query = (
+            select(SalesCollectionEntry, DailyActivityReport, User)
+            .join(DailyActivityReport, SalesCollectionEntry.report_id == DailyActivityReport.id)
+            .join(User, DailyActivityReport.employee_id == User.id)
+            .where(*comm_filters)
+            .order_by(SalesCollectionEntry.expected_payment_date.asc())
+            .limit(15)
+        )
+        comm_res = await self.db.execute(comm_query)
+        promised_items = comm_res.all()
+
+        for entry, rep, emp_user in promised_items:
+            if not entry.customer_name or not entry.amount or not entry.expected_payment_date:
+                continue
+
+            exp_date = entry.expected_payment_date
+            exp_date_str = str(exp_date)
+            emp_prefix = f"[{emp_user.full_name or emp_user.username}] " if is_admin_all else ""
+            cat_label = entry.category.replace("_", " ").title()
+            proj_str = f" ({entry.project_name})" if entry.project_name else ""
+
+            if exp_date == today:
+                reminders.append(
+                    ReminderItem(
+                        id=f"commit-today-{entry.id}",
+                        type="commitment_due_today",
+                        severity="urgent",
+                        title=f"{emp_prefix}Payment Promised Today: {entry.customer_name}",
+                        message=f"৳{entry.amount:,.0f} ({cat_label}){proj_str} promised today by {entry.customer_name}. Follow up for collection.",
+                        client_name=entry.customer_name,
+                        category=cat_label,
+                        date=exp_date_str,
+                        link="/sales",
+                        action_label="Collect / Reschedule",
+                    )
+                )
+            elif exp_date < today:
+                overdue_days = (today - exp_date).days
+                overdue_count += 1
+                reminders.append(
+                    ReminderItem(
+                        id=f"commit-overdue-{entry.id}",
+                        type="commitment_overdue",
+                        severity="warning",
+                        title=f"{emp_prefix}Overdue Promise: {entry.customer_name}",
+                        message=f"৳{entry.amount:,.0f} was promised on {exp_date_str} ({overdue_days}d overdue) by {entry.customer_name}. Reschedule or follow up.",
+                        client_name=entry.customer_name,
+                        category=cat_label,
+                        date=exp_date_str,
+                        link="/sales",
+                        action_label="Review in Pipeline",
+                    )
+                )
+            elif exp_date == today + timedelta(days=1):
+                reminders.append(
+                    ReminderItem(
+                        id=f"commit-tomorrow-{entry.id}",
+                        type="commitment_due",
+                        severity="info",
+                        title=f"{emp_prefix}Payment Due Tomorrow: {entry.customer_name}",
+                        message=f"৳{entry.amount:,.0f} ({cat_label}){proj_str} promised for tomorrow by {entry.customer_name}.",
+                        client_name=entry.customer_name,
+                        category=cat_label,
+                        date=exp_date_str,
+                        link="/sales",
+                        action_label="View in Sales",
+                    )
+                )
+
+        # Also include recent commitments (last 7 days) without an expected date
+        no_date_filters = [
+            SalesCollectionEntry.expected_payment_date.is_(None),
+            SalesCollectionEntry.category.like("%commit%"),
+            DailyActivityReport.report_date >= (today - timedelta(days=7)),
+        ]
+        if not is_admin_all:
+            no_date_filters.append(DailyActivityReport.employee_id == emp_id)
+
+        no_date_q = await self.db.execute(
+            select(SalesCollectionEntry, User)
+            .join(DailyActivityReport, SalesCollectionEntry.report_id == DailyActivityReport.id)
+            .join(User, DailyActivityReport.employee_id == User.id)
+            .where(*no_date_filters)
             .order_by(SalesCollectionEntry.id.desc())
             .limit(5)
         )
-        commitments = commit_q.scalars().all()
-        for comm in commitments:
+        for comm, emp_user in no_date_q.all():
             if comm.customer_name and comm.amount:
                 cat_label = comm.category.replace("_", " ").title()
+                emp_prefix = f"[{emp_user.full_name or emp_user.username}] " if is_admin_all else ""
                 reminders.append(
                     ReminderItem(
                         id=f"commit-{comm.id}",
                         type="commitment_due",
                         severity="info",
-                        title=f"Commitment: {comm.customer_name}",
-                        message=f"{cat_label} of ৳{comm.amount:,.0f} recorded. Follow up for collection.",
+                        title=f"{emp_prefix}Commitment: {comm.customer_name}",
+                        message=f"{cat_label} of ৳{comm.amount:,.0f} recorded. Set promised date in Sales.",
                         client_name=comm.customer_name,
+                        category=cat_label,
                         link="/sales",
-                        action_label="View Sales",
+                        action_label="Set Date",
                     )
                 )
 
