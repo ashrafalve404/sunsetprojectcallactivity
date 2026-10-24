@@ -19,8 +19,9 @@ All amounts in BDT using Python Decimal arithmetic.
 """
 from __future__ import annotations
 
+from datetime import date, datetime, timezone
 from decimal import Decimal
-from typing import Sequence
+from typing import Optional, Sequence
 
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,6 +32,8 @@ from app.models.user import User, UserRole
 from app.repositories.report_repo import ReportRepository
 from app.repositories.sales_repo import SalesCollectionRepository
 from app.schemas.sales_collection import (
+    CommitmentItemRead,
+    CommitmentPipelineResponse,
     SalesCollectionEntryCreate,
     SalesCollectionEntryUpdate,
 )
@@ -89,7 +92,27 @@ class SalesService:
             raise HTTPException(status_code=404, detail="Entry not found")
         report = await self._load_and_check_report(entry.report_id, current_user)
         self._guard_submitted(report, current_user)
-        for field, value in data.model_dump(exclude_unset=True).items():
+
+        update_data = data.model_dump(exclude_unset=True)
+        reschedule_reason = update_data.pop("reschedule_reason", None)
+
+        # Audit trail: check if expected_payment_date is changing from a previously set date
+        if "expected_payment_date" in update_data:
+            new_date = update_data["expected_payment_date"]
+            old_date = entry.expected_payment_date
+            if old_date is not None and new_date is not None and old_date != new_date:
+                history = list(entry.reschedule_history or [])
+                history.append({
+                    "old_date": str(old_date),
+                    "new_date": str(new_date),
+                    "reason": reschedule_reason.strip() if reschedule_reason else "Date shifted by client",
+                    "changed_at": datetime.now(timezone.utc).isoformat(),
+                    "changed_by": current_user.full_name or current_user.username,
+                })
+                entry.reschedule_history = history
+                entry.reschedule_count = len(history)
+
+        for field, value in update_data.items():
             setattr(entry, field, value)
         return await self.repo.update(entry)
 
@@ -100,6 +123,75 @@ class SalesService:
         report = await self._load_and_check_report(entry.report_id, current_user)
         self._guard_submitted(report, current_user)
         await self.repo.delete(entry)
+
+    async def get_commitments_pipeline(
+        self,
+        current_user: User,
+        employee_id: Optional[int] = None,
+        date_from: Optional[date] = None,
+        date_to: Optional[date] = None,
+    ) -> CommitmentPipelineResponse:
+        target_emp_id = None
+        if current_user.role in (UserRole.ADMIN, UserRole.SUB_ADMIN):
+            target_emp_id = employee_id
+        else:
+            target_emp_id = current_user.id
+
+        today = date.today()
+        rows = await self.repo.get_commitments(
+            employee_id=target_emp_id,
+            date_from=date_from,
+            date_to=date_to,
+            commitment_categories=COMMITMENT_CATEGORIES,
+        )
+
+        items: list[CommitmentItemRead] = []
+        total_promised = Decimal("0")
+        rescheduled_count = 0
+
+        for entry, rep, emp in rows:
+            status = "upcoming"
+            if entry.expected_payment_date:
+                if entry.expected_payment_date < today:
+                    status = "overdue"
+                elif entry.expected_payment_date == today:
+                    status = "due_today"
+                else:
+                    status = "upcoming"
+            else:
+                status = "no_date"
+
+            if entry.reschedule_count and entry.reschedule_count > 0:
+                rescheduled_count += 1
+
+            total_promised += Decimal(str(entry.amount or 0))
+
+            items.append(
+                CommitmentItemRead(
+                    id=entry.id,
+                    report_id=entry.report_id,
+                    report_date=rep.report_date,
+                    employee_id=emp.id,
+                    employee_name=emp.full_name,
+                    category=entry.category,
+                    amount=Decimal(str(entry.amount)),
+                    customer_name=entry.customer_name,
+                    expected_payment_date=entry.expected_payment_date,
+                    reschedule_count=entry.reschedule_count or 0,
+                    reschedule_history=entry.reschedule_history,
+                    payment_method=entry.payment_method,
+                    reference=entry.reference,
+                    notes=entry.notes,
+                    status=status,
+                )
+            )
+
+        return CommitmentPipelineResponse(
+            total_promised_amount=total_promised,
+            total_commitments=len(items),
+            rescheduled_count=rescheduled_count,
+            items=items,
+        )
 
     # ── Financial calculation helpers (reused by dashboard service) ──────────
 
@@ -113,22 +205,20 @@ class SalesService:
           total_new_sales         — sum of new_sales category
           total_actual_collection — sum of actual collection categories (cash in)
           total_sales_commitments — sum of new-sales commitment categories
-          total_tb_collection     — sum of TB collection
           total_tb_commitments    — sum of token-to-booking commitment categories
-          total_emi_collection    — sum of EMI collection
         """
         totals: dict[str, Decimal] = {
-            "total_new_sales": Decimal("0"),
-            "total_actual_collection": Decimal("0"),
-            "total_sales_commitments": Decimal("0"),
-            "total_tb_collection": Decimal("0"),
-            "total_tb_commitments": Decimal("0"),
-            "total_emi_collection": Decimal("0"),
+            "total_new_sales": Decimal("0.00"),
+            "total_actual_collection": Decimal("0.00"),
+            "total_sales_commitments": Decimal("0.00"),
+            "total_tb_collection": Decimal("0.00"),
+            "total_tb_commitments": Decimal("0.00"),
+            "total_emi_collection": Decimal("0.00"),
         }
         for entry in entries:
-            amount = Decimal(str(entry.amount))
             cat = entry.category
-            if cat == "new_sales":
+            amount = Decimal(str(entry.amount))
+            if cat in SALES_CATEGORIES:
                 totals["total_new_sales"] += amount
             if cat in ACTUAL_COLLECTION_CATEGORIES:
                 totals["total_actual_collection"] += amount
@@ -136,7 +226,6 @@ class SalesService:
                 totals["total_tb_collection"] += amount
             if cat == "emi_collection":
                 totals["total_emi_collection"] += amount
-            # Commitment categories — kept SEPARATE from actual
             if cat in COMMITMENT_CATEGORIES:
                 if cat.startswith("new_sales"):
                     totals["total_sales_commitments"] += amount

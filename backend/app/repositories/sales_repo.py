@@ -1,12 +1,15 @@
 """SalesCollectionRepository — database access for SalesCollectionEntry."""
 from __future__ import annotations
 
+from datetime import date
 from typing import Optional, Sequence
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.report import DailyActivityReport
 from app.models.sales_collection import SalesCollectionEntry
+from app.models.user import User
 
 
 class SalesCollectionRepository:
@@ -42,3 +45,53 @@ class SalesCollectionRepository:
     async def delete(self, entry: SalesCollectionEntry) -> None:
         await self.db.delete(entry)
         await self.db.flush()
+
+    async def get_commitments(
+        self,
+        employee_id: Optional[int] = None,
+        date_from: Optional[date] = None,
+        date_to: Optional[date] = None,
+        commitment_categories: Optional[set[str]] = None,
+    ) -> Sequence[tuple[SalesCollectionEntry, DailyActivityReport, User]]:
+        conditions = []
+        if commitment_categories:
+            conditions.append(
+                or_(
+                    SalesCollectionEntry.expected_payment_date.isnot(None),
+                    SalesCollectionEntry.category.in_(commitment_categories),
+                )
+            )
+        else:
+            conditions.append(SalesCollectionEntry.expected_payment_date.isnot(None))
+
+        if employee_id is not None:
+            conditions.append(DailyActivityReport.employee_id == employee_id)
+
+        if date_from is not None:
+            conditions.append(
+                or_(
+                    SalesCollectionEntry.expected_payment_date >= date_from,
+                    SalesCollectionEntry.expected_payment_date.is_(None),
+                )
+            )
+
+        if date_to is not None:
+            conditions.append(
+                or_(
+                    SalesCollectionEntry.expected_payment_date <= date_to,
+                    SalesCollectionEntry.expected_payment_date.is_(None),
+                )
+            )
+
+        stmt = (
+            select(SalesCollectionEntry, DailyActivityReport, User)
+            .join(DailyActivityReport, SalesCollectionEntry.report_id == DailyActivityReport.id)
+            .join(User, DailyActivityReport.employee_id == User.id)
+            .where(*conditions)
+            .order_by(
+                SalesCollectionEntry.expected_payment_date.asc(),
+                SalesCollectionEntry.id.desc(),
+            )
+        )
+        result = await self.db.execute(stmt)
+        return result.all()

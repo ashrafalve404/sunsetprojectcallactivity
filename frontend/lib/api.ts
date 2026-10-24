@@ -14,6 +14,7 @@ import {
   Report,
   SalesCollectionEntry,
   SalesCollectionResponse,
+  CommitmentPipelineResponse,
   SystemSetting,
   User,
   RemindersResponse,
@@ -360,7 +361,7 @@ export const api = {
     update: async (
       reportId: number,
       entryId: number,
-      entry: Partial<SalesCollectionEntry>
+      entry: Partial<SalesCollectionEntry> & { reschedule_reason?: string }
     ): Promise<SalesCollectionEntry> => {
       return request<SalesCollectionEntry>(
         `/reports/${reportId}/sales-collections/${entryId}`,
@@ -374,6 +375,18 @@ export const api = {
       return request<void>(`/reports/${reportId}/sales-collections/${entryId}`, {
         method: "DELETE",
       });
+    },
+    getCommitmentsPipeline: async (params?: {
+      employee_id?: number;
+      date_from?: string;
+      date_to?: string;
+    }): Promise<CommitmentPipelineResponse> => {
+      const search = new URLSearchParams();
+      if (params?.employee_id) search.set("employee_id", String(params.employee_id));
+      if (params?.date_from) search.set("date_from", params.date_from);
+      if (params?.date_to) search.set("date_to", params.date_to);
+      const q = search.toString();
+      return request<CommitmentPipelineResponse>(`/sales-collections/commitments/pipeline${q ? `?${q}` : ""}`);
     },
   },
 

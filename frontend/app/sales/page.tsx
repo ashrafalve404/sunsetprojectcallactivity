@@ -10,6 +10,15 @@ import {
   Calendar,
   Lock,
   Receipt,
+  History,
+  AlertTriangle,
+  Clock,
+  ArrowRight,
+  TrendingUp,
+  Search,
+  CheckCircle2,
+  AlertCircle,
+  Users,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import {
@@ -29,6 +38,8 @@ import {
   SalesCollectionCategory,
   SalesCollectionEntry,
   Report,
+  CommitmentItem,
+  CommitmentPipelineResponse,
 } from "@/types";
 import {
   getDhakaToday,
@@ -104,15 +115,27 @@ function SalesVsCollectionContent() {
     : undefined;
   const [reportDate, setReportDate] = useState<string>(initialDate);
 
+  // Tab: Daily Transactions vs Future Commitments Pipeline
+  const [activeTab, setActiveTab] = useState<"daily" | "pipeline">("daily");
+
   // Report & entries state
   const [report, setReport] = useState<Report | null>(null);
   const [entries, setEntries] = useState<SalesCollectionEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Future Commitments Pipeline State
+  const [pipelineData, setPipelineData] = useState<CommitmentPipelineResponse | null>(null);
+  const [pipelineLoading, setPipelineLoading] = useState(false);
+  const [pipelineFilter, setPipelineFilter] = useState<"all" | "due_today" | "upcoming" | "overdue" | "rescheduled">("all");
+  const [pipelineSearch, setPipelineSearch] = useState("");
+
   // Add/Edit modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<SalesCollectionEntry | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+
+  // Audit history modal state
+  const [selectedHistoryEntry, setSelectedHistoryEntry] = useState<SalesCollectionEntry | CommitmentItem | null>(null);
 
   // Form fields
   const [formCategory, setFormCategory] = useState<SalesCollectionCategory>("new_sales_collection");
@@ -122,6 +145,9 @@ function SalesVsCollectionContent() {
   const [formPaymentSeq, setFormPaymentSeq] = useState<string>("");
   const [formReference, setFormReference] = useState<string>("");
   const [formNotes, setFormNotes] = useState<string>("");
+  const [formExpectedPaymentDate, setFormExpectedPaymentDate] = useState<string>("");
+  const [formRescheduleReason, setFormRescheduleReason] = useState<string>("");
+
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -179,46 +205,66 @@ function SalesVsCollectionContent() {
     }
   }, []);
 
+  // Load pipeline data
+  const loadPipeline = useCallback(async () => {
+    setPipelineLoading(true);
+    try {
+      const data = await api.sales.getCommitmentsPipeline({
+        employee_id: targetEmployeeId,
+      });
+      setPipelineData(data);
+    } catch {
+      // Non-fatal
+    } finally {
+      setPipelineLoading(false);
+    }
+  }, [targetEmployeeId]);
+
   useEffect(() => {
     loadData(reportDate, targetEmployeeId);
   }, [reportDate, targetEmployeeId, loadData]);
 
-  // Grouped Calculations
-  const calculations = useMemo(() => {
-    let actualNewSalesCollection = 0;
-    let salesCommitments = 0;
-    let tbCollection = 0;
-    let tbCommitments = 0;
-    let emiCollection = 0;
-    let otherCollection = 0;
-
-    for (const e of entries) {
-      const amt = Number(e.amount) || 0;
-      switch (e.category) {
-        case "new_sales_collection":
-          actualNewSalesCollection += amt;
-          break;
-        case "new_sales_commit_payment_1":
-        case "new_sales_commit_payment_2":
-        case "new_sales_commit_payment_3":
-          salesCommitments += amt;
-          break;
-        case "tb_collection":
-          tbCollection += amt;
-          break;
-        case "tb_commit_payment_1":
-        case "tb_commit_payment_2":
-        case "tb_commit_payment_3":
-          tbCommitments += amt;
-          break;
-        case "emi_collection":
-          emiCollection += amt;
-          break;
-        case "other_collection":
-          otherCollection += amt;
-          break;
-      }
+  useEffect(() => {
+    if (activeTab === "pipeline") {
+      loadPipeline();
     }
+  }, [activeTab, loadPipeline]);
+
+  // Financial separation rules
+  const calculations = useMemo(() => {
+    const actualNewSalesCollection = entries
+      .filter((e) => e.category === "new_sales_collection")
+      .reduce((sum, e) => sum + (e.amount || 0), 0);
+
+    const salesCommitments = entries
+      .filter(
+        (e) =>
+          e.category === "new_sales_commit_payment_1" ||
+          e.category === "new_sales_commit_payment_2" ||
+          e.category === "new_sales_commit_payment_3"
+      )
+      .reduce((sum, e) => sum + (e.amount || 0), 0);
+
+    const tbCollection = entries
+      .filter((e) => e.category === "tb_collection")
+      .reduce((sum, e) => sum + (e.amount || 0), 0);
+
+    const tbCommitments = entries
+      .filter(
+        (e) =>
+          e.category === "tb_commit_payment_1" ||
+          e.category === "tb_commit_payment_2" ||
+          e.category === "tb_commit_payment_3"
+      )
+      .reduce((sum, e) => sum + (e.amount || 0), 0);
+
+    const emiCollection = entries
+      .filter((e) => e.category === "emi_collection")
+      .reduce((sum, e) => sum + (e.amount || 0), 0);
+
+    const otherCollection = entries
+      .filter((e) => e.category === "other_collection")
+      .reduce((sum, e) => sum + (e.amount || 0), 0);
 
     const grandTotalActual =
       actualNewSalesCollection + tbCollection + emiCollection + otherCollection;
@@ -238,13 +284,15 @@ function SalesVsCollectionContent() {
 
   const openAddModal = () => {
     setEditingEntry(null);
-    setFormCategory("new_sales_collection");
+    setFormCategory("new_sales_commit_payment_1");
     setFormAmount("");
     setFormCustomerNames([""]);
     setFormPaymentMethod("cash");
     setFormPaymentSeq("");
     setFormReference("");
     setFormNotes("");
+    setFormExpectedPaymentDate("");
+    setFormRescheduleReason("");
     setFormError(null);
     setIsModalOpen(true);
   };
@@ -266,6 +314,8 @@ function SalesVsCollectionContent() {
     setFormPaymentSeq(entry.payment_sequence ? String(entry.payment_sequence) : "");
     setFormReference(entry.reference || "");
     setFormNotes(entry.notes || "");
+    setFormExpectedPaymentDate(entry.expected_payment_date || "");
+    setFormRescheduleReason("");
     setFormError(null);
     setIsModalOpen(true);
   };
@@ -283,7 +333,6 @@ function SalesVsCollectionContent() {
     setFormSubmitting(true);
     setFormError(null);
 
-    // Determine is_collection flag from category definition
     const catDef = SALES_CATEGORIES.find((c) => c.key === formCategory);
     const isCollection = catDef?.isCollection ?? false;
 
@@ -292,7 +341,7 @@ function SalesVsCollectionContent() {
       .filter(Boolean)
       .join(", ");
 
-    const payload = {
+    const payload: Partial<SalesCollectionEntry> & { reschedule_reason?: string } = {
       category: formCategory,
       is_collection: isCollection,
       amount: amt,
@@ -301,7 +350,12 @@ function SalesVsCollectionContent() {
       payment_sequence: formPaymentSeq ? parseInt(formPaymentSeq, 10) : null,
       reference: formReference.trim() || null,
       notes: formNotes.trim() || null,
+      expected_payment_date: formExpectedPaymentDate ? formExpectedPaymentDate : null,
     };
+
+    if (formRescheduleReason.trim()) {
+      payload.reschedule_reason = formRescheduleReason.trim();
+    }
 
     try {
       if (editingEntry) {
@@ -314,7 +368,7 @@ function SalesVsCollectionContent() {
           text: "Entry updated successfully.",
         });
       } else {
-        const created = await api.sales.create(report.id, payload);
+        const created = await api.sales.create(report.id, payload as any);
         setEntries((prev) => [created, ...prev]);
         setStatusMessage({
           type: "success",
@@ -322,6 +376,10 @@ function SalesVsCollectionContent() {
         });
       }
       setIsModalOpen(false);
+      // Refresh pipeline if active
+      if (activeTab === "pipeline") {
+        loadPipeline();
+      }
     } catch (err: unknown) {
       if (err instanceof ApiError) {
         setFormError(err.message);
@@ -338,11 +396,14 @@ function SalesVsCollectionContent() {
     try {
       await api.sales.delete(report.id, entryId);
       setEntries((prev) => prev.filter((item) => item.id !== entryId));
-      setDeleteConfirmId(null);
       setStatusMessage({
-        type: "success",
-        text: "Transaction deleted successfully.",
+        type: "info",
+        text: "Transaction deleted.",
       });
+      setDeleteConfirmId(null);
+      if (activeTab === "pipeline") {
+        loadPipeline();
+      }
     } catch (err: unknown) {
       if (err instanceof ApiError) {
         setStatusMessage({ type: "error", text: err.message });
@@ -357,10 +418,44 @@ function SalesVsCollectionContent() {
 
   const isLocked = report?.is_submitted ?? false;
 
+  // Filtered pipeline items
+  const filteredPipelineItems = useMemo(() => {
+    if (!pipelineData?.items) return [];
+    let items = pipelineData.items;
+
+    if (pipelineFilter === "due_today") {
+      items = items.filter((i) => i.status === "due_today");
+    } else if (pipelineFilter === "upcoming") {
+      items = items.filter((i) => i.status === "upcoming");
+    } else if (pipelineFilter === "overdue") {
+      items = items.filter((i) => i.status === "overdue");
+    } else if (pipelineFilter === "rescheduled") {
+      items = items.filter((i) => i.reschedule_count > 0);
+    }
+
+    if (pipelineSearch.trim()) {
+      const q = pipelineSearch.trim().toLowerCase();
+      items = items.filter(
+        (i) =>
+          i.customer_name?.toLowerCase().includes(q) ||
+          i.category?.toLowerCase().includes(q) ||
+          i.employee_name?.toLowerCase().includes(q) ||
+          i.reference?.toLowerCase().includes(q)
+      );
+    }
+
+    return items;
+  }, [pipelineData, pipelineFilter, pipelineSearch]);
+
+  const highRiskCount = useMemo(() => {
+    if (!pipelineData?.items) return 0;
+    return pipelineData.items.filter((i) => i.reschedule_count >= 2).length;
+  }, [pipelineData]);
+
   return (
     <DashboardLayout
       title="Sales & Collection"
-      subtitle="Financial accounting separating actual cash receipts from future commitments"
+      subtitle="Financial tracking, actual collections, future commitments, and promise reschedule audit"
     >
       <div className="space-y-6">
         {/* ── Header Controls Card ────────────────────────────────────────── */}
@@ -398,7 +493,42 @@ function SalesVsCollectionContent() {
                 </Badge>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {/* View Tabs Toggle */}
+                <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("daily")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                      activeTab === "daily"
+                        ? "bg-white text-green-800 shadow-2xs font-bold"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <Receipt className="w-3.5 h-3.5" />
+                    <span>Daily Transactions</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("pipeline")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                      activeTab === "pipeline"
+                        ? "bg-white text-green-800 shadow-2xs font-bold"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Future Commitments</span>
+                    {pipelineData?.total_commitments ? (
+                      <span className="text-[10px] font-mono font-extrabold px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-900">
+                        {pipelineData.total_commitments}
+                      </span>
+                    ) : null}
+                  </button>
+                </div>
+
+                <div className="h-4 w-px bg-slate-200 hidden sm:block" />
+
                 {(!isLocked || isAdmin) && (
                   <Button
                     variant="primary"
@@ -418,7 +548,7 @@ function SalesVsCollectionContent() {
                 )}
                 {isLocked && isAdmin && (
                   <div className="flex items-center gap-1.5 text-xs text-amber-800 bg-amber-50 px-3 py-1.5 rounded border border-amber-300 font-medium">
-                    <Lock className="w-3.5 h-3.5 text-amber-700" />
+                    <Lock className="w-3.5 h-3.5" />
                     Finalized (Admin Override Enabled)
                   </div>
                 )}
@@ -446,189 +576,489 @@ function SalesVsCollectionContent() {
           </Alert>
         )}
 
-        {/* ── Financial Split Summary Cards ────────────────────────────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Actual Cash Collected */}
-          <Card className="p-4 bg-emerald-50/40 border-emerald-200">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">
-                Total Actual Collection
-              </span>
-              <Badge variant="success">Actual Cash</Badge>
-            </div>
-            <div className="text-2xl font-extrabold text-emerald-800 mt-2">
-              {formatBDT(calculations.grandTotalActual)}
-            </div>
-            <p className="text-[11px] text-emerald-700 mt-1">
-              Sales ({formatBDT(calculations.actualNewSalesCollection)}) + TB ({formatBDT(calculations.tbCollection)}) + EMI ({formatBDT(calculations.emiCollection)})
-            </p>
-          </Card>
+        {/* ═══════════════════════════════════════════════════════════════════
+            TAB 1: DAILY TRANSACTIONS VIEW
+           ═══════════════════════════════════════════════════════════════════ */}
+        {activeTab === "daily" && (
+          <>
+            {/* Financial Split Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Actual Cash Collected */}
+              <Card className="p-4 bg-emerald-50/40 border-emerald-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">
+                    Total Actual Collection
+                  </span>
+                  <Badge variant="success">Actual Cash</Badge>
+                </div>
+                <div className="text-2xl font-extrabold text-emerald-800 mt-2">
+                  {formatBDT(calculations.grandTotalActual)}
+                </div>
+                <p className="text-[11px] text-emerald-700 mt-1">
+                  Sales ({formatBDT(calculations.actualNewSalesCollection)}) + TB ({formatBDT(calculations.tbCollection)}) + EMI ({formatBDT(calculations.emiCollection)})
+                </p>
+              </Card>
 
-          {/* Payment Commitments */}
-          <Card className="p-4 bg-amber-50/40 border-amber-200">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider">
-                Total Commitments
-              </span>
-              <Badge variant="warning">Upcoming</Badge>
-            </div>
-            <div className="text-2xl font-extrabold text-amber-800 mt-2">
-              {formatBDT(calculations.grandTotalCommitments)}
-            </div>
-            <p className="text-[11px] text-amber-700 mt-1">
-              Sales ({formatBDT(calculations.salesCommitments)}) + TB ({formatBDT(calculations.tbCommitments)})
-            </p>
-          </Card>
+              {/* Payment Commitments */}
+              <Card className="p-4 bg-amber-50/40 border-amber-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider">
+                    Total Commitments
+                  </span>
+                  <Badge variant="warning">Upcoming</Badge>
+                </div>
+                <div className="text-2xl font-extrabold text-amber-800 mt-2">
+                  {formatBDT(calculations.grandTotalCommitments)}
+                </div>
+                <p className="text-[11px] text-amber-700 mt-1">
+                  Sales ({formatBDT(calculations.salesCommitments)}) + TB ({formatBDT(calculations.tbCommitments)})
+                </p>
+              </Card>
 
-          {/* Token to Booking (TB) Total */}
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                TB (Token to Booking)
-              </span>
-              <Receipt className="w-4 h-4 text-slate-600" />
-            </div>
-            <div className="text-xl font-bold text-slate-900 mt-2">
-              {formatBDT(calculations.tbCollection)}
-            </div>
-            <p className="text-[11px] text-slate-600 font-medium mt-1">
-              Commitment: {formatBDT(calculations.tbCommitments)}
-            </p>
-          </Card>
+              {/* Token to Booking (TB) Total */}
+              <Card className="p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                    TB (Token to Booking)
+                  </span>
+                  <Receipt className="w-4 h-4 text-slate-600" />
+                </div>
+                <div className="text-xl font-bold text-slate-900 mt-2">
+                  {formatBDT(calculations.tbCollection)}
+                </div>
+                <p className="text-[11px] text-slate-600 font-medium mt-1">
+                  Commitment: {formatBDT(calculations.tbCommitments)}
+                </p>
+              </Card>
 
-          {/* EMI Collection */}
-          <Card className="p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                EMI Installments
-              </span>
-              <Banknote className="w-4 h-4 text-slate-600" />
+              {/* EMI Collection */}
+              <Card className="p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                    EMI Installments
+                  </span>
+                  <Banknote className="w-4 h-4 text-slate-600" />
+                </div>
+                <div className="text-xl font-bold text-slate-900 mt-2">
+                  {formatBDT(calculations.emiCollection)}
+                </div>
+                <p className="text-[11px] text-slate-600 font-medium mt-1">
+                  Strictly counted towards collection
+                </p>
+              </Card>
             </div>
-            <div className="text-xl font-bold text-slate-900 mt-2">
-              {formatBDT(calculations.emiCollection)}
-            </div>
-            <p className="text-[11px] text-slate-600 font-medium mt-1">
-              Strictly counted towards collection
-            </p>
-          </Card>
-        </div>
 
-        {/* ── Transactions Table ───────────────────────────────────────────── */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Receipt className="w-4 h-4 text-green-700" />
-              Recorded Financial Transactions
-            </CardTitle>
-            <span className="text-xs text-slate-500">
-              {entries.length} {entries.length === 1 ? "entry" : "entries"} recorded
-            </span>
-          </CardHeader>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-slate-100/70 border-b border-slate-200 text-slate-700 text-[11px] font-semibold">
-                  <th className="py-2.5 px-4">Category</th>
-                  <th className="py-2.5 px-3">Type</th>
-                  <th className="py-2.5 px-3 text-right">Amount (BDT)</th>
-                  <th className="py-2.5 px-3">Customer Name</th>
-                  <th className="py-2.5 px-3">Method</th>
-                  <th className="py-2.5 px-3">Seq #</th>
-                  <th className="py-2.5 px-3">Reference / Notes</th>
-                  {(!isLocked || isAdmin) && <th className="py-2.5 px-3 text-right">Actions</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {entries.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={(!isLocked || isAdmin) ? 8 : 7}
-                      className="py-10 text-center text-slate-400"
-                    >
-                      No financial transactions recorded for this day yet.
-                      {!isLocked && (
-                        <div className="mt-2">
-                          <Button size="sm" variant="outline" onClick={openAddModal}>
-                            <Plus className="w-3.5 h-3.5 mr-1" />
-                            Record First Transaction
-                          </Button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ) : (
-                  entries.map((entry) => {
-                    const catDef = SALES_CATEGORIES.find((c) => c.key === entry.category);
-                    return (
-                      <tr key={entry.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="py-3 px-4 font-semibold text-slate-900">
-                          {catDef?.label || entry.category}
-                        </td>
-                        <td className="py-3 px-3">
-                          <Badge variant={entry.is_collection ? "success" : "warning"}>
-                            {entry.is_collection ? "Actual Collection" : "Commitment"}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-3 text-right font-bold text-slate-900">
-                          {formatBDT(entry.amount)}
-                        </td>
-                        <td className="py-3 px-3 text-slate-700">
-                          {entry.customer_name ? (
-                            entry.customer_name.includes(",") ? (
-                              <div className="flex flex-wrap gap-1">
-                                {entry.customer_name.split(",").map((cName, idx) => (
-                                  <span
-                                    key={idx}
-                                    className="inline-block bg-slate-100 text-slate-800 text-[11px] font-semibold px-2 py-0.5 rounded border border-slate-200"
-                                  >
-                                    {cName.trim()}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : (
-                              <span className="font-medium text-slate-900">{entry.customer_name}</span>
-                            )
-                          ) : (
-                            "—"
+            {/* Transactions Table */}
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <CardTitle className="flex items-center gap-2">
+                    <Receipt className="w-4 h-4 text-green-700" />
+                    Recorded Financial Transactions
+                  </CardTitle>
+                  <span className="text-xs text-slate-500">
+                    {entries.length} {entries.length === 1 ? "entry" : "entries"} recorded
+                  </span>
+                </div>
+              </CardHeader>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-100/70 border-b border-slate-200 text-slate-700 text-[11px] font-semibold">
+                      <th className="py-2.5 px-4">Category</th>
+                      <th className="py-2.5 px-3">Type</th>
+                      <th className="py-2.5 px-3 text-right">Amount (BDT)</th>
+                      <th className="py-2.5 px-3">Customer Name</th>
+                      <th className="py-2.5 px-3">Promised Date & Reschedule Audit</th>
+                      <th className="py-2.5 px-3">Method</th>
+                      <th className="py-2.5 px-3">Seq #</th>
+                      <th className="py-2.5 px-3">Reference / Notes</th>
+                      {(!isLocked || isAdmin) && <th className="py-2.5 px-3 text-right">Actions</th>}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {entries.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={(!isLocked || isAdmin) ? 9 : 8}
+                          className="py-10 text-center text-slate-400"
+                        >
+                          No financial transactions recorded for this day yet.
+                          {!isLocked && (
+                            <div className="mt-2">
+                              <Button size="sm" variant="outline" onClick={openAddModal}>
+                                <Plus className="w-3.5 h-3.5 mr-1" />
+                                Record First Transaction
+                              </Button>
+                            </div>
                           )}
                         </td>
-                        <td className="py-3 px-3">
-                          {getPaymentMethodBadge(entry.payment_method)}
+                      </tr>
+                    ) : (
+                      entries.map((entry) => {
+                        const catDef = SALES_CATEGORIES.find((c) => c.key === entry.category);
+                        return (
+                          <tr key={entry.id} className="hover:bg-slate-50 transition-colors">
+                            <td className="py-3 px-4 font-semibold text-slate-900">
+                              {catDef?.label || entry.category}
+                            </td>
+                            <td className="py-3 px-3">
+                              <Badge variant={entry.is_collection ? "success" : "warning"}>
+                                {entry.is_collection ? "Actual Collection" : "Commitment"}
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-3 text-right font-bold text-slate-900">
+                              {formatBDT(entry.amount)}
+                            </td>
+                            <td className="py-3 px-3 text-slate-700">
+                              {entry.customer_name ? (
+                                entry.customer_name.includes(",") ? (
+                                  <div className="flex flex-wrap gap-1">
+                                    {entry.customer_name.split(",").map((cName, idx) => (
+                                      <span
+                                        key={idx}
+                                        className="inline-block bg-slate-100 text-slate-800 text-[11px] font-semibold px-2 py-0.5 rounded border border-slate-200"
+                                      >
+                                        {cName.trim()}
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span className="font-medium text-slate-900">{entry.customer_name}</span>
+                                )
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+
+                            {/* Promised Date & Reschedule Audit Trail */}
+                            <td className="py-3 px-3">
+                              {entry.expected_payment_date ? (
+                                <div className="space-y-1">
+                                  <span className="inline-flex items-center gap-1 font-semibold text-[11px] px-2 py-0.5 rounded bg-amber-50 text-amber-900 border border-amber-200">
+                                    <Calendar className="w-3 h-3 text-amber-700" />
+                                    {formatReadableDate(entry.expected_payment_date)}
+                                  </span>
+                                  {entry.reschedule_count && entry.reschedule_count > 0 ? (
+                                    <div>
+                                      <button
+                                        type="button"
+                                        onClick={() => setSelectedHistoryEntry(entry)}
+                                        className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.2 rounded border transition-colors ${
+                                          entry.reschedule_count >= 2
+                                            ? "bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-300"
+                                            : "bg-amber-100 hover:bg-amber-200 text-amber-800 border-amber-300"
+                                        }`}
+                                        title="Click to view full reschedule audit trail"
+                                      >
+                                        <History className="w-3 h-3" />
+                                        Shifted {entry.reschedule_count}x
+                                      </button>
+                                    </div>
+                                  ) : null}
+                                </div>
+                              ) : (
+                                <span className="text-slate-400">—</span>
+                              )}
+                            </td>
+
+                            <td className="py-3 px-3">
+                              {getPaymentMethodBadge(entry.payment_method)}
+                            </td>
+                            <td className="py-3 px-3 text-slate-600">
+                              {entry.payment_sequence ? `#${entry.payment_sequence}` : "—"}
+                            </td>
+                            <td className="py-3 px-3 text-slate-500 max-w-[200px] truncate">
+                              {entry.reference || entry.notes || "—"}
+                            </td>
+                            {(!isLocked || isAdmin) && (
+                              <td className="py-3 px-3 text-right">
+                                <div className="flex items-center justify-end gap-1">
+                                  <button
+                                    onClick={() => openEditModal(entry)}
+                                    className="p-1 text-slate-400 hover:text-slate-700 rounded"
+                                    title="Edit"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => setDeleteConfirmId(entry.id)}
+                                    className="p-1 text-slate-400 hover:text-rose-600 rounded"
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            TAB 2: FUTURE COMMITMENTS PIPELINE & RESCHEDULE AUDIT
+           ═══════════════════════════════════════════════════════════════════ */}
+        {activeTab === "pipeline" && (
+          <div className="space-y-6">
+            {/* Pipeline KPI Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card className="p-4 bg-gradient-to-br from-amber-50/70 to-white border-amber-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider">
+                    Total Promised Pipeline
+                  </span>
+                  <Calendar className="w-4 h-4 text-amber-700" />
+                </div>
+                <div className="text-2xl font-extrabold text-amber-900 mt-2">
+                  {formatBDT(pipelineData?.total_promised_amount || 0)}
+                </div>
+                <p className="text-[11px] text-amber-800 mt-1 font-medium">
+                  Future expected collection from clients
+                </p>
+              </Card>
+
+              <Card className="p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                    Total Commitments
+                  </span>
+                  <Users className="w-4 h-4 text-green-700" />
+                </div>
+                <div className="text-2xl font-extrabold text-slate-900 mt-2">
+                  {pipelineData?.total_commitments || 0}
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Active customer commitments on file
+                </p>
+              </Card>
+
+              <Card className="p-4 bg-slate-50 border-slate-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                    Rescheduled Commitments
+                  </span>
+                  <History className="w-4 h-4 text-slate-600" />
+                </div>
+                <div className="text-2xl font-extrabold text-slate-900 mt-2">
+                  {pipelineData?.rescheduled_count || 0}
+                </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Clients who postponed payment date
+                </p>
+              </Card>
+
+              <Card className="p-4 bg-rose-50/50 border-rose-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-rose-800 uppercase tracking-wider">
+                    High-Risk Clients (Shifted 2+x)
+                  </span>
+                  <AlertTriangle className="w-4 h-4 text-rose-600" />
+                </div>
+                <div className="text-2xl font-extrabold text-rose-900 mt-2">
+                  {highRiskCount}
+                </div>
+                <p className="text-[11px] text-rose-700 mt-1 font-medium">
+                  {highRiskCount > 0 ? "Multiple delays — low buying intent" : "All clients on schedule"}
+                </p>
+              </Card>
+            </div>
+
+            {/* Filter and Search Bar */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                    {[
+                      { key: "all", label: "All Commitments" },
+                      { key: "due_today", label: "Due Today" },
+                      { key: "upcoming", label: "Upcoming" },
+                      { key: "overdue", label: "Overdue" },
+                      { key: "rescheduled", label: "Rescheduled / Shifted" },
+                    ].map((f) => (
+                      <button
+                        key={f.key}
+                        type="button"
+                        onClick={() => setPipelineFilter(f.key as any)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+                          pipelineFilter === f.key
+                            ? "bg-green-700 text-white font-bold shadow-xs"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="relative w-full sm:w-64">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5 pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder="Search customer, employee..."
+                      value={pipelineSearch}
+                      onChange={(e) => setPipelineSearch(e.target.value)}
+                      className="w-full pl-8 pr-3 py-1.5 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Pipeline Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-amber-600" />
+                  <span>Customer Commitment Pipeline</span>
+                </CardTitle>
+                <span className="text-xs text-slate-500">
+                  {filteredPipelineItems.length} {filteredPipelineItems.length === 1 ? "record" : "records"}
+                </span>
+              </CardHeader>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-100/70 border-b border-slate-200 text-slate-700 text-[11px] font-semibold">
+                      <th className="py-2.5 px-4">Customer Name</th>
+                      <th className="py-2.5 px-3">Promised Date</th>
+                      <th className="py-2.5 px-3 text-right">Promised Amount</th>
+                      <th className="py-2.5 px-3">Status</th>
+                      <th className="py-2.5 px-3">Reschedule Shift Log</th>
+                      <th className="py-2.5 px-3">Employee</th>
+                      <th className="py-2.5 px-3">Reference / Notes</th>
+                      <th className="py-2.5 px-3 text-right">Audit</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {pipelineLoading ? (
+                      <tr>
+                        <td colSpan={8} className="py-12 text-center text-slate-400">
+                          Loading commitment pipeline...
                         </td>
-                        <td className="py-3 px-3 text-slate-600">
-                          {entry.payment_sequence ? `#${entry.payment_sequence}` : "—"}
+                      </tr>
+                    ) : filteredPipelineItems.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="py-12 text-center text-slate-400">
+                          No customer commitments match this filter.
                         </td>
-                        <td className="py-3 px-3 text-slate-500 max-w-[200px] truncate">
-                          {entry.reference || entry.notes || "—"}
-                        </td>
-                        {(!isLocked || isAdmin) && (
-                          <td className="py-3 px-3 text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <button
-                                onClick={() => openEditModal(entry)}
-                                className="p-1 text-slate-400 hover:text-slate-700 rounded"
-                                title="Edit"
-                              >
-                                <Edit2 className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => setDeleteConfirmId(entry.id)}
-                                className="p-1 text-slate-400 hover:text-rose-600 rounded"
-                                title="Delete"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                      </tr>
+                    ) : (
+                      filteredPipelineItems.map((item) => (
+                        <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="py-3 px-4 font-bold text-slate-900">
+                            <div>
+                              <span>{item.customer_name || "Unknown Customer"}</span>
+                              <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                Ref #{item.id} • {item.category}
+                              </div>
                             </div>
                           </td>
-                        )}
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+
+                          <td className="py-3 px-3 font-semibold text-slate-900">
+                            {item.expected_payment_date ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-50 text-amber-900 border border-amber-200 font-mono text-[11px]">
+                                <Calendar className="w-3 h-3 text-amber-700" />
+                                {formatReadableDate(item.expected_payment_date)}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400">—</span>
+                            )}
+                          </td>
+
+                          <td className="py-3 px-3 text-right font-extrabold text-slate-900 text-sm">
+                            {formatBDT(item.amount)}
+                          </td>
+
+                          <td className="py-3 px-3">
+                            <span
+                              className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                item.status === "due_today"
+                                  ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                                  : item.status === "overdue"
+                                  ? "bg-rose-100 text-rose-800 border border-rose-300"
+                                  : item.status === "upcoming"
+                                  ? "bg-blue-50 text-blue-800 border border-blue-200"
+                                  : "bg-slate-100 text-slate-600"
+                              }`}
+                            >
+                              {item.status === "due_today"
+                                ? "🔔 Due Today"
+                                : item.status === "overdue"
+                                ? "⚠️ Overdue"
+                                : item.status === "upcoming"
+                                ? "Upcoming"
+                                : "No Date"}
+                            </span>
+                          </td>
+
+                          <td className="py-3 px-3">
+                            {item.reschedule_count > 0 ? (
+                              <button
+                                type="button"
+                                onClick={() => setSelectedHistoryEntry(item as any)}
+                                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold border transition-colors ${
+                                  item.reschedule_count >= 2
+                                    ? "bg-rose-100 text-rose-900 border-rose-300 hover:bg-rose-200"
+                                    : "bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200"
+                                }`}
+                                title="Click to view full reschedule history timeline"
+                              >
+                                <History className="w-3 h-3" />
+                                <span>Shifted {item.reschedule_count}x</span>
+                                {item.reschedule_count >= 2 && (
+                                  <span className="text-[9px] bg-rose-700 text-white px-1 rounded">
+                                    High Risk
+                                  </span>
+                                )}
+                              </button>
+                            ) : (
+                              <span className="text-emerald-700 text-[11px] font-semibold flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                On Schedule (0 shifts)
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="py-3 px-3 text-slate-700">
+                            <div className="flex items-center gap-1">
+                              <span>{item.employee_name || "Employee"}</span>
+                              <span className="font-mono text-[9px] bg-slate-100 text-slate-700 px-1 rounded">
+                                {formatEmployeeId(item.employee_id)}
+                              </span>
+                            </div>
+                          </td>
+
+                          <td className="py-3 px-3 text-slate-500 max-w-[200px] truncate">
+                            {item.reference || item.notes || "—"}
+                          </td>
+
+                          <td className="py-3 px-3 text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs py-1"
+                              onClick={() => setSelectedHistoryEntry(item as any)}
+                            >
+                              <History className="w-3 h-3 mr-1" />
+                              View Log
+                            </Button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
           </div>
-        </Card>
+        )}
 
         {/* ── Add / Edit Transaction Modal ─────────────────────────────────── */}
         <Modal
@@ -655,23 +1085,81 @@ function SalesVsCollectionContent() {
                 }
                 className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
               >
-                <optgroup label="New Sales">
-                  <option value="new_sales_collection">New Sales Collection (Actual)</option>
+                <optgroup label="New Sales Commitments">
                   <option value="new_sales_commit_payment_1">CX New Sales Commit Payment 1</option>
                   <option value="new_sales_commit_payment_2">New Sales Commit Payment 2</option>
                   <option value="new_sales_commit_payment_3">New Sales Commit Payment 3</option>
                 </optgroup>
-                <optgroup label="Token to Booking (TB)">
-                  <option value="tb_collection">TB Collection (Actual)</option>
+                <optgroup label="Token to Booking (TB) Commitments">
                   <option value="tb_commit_payment_1">TB CX Commit Payment 1</option>
                   <option value="tb_commit_payment_2">TB CX Commit Payment 2</option>
                   <option value="tb_commit_payment_3">TB CX Commit Payment 3</option>
                 </optgroup>
-                <optgroup label="Other Collections">
+                <optgroup label="Actual Collections (Received Today)">
+                  <option value="new_sales_collection">New Sales Collection (Actual)</option>
+                  <option value="tb_collection">TB Collection (Actual)</option>
                   <option value="emi_collection">EMI Collection (Actual)</option>
                   <option value="other_collection">Other Collection (Actual)</option>
                 </optgroup>
               </select>
+            </div>
+
+            {/* Future Commitment Date & Reschedule Audit Section */}
+            <div className="bg-amber-50/50 p-3.5 rounded-xl border border-amber-200/90 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold text-amber-950 uppercase tracking-wider flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-amber-700" />
+                  Next Promised Payment Date (Commitment Date)
+                </label>
+                {editingEntry?.reschedule_count && editingEntry.reschedule_count > 0 ? (
+                  <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                    ⚠️ Shifted {editingEntry.reschedule_count} {editingEntry.reschedule_count === 1 ? "time" : "times"}
+                  </span>
+                ) : null}
+              </div>
+              <p className="text-[11px] text-amber-800">
+                Customer-er commit kora date boshale system automatic tracking ar reschedule audit log rakhbe.
+              </p>
+              <input
+                type="date"
+                value={formExpectedPaymentDate}
+                onChange={(e) => setFormExpectedPaymentDate(e.target.value)}
+                className="w-full border border-amber-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-amber-600 focus:outline-none bg-white"
+              />
+
+              {/* Show reschedule reason prompt if editing and date has changed */}
+              {editingEntry &&
+                editingEntry.expected_payment_date &&
+                formExpectedPaymentDate &&
+                editingEntry.expected_payment_date !== formExpectedPaymentDate && (
+                  <div className="pt-2.5 border-t border-amber-200 space-y-2">
+                    <div className="flex items-center justify-between text-[11px] bg-white p-2 rounded border border-amber-200">
+                      <span className="text-amber-950 font-bold">Date Rescheduling:</span>
+                      <span className="text-slate-600 font-mono">
+                        <span className="line-through text-rose-600 font-bold mr-1">
+                          {formatReadableDate(editingEntry.expected_payment_date)}
+                        </span>
+                        ➔{" "}
+                        <span className="text-emerald-700 font-bold ml-1">
+                          {formatReadableDate(formExpectedPaymentDate)}
+                        </span>
+                      </span>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-rose-800 uppercase tracking-wide mb-1">
+                        Reason for Date Postponement *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Bank cheque clearance delay, Client out of town, Funds arranging..."
+                        value={formRescheduleReason}
+                        onChange={(e) => setFormRescheduleReason(e.target.value)}
+                        className="w-full border border-rose-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-rose-400 focus:ring-1 focus:ring-rose-500 focus:outline-none bg-white"
+                      />
+                    </div>
+                  </div>
+                )}
             </div>
 
             {/* Amount and Payment Sequence */}
@@ -712,7 +1200,7 @@ function SalesVsCollectionContent() {
               </div>
             </div>
 
-            {/* Customer Name(s) - Progressive Dynamic Fields */}
+            {/* Customer Name(s) */}
             <div className="bg-slate-50/70 p-3 rounded-lg border border-slate-200 space-y-2.5">
               <div className="flex items-center justify-between">
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
@@ -756,7 +1244,6 @@ function SalesVsCollectionContent() {
                 ))}
               </div>
 
-              {/* Show button when the current last customer field has text */}
               {formCustomerNames[formCustomerNames.length - 1]?.trim().length > 0 && (
                 <button
                   type="button"
@@ -848,6 +1335,131 @@ function SalesVsCollectionContent() {
           </form>
         </Modal>
 
+        {/* ── Reschedule History Audit Trail Modal ─────────────────────────── */}
+        <Modal
+          isOpen={selectedHistoryEntry !== null}
+          onClose={() => setSelectedHistoryEntry(null)}
+          title="Customer Commitment & Reschedule History Log"
+          description={
+            selectedHistoryEntry?.customer_name
+              ? `Client: ${selectedHistoryEntry.customer_name}`
+              : "Audit Trail"
+          }
+        >
+          {selectedHistoryEntry && (
+            <div className="space-y-4">
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500">Promised Amount:</span>
+                  <span className="font-extrabold text-slate-900 text-sm">
+                    {formatBDT(selectedHistoryEntry.amount)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500">Current Promised Date:</span>
+                  <span className="font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-mono">
+                    {selectedHistoryEntry.expected_payment_date
+                      ? formatReadableDate(selectedHistoryEntry.expected_payment_date)
+                      : "Not set"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500">Total Times Date Shifted:</span>
+                  <span
+                    className={`font-extrabold px-2 py-0.5 rounded ${
+                      (selectedHistoryEntry.reschedule_count || 0) >= 2
+                        ? "bg-rose-100 text-rose-800 border border-rose-300"
+                        : "bg-amber-100 text-amber-900 border border-amber-300"
+                    }`}
+                  >
+                    {selectedHistoryEntry.reschedule_count || 0} times postponed
+                  </span>
+                </div>
+              </div>
+
+              {/* Client Heat Gauge Analysis */}
+              {(selectedHistoryEntry.reschedule_count || 0) >= 2 ? (
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-900 flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold block">Client Intention Warning (Weak Interest):</span>
+                    <span>
+                      Customer has shifted commitment dates {selectedHistoryEntry.reschedule_count} times. Admin and sales team should verify genuine buyer interest before prioritizing.
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-900 flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>
+                    Commitment timeline is active and within acceptable sales follow-up parameters.
+                  </span>
+                </div>
+              )}
+
+              {/* Chronological Reschedule Log */}
+              <div>
+                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <History className="w-3.5 h-3.5 text-green-700" />
+                  Chronological Reschedule Timeline
+                </h4>
+
+                {selectedHistoryEntry.reschedule_history &&
+                selectedHistoryEntry.reschedule_history.length > 0 ? (
+                  <div className="relative pl-6 space-y-3 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+                    {selectedHistoryEntry.reschedule_history.map((h, i) => (
+                      <div key={i} className="relative">
+                        <div className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-amber-500 ring-4 ring-amber-100" />
+                        <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs space-y-1 text-xs">
+                          <div className="flex items-center justify-between font-semibold">
+                            <span className="text-slate-800 font-bold">Shift #{i + 1}</span>
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              {h.changed_at ? h.changed_at.slice(0, 10) : ""}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 font-mono text-[11px] text-slate-700">
+                            <span className="line-through text-rose-600">
+                              {h.old_date ? formatReadableDate(h.old_date) : "Start"}
+                            </span>
+                            <ArrowRight className="w-3 h-3 text-slate-400" />
+                            <span className="text-emerald-700 font-bold">
+                              {h.new_date ? formatReadableDate(h.new_date) : "New Date"}
+                            </span>
+                          </div>
+                          {h.reason && (
+                            <p className="text-slate-600 text-[11px] bg-slate-50 p-2 rounded border border-slate-100 mt-1">
+                              <strong>Reason:</strong> {h.reason}
+                            </p>
+                          )}
+                          {h.changed_by && (
+                            <p className="text-[10px] text-slate-400">
+                              Updated by: {h.changed_by}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 py-3 text-center bg-slate-50 rounded-lg">
+                    No date shifts recorded yet. This is the client's initial promised date.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedHistoryEntry(null)}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </Modal>
+
         {/* ── Delete Confirmation Modal ────────────────────────────────────── */}
         <Modal
           isOpen={deleteConfirmId !== null}
@@ -859,7 +1471,7 @@ function SalesVsCollectionContent() {
             <p className="text-xs text-slate-600">
               This action will permanently delete this transaction from the daily report.
             </p>
-            <div className="flex items-center justify-end gap-2">
+            <div className="flex items-center justify-end gap-2 pt-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -872,7 +1484,7 @@ function SalesVsCollectionContent() {
                 size="sm"
                 onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)}
               >
-                Delete Transaction
+                Delete
               </Button>
             </div>
           </div>
@@ -887,7 +1499,7 @@ export default function SalesVsCollectionPage() {
     <Suspense
       fallback={
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 text-sm text-slate-500">
-          Loading Sales & Collection...
+          Loading Financial Activity...
         </div>
       }
     >

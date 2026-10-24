@@ -12,15 +12,16 @@ from app.core.config import settings
 from app.api.v1.router import api_router
 from app.db.session import engine
 from app.db.base import Base  # noqa: F401 — imports all models so metadata is populated
+from app.db.ensure_columns import ensure_schema_updates
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan — create tables in dev (use Alembic in production)."""
-    # In production, use `alembic upgrade head` instead.
+    """Application lifespan — create tables in dev and ensure safe schema updates."""
     if settings.DEBUG:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+    await ensure_schema_updates(engine, settings.is_sqlite)
     yield
 
 

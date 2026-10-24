@@ -210,6 +210,14 @@ export const PAYMENT_METHODS = [
 
 export type PaymentMethodKey = (typeof PAYMENT_METHODS)[number]["key"];
 
+export interface RescheduleHistoryItem {
+  old_date: string | null;
+  new_date: string;
+  reason: string;
+  changed_at: string;
+  changed_by: string;
+}
+
 export interface SalesCollectionEntry {
   id: number;
   report_id: number;
@@ -221,9 +229,36 @@ export interface SalesCollectionEntry {
   payment_sequence?: number | null;
   reference?: string | null;
   notes?: string | null;
+  expected_payment_date?: string | null;
+  reschedule_count?: number;
+  reschedule_history?: RescheduleHistoryItem[] | null;
   created_at?: string;
 }
 
+export interface CommitmentItem {
+  id: number;
+  report_id: number;
+  report_date: string;
+  employee_id: number;
+  employee_name?: string | null;
+  category: string;
+  amount: number;
+  customer_name?: string | null;
+  expected_payment_date?: string | null;
+  reschedule_count: number;
+  reschedule_history?: RescheduleHistoryItem[] | null;
+  payment_method?: string | null;
+  reference?: string | null;
+  notes?: string | null;
+  status: "due_today" | "overdue" | "upcoming" | "no_date";
+}
+
+export interface CommitmentPipelineResponse {
+  total_promised_amount: number;
+  total_commitments: number;
+  rescheduled_count: number;
+  items: CommitmentItem[];
+}
 
 export interface FinancialTotals {
   actual_collection_total: number;

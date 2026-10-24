@@ -1,9 +1,9 @@
-"""Pydantic schemas for SalesCollectionEntry."""
+"""Pydantic schemas for SalesCollectionEntry and Commitment Pipeline."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -17,6 +17,9 @@ class SalesCollectionEntryBase(BaseModel):
     payment_method: Optional[str] = Field(None, max_length=50)
     reference: Optional[str] = Field(None, max_length=200)
     notes: Optional[str] = None
+    expected_payment_date: Optional[date] = None
+    reschedule_count: int = 0
+    reschedule_history: Optional[List[Dict[str, Any]]] = None
 
     @field_validator("amount", mode="before")
     @classmethod
@@ -29,6 +32,7 @@ class SalesCollectionEntryCreate(SalesCollectionEntryBase):
 
 
 class SalesCollectionEntryUpdate(BaseModel):
+    category: Optional[str] = Field(None, max_length=100)
     description: Optional[str] = Field(None, max_length=300)
     amount: Optional[Decimal] = Field(None, decimal_places=2, ge=Decimal("0"))
     payment_sequence: Optional[int] = Field(None, ge=1)
@@ -36,8 +40,8 @@ class SalesCollectionEntryUpdate(BaseModel):
     payment_method: Optional[str] = Field(None, max_length=50)
     reference: Optional[str] = Field(None, max_length=200)
     notes: Optional[str] = None
-
-
+    expected_payment_date: Optional[date] = None
+    reschedule_reason: Optional[str] = None
 
     @field_validator("amount", mode="before")
     @classmethod
@@ -58,3 +62,30 @@ class SalesCollectionEntryRead(SalesCollectionEntryBase):
 class SalesCollectionListRead(BaseModel):
     report_id: int
     entries: List[SalesCollectionEntryRead]
+
+
+class CommitmentItemRead(BaseModel):
+    id: int
+    report_id: int
+    report_date: date
+    employee_id: int
+    employee_name: Optional[str] = None
+    category: str
+    amount: Decimal
+    customer_name: Optional[str] = None
+    expected_payment_date: Optional[date] = None
+    reschedule_count: int = 0
+    reschedule_history: Optional[List[Dict[str, Any]]] = None
+    payment_method: Optional[str] = None
+    reference: Optional[str] = None
+    notes: Optional[str] = None
+    status: str = "upcoming"  # "due_today" | "overdue" | "upcoming" | "no_date"
+
+    model_config = {"from_attributes": True}
+
+
+class CommitmentPipelineResponse(BaseModel):
+    total_promised_amount: Decimal
+    total_commitments: int
+    rescheduled_count: int
+    items: List[CommitmentItemRead]

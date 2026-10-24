@@ -1,13 +1,17 @@
 """Sales and collection endpoints."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, status
+from datetime import date
+from typing import Optional
+
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.permissions import get_current_user
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.sales_collection import (
+    CommitmentPipelineResponse,
     SalesCollectionEntryCreate,
     SalesCollectionEntryRead,
     SalesCollectionEntryUpdate,
@@ -16,6 +20,27 @@ from app.schemas.sales_collection import (
 from app.services.sales_service import SalesService
 
 router = APIRouter(tags=["Sales & Collection"])
+
+
+@router.get(
+    "/sales-collections/commitments/pipeline",
+    response_model=CommitmentPipelineResponse,
+)
+async def get_commitments_pipeline(
+    employee_id: Optional[int] = Query(None, description="Filter by employee (Admin only)"),
+    date_from: Optional[date] = Query(None, description="Filter promised dates from"),
+    date_to: Optional[date] = Query(None, description="Filter promised dates to"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve commitments pipeline with future promised dates, reschedule counts, and history."""
+    svc = SalesService(db)
+    return await svc.get_commitments_pipeline(
+        current_user=current_user,
+        employee_id=employee_id,
+        date_from=date_from,
+        date_to=date_to,
+    )
 
 
 @router.get(
@@ -76,4 +101,3 @@ async def delete_sales_collection(
 ):
     svc = SalesService(db)
     await svc.delete_entry(entry_id, current_user)
-
