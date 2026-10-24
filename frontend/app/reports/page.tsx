@@ -11,6 +11,8 @@ import {
   AlertCircle,
   Trash2,
   Printer,
+  Search,
+  X,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import {
@@ -34,6 +36,7 @@ import {
   formatReadableDate,
   formatBDT,
   formatMinutes,
+  formatEmployeeId,
 } from "@/lib/utils";
 
 interface DetailedReportRow extends Report {
@@ -56,6 +59,7 @@ function ReportsContent() {
   const [endDate, setEndDate] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "submitted" | "draft">("all");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | "all">("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [downloadingReportId, setDownloadingReportId] = useState<number | null>(null);
 
   const handleDownloadSingleReportCSV = async (repId: number) => {
@@ -180,6 +184,39 @@ function ReportsContent() {
     loadReports();
   }, [loadReports]);
 
+  // Filter reports by search query (Employee Name, Employee Code EMP-XXX, Report ID REP-XXXXX, Date)
+  const filteredReports = useMemo(() => {
+    if (!searchQuery.trim()) return reports;
+    const q = searchQuery.toLowerCase().trim();
+    const cleanQ = q.replace(/^#/, "");
+
+    return reports.filter((r) => {
+      const rawId = String(r.id);
+      const repPadded = `rep-${rawId.padStart(5, "0")}`.toLowerCase();
+      const repShort = `rep-${rawId}`.toLowerCase();
+
+      const empRawId = r.employee_id ? String(r.employee_id) : "";
+      const empCode = formatEmployeeId(r.employee_id).toLowerCase();
+      const empName = (r.employee_name || "").toLowerCase();
+
+      const dateStr = (r.report_date || "").toLowerCase();
+      const readableDate = formatReadableDate(r.report_date).toLowerCase();
+      const statusText = r.is_submitted ? "submitted" : "draft";
+
+      return (
+        empName.includes(cleanQ) ||
+        empCode.includes(cleanQ) ||
+        empRawId === cleanQ ||
+        repPadded.includes(cleanQ) ||
+        repShort.includes(cleanQ) ||
+        rawId === cleanQ ||
+        dateStr.includes(cleanQ) ||
+        readableDate.includes(cleanQ) ||
+        statusText.startsWith(cleanQ)
+      );
+    });
+  }, [reports, searchQuery]);
+
   // Aggregated totals across all filtered reports
   const aggregates = useMemo(() => {
     let totalDialed = 0;
@@ -190,7 +227,7 @@ function ReportsContent() {
     let totalCollection = 0;
     let totalCommitment = 0;
 
-    for (const r of reports) {
+    for (const r of filteredReports) {
       if (r.summary) {
         totalDialed += r.summary.total_calls_dialed || 0;
         totalConnected += r.summary.total_calls_connected || 0;
@@ -215,15 +252,17 @@ function ReportsContent() {
       totalCollection,
       totalCommitment,
     };
-  }, [reports]);
+  }, [filteredReports]);
 
   // Export to CSV
   const handleExportCSV = () => {
-    if (reports.length === 0) return;
+    if (filteredReports.length === 0) return;
 
     const headers = [
+      "Report ID",
       "Report Date",
       "Employee ID",
+      "Staff Officer",
       "Status",
       "Total Dialed",
       "Total Connected",
@@ -235,9 +274,16 @@ function ReportsContent() {
       "Submitted At",
     ];
 
-    const rows = reports.map((r) => [
+    const escapeCsv = (str: unknown): string => {
+      if (str === null || str === undefined) return '""';
+      return `"${String(str).replace(/"/g, '""')}"`;
+    };
+
+    const rows = filteredReports.map((r) => [
+      `REP-${String(r.id).padStart(5, "0")}`,
       r.report_date,
-      r.employee_id,
+      formatEmployeeId(r.employee_id),
+      r.employee_name || "N/A",
       r.is_submitted ? "Submitted" : "Draft",
       r.summary?.total_calls_dialed ?? 0,
       r.summary?.total_calls_connected ?? 0,
@@ -246,23 +292,28 @@ function ReportsContent() {
       r.summary?.total_outdoor_visits ?? 0,
       r.summary?.actual_collection_bdt ?? 0,
       r.summary?.commitments_bdt ?? 0,
-      r.submitted_at || "N/A",
+      r.submitted_at || "Pending",
     ]);
 
     const csvContent =
-      "data:text/csv;charset=utf-8," +
-      [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+      "\uFEFF" +
+      [
+        headers.map(escapeCsv).join(","),
+        ...rows.map((row) => row.map(escapeCsv).join(",")),
+      ].join("\r\n");
 
-    const encodedUri = encodeURI(csvContent);
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
+    link.setAttribute("href", url);
     link.setAttribute(
       "download",
-      `sunset_reports_${startDate}_to_${endDate}.csv`
+      `sunset_reports_log_${startDate}_to_${endDate}.csv`
     );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const handleResetFilters = () => {
@@ -271,6 +322,7 @@ function ReportsContent() {
     setEndDate(today);
     setStatusFilter("all");
     setSelectedEmployeeId("all");
+    setSearchQuery("");
   };
 
   const handleDeleteReport = async (reportId: number) => {
@@ -301,13 +353,63 @@ function ReportsContent() {
         {/* ── Filters Card ─────────────────────────────────────────────────── */}
         <Card>
           <CardContent className="p-4">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center gap-2 text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                <Filter className="w-4 h-4 text-green-700" />
-                <span>Filter Reports</span>
+            <div className="flex flex-col gap-3">
+              {/* Row 1: Search Bar & Actions */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                {/* Instant Search Bar */}
+                <div className="relative flex-1 min-w-[260px] max-w-lg">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Search by Employee Name, ID (EMP-001), Report ID (REP-00021), or date..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-8 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-600/30 focus:border-green-600 focus:outline-none bg-white font-medium text-slate-800 placeholder:text-slate-400 shadow-sm"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded"
+                      title="Clear search"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Reset & Export Actions */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleResetFilters}
+                    className="text-xs"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                    Reset
+                  </Button>
+
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handleExportCSV}
+                    disabled={filteredReports.length === 0 || loading}
+                    className="text-xs"
+                  >
+                    <Download className="w-3.5 h-3.5 mr-1" />
+                    Export CSV
+                  </Button>
+                </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
+              {/* Row 2: Structured Filters (Dates, Status, Employee) */}
+              <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-slate-100">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 mr-1">
+                  <Filter className="w-3.5 h-3.5 text-green-700" />
+                  <span>Filters:</span>
+                </div>
+
                 {/* Date range */}
                 <div className="flex items-center gap-2 text-sm">
                   <span className="text-xs text-slate-700 font-semibold">From:</span>
@@ -356,38 +458,17 @@ function ReportsContent() {
                           e.target.value === "all" ? "all" : Number(e.target.value)
                         )
                       }
-                      className="border border-slate-300 rounded px-2.5 py-1 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
+                      className="border border-slate-300 rounded px-2.5 py-1 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white max-w-[260px] truncate"
                     >
                       <option value="all">All Employees</option>
                       {employees.map((emp) => (
                         <option key={emp.id} value={emp.id}>
-                          {emp.full_name} (@{emp.username})
+                          [{formatEmployeeId(emp.id)}] {emp.full_name} (@{emp.username})
                         </option>
                       ))}
                     </select>
                   </div>
                 )}
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleResetFilters}
-                  className="text-xs"
-                >
-                  <RotateCcw className="w-3.5 h-3.5 mr-1" />
-                  Reset
-                </Button>
-
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={handleExportCSV}
-                  disabled={reports.length === 0 || loading}
-                  className="text-xs"
-                >
-                  <Download className="w-3.5 h-3.5 mr-1" />
-                  Export CSV
-                </Button>
               </div>
             </div>
           </CardContent>
@@ -417,10 +498,14 @@ function ReportsContent() {
               Filtered Reports
             </span>
             <div className="text-2xl font-bold text-slate-900 mt-1">
-              {reports.length}
+              {filteredReports.length}
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              {startDate === endDate ? startDate : `${startDate} to ${endDate}`}
+            <p className="text-xs text-slate-500 mt-0.5 truncate">
+              {searchQuery
+                ? `Matching "${searchQuery}"`
+                : startDate === endDate
+                ? startDate
+                : `${startDate} to ${endDate}`}
             </p>
           </Card>
 
@@ -465,14 +550,16 @@ function ReportsContent() {
               Daily Reports Log
             </CardTitle>
             <span className="text-xs text-slate-500">
-              Showing {reports.length} matching daily reports
+              Showing {filteredReports.length}{" "}
+              {filteredReports.length !== reports.length ? `(filtered from ${reports.length})` : ""}{" "}
+              daily reports
             </span>
           </CardHeader>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-100/70 border-b border-slate-200 text-slate-700 text-[11px] font-semibold">
-                  <th className="py-2.5 px-4">Date</th>
+                  <th className="py-2.5 px-4">Report & Date</th>
                   {isAdmin && <th className="py-2.5 px-3">Employee</th>}
                   <th className="py-2.5 px-3 text-center">Status</th>
                   <th className="py-2.5 px-3 text-right" title="Total calls dialed across all time blocks">Dialed</th>
@@ -506,24 +593,38 @@ function ReportsContent() {
                       <td className="py-3 px-3 text-right"><Skeleton className="h-4 w-12 ml-auto" /></td>
                     </tr>
                   ))
-                ) : reports.length === 0 ? (
+                ) : filteredReports.length === 0 ? (
                   <tr>
                     <td
                       colSpan={isAdmin ? 11 : 10}
                       className="py-12 text-center text-slate-400"
                     >
-                      No reports match the selected filters.
+                      {searchQuery
+                        ? `No reports found matching "${searchQuery}". Try a different name, Employee ID, or Report ID.`
+                        : "No reports match the selected filters."}
                     </td>
                   </tr>
                 ) : (
-                  reports.map((report) => (
+                  filteredReports.map((report) => (
                     <tr key={report.id} className="hover:bg-slate-50 transition-colors">
                       <td className="py-3 px-4 font-semibold text-slate-900">
-                        {formatReadableDate(report.report_date)}
+                        <div className="flex flex-col">
+                          <span>{formatReadableDate(report.report_date)}</span>
+                          <span className="font-mono text-[10px] text-slate-500 font-semibold tracking-wide">
+                            REP-{String(report.id).padStart(5, "0")}
+                          </span>
+                        </div>
                       </td>
                       {isAdmin && (
-                        <td className="py-3 px-3 text-slate-600">
-                          {report.employee_name || `Employee #${report.employee_id}`}
+                        <td className="py-3 px-3 text-slate-700">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-medium text-slate-900">
+                              {report.employee_name || `Employee #${report.employee_id}`}
+                            </span>
+                            <span className="font-mono text-[10px] font-bold bg-green-50 text-green-800 border border-green-200 px-1.5 py-0.5 rounded leading-none">
+                              {formatEmployeeId(report.employee_id)}
+                            </span>
+                          </div>
                         </td>
                       )}
                       <td className="py-3 px-3 text-center">
