@@ -8,6 +8,7 @@ from app.models.meeting_activity import MeetingActivityEntry
 from app.models.sales_collection import SalesCollectionEntry
 from app.models.targets import DailyTargets
 from app.models.settings import AppSettings
+from app.models.notice import Notice, NoticeType, NoticeStatus, NoticePriority
 
 __all__ = [
     "User",
@@ -19,4 +20,8 @@ __all__ = [
     "SalesCollectionEntry",
     "DailyTargets",
     "AppSettings",
+    "Notice",
+    "NoticeType",
+    "NoticeStatus",
+    "NoticePriority",
 ]

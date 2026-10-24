@@ -13,6 +13,7 @@ import {
   UserCheck,
   Settings,
   X,
+  BellRing,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
@@ -32,6 +33,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     { name: "Meeting Activity", href: "/meetings", icon: Users },
     { name: "Sales & Collection", href: "/sales", icon: Banknote },
     { name: "Reports", href: "/reports", icon: FileSpreadsheet },
+    { name: "Notice Board", href: "/notices", icon: BellRing },
     ...(isAdmin
       ? [
           { name: "Employees", href: "/employees", icon: UserCheck, adminOnly: true },

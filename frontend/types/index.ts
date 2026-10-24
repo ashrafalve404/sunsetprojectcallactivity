@@ -350,3 +350,27 @@ export interface PerformanceLeaderboardResponse {
   rankings: EmployeeLeaderboardItem[];
 }
 
+export type NoticeType = "text" | "pdf";
+export type NoticeStatus = "published" | "pending_approval" | "rejected";
+export type NoticePriority = "normal" | "important" | "urgent";
+
+export interface Notice {
+  id: number;
+  title: string;
+  notice_type: NoticeType;
+  content?: string | null;
+  file_url?: string | null;
+  file_name?: string | null;
+  status: NoticeStatus;
+  priority: NoticePriority;
+  created_by_id?: number | null;
+  created_by_name?: string | null;
+  approved_by_id?: number | null;
+  approved_by_name?: string | null;
+  approval_note?: string | null;
+  approved_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+

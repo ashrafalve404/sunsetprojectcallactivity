@@ -49,6 +49,14 @@ app.add_middleware(
 # ─── Routers ──────────────────────────────────────────────────────────────────
 app.include_router(api_router, prefix="/api/v1")
 
+# ─── Static Uploads ───────────────────────────────────────────────────────────
+import os
+from fastapi.staticfiles import StaticFiles
+
+uploads_dir = os.path.join(os.getcwd(), "uploads")
+os.makedirs(uploads_dir, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
+
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):

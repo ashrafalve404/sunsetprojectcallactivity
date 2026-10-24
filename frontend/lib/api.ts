@@ -18,6 +18,7 @@ import {
   User,
   RemindersResponse,
   PerformanceLeaderboardResponse,
+  Notice,
 } from "@/types";
 
 const API_BASE =
@@ -62,9 +63,10 @@ async function request<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const token = getAccessToken();
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
     Accept: "application/json",
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
     ...(options.headers as Record<string, string>),
   };
 
@@ -558,6 +560,48 @@ export const api = {
     get: async (employeeId?: number): Promise<RemindersResponse> => {
       const q = employeeId ? `?employee_id=${employeeId}` : "";
       return request<RemindersResponse>(`/reminders${q}`);
+    },
+  },
+  notices: {
+    list: async (params?: { status?: string; notice_type?: string }): Promise<Notice[]> => {
+      const search = new URLSearchParams();
+      if (params?.status) search.set("status", params.status);
+      if (params?.notice_type) search.set("notice_type", params.notice_type);
+      const q = search.toString();
+      return request<Notice[]>(`/notices${q ? `?${q}` : ""}`);
+    },
+    get: async (noticeId: number): Promise<Notice> => {
+      return request<Notice>(`/notices/${noticeId}`);
+    },
+    createText: async (data: {
+      title: string;
+      content: string;
+      priority?: string;
+    }): Promise<Notice> => {
+      return request<Notice>("/notices/text", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+    },
+    createPdf: async (formData: FormData): Promise<Notice> => {
+      return request<Notice>("/notices/pdf", {
+        method: "POST",
+        body: formData,
+      });
+    },
+    review: async (
+      noticeId: number,
+      data: { status: "published" | "rejected"; approval_note?: string }
+    ): Promise<Notice> => {
+      return request<Notice>(`/notices/${noticeId}/review`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+    },
+    delete: async (noticeId: number): Promise<void> => {
+      return request<void>(`/notices/${noticeId}`, {
+        method: "DELETE",
+      });
     },
   },
 };
