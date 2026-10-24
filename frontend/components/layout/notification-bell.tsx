@@ -141,30 +141,48 @@ export function NotificationBell() {
 
       {/* Dropdown Drawer */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-slate-200 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-          {/* Header */}
-          <div className="p-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Bell className="w-4 h-4 text-green-700" />
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
-                Reminders & Alerts
-              </h3>
-              {totalUnread > 0 && (
-                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.2 rounded-full">
-                  {totalUnread} new
-                </span>
-              )}
+        <>
+          {/* Mobile Backdrop Overlay */}
+          <div
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-2xs z-40 sm:hidden"
+            onClick={() => setIsOpen(false)}
+            aria-hidden="true"
+          />
+
+          <div className="fixed sm:absolute top-14 sm:top-full left-2 right-2 sm:left-auto sm:right-0 mt-1 sm:mt-2 w-auto sm:w-96 max-w-[calc(100vw-1rem)] sm:max-w-none max-h-[85vh] sm:max-h-[540px] flex flex-col bg-white rounded-2xl sm:rounded-xl shadow-2xl border border-slate-200 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="p-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <Bell className="w-4 h-4 text-green-700" />
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                  Reminders & Alerts
+                </h3>
+                {totalUnread > 0 && (
+                  <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.2 rounded-full">
+                    {totalUnread} new
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {totalUnread > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleClearAll}
+                    className="text-[11px] font-medium text-slate-500 hover:text-slate-800 transition-colors"
+                  >
+                    Clear all
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                  className="sm:hidden p-1 text-slate-400 hover:text-slate-700 rounded-md hover:bg-slate-200/60"
+                  aria-label="Close"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-            {totalUnread > 0 && (
-              <button
-                type="button"
-                onClick={handleClearAll}
-                className="text-[11px] font-medium text-slate-500 hover:text-slate-800 transition-colors"
-              >
-                Clear all
-              </button>
-            )}
-          </div>
 
           {/* Sub-admin Notice Approvals Banner */}
           {isSubAdmin && pendingReviewNotices.length > 0 && (
@@ -366,7 +384,7 @@ export function NotificationBell() {
           </div>
 
           {/* Footer */}
-          <div className="p-2.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500 px-3.5">
+          <div className="p-2.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500 px-3.5 shrink-0">
             <span>Sunset Daily Activity</span>
             <button
               type="button"
@@ -377,7 +395,8 @@ export function NotificationBell() {
             </button>
           </div>
         </div>
-      )}
-    </div>
+      </>
+    )}
+  </div>
   );
 }
