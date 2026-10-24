@@ -24,7 +24,7 @@ import {
 } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { DailyTarget, User } from "@/types";
-import { formatBDT, getDhakaToday, formatReadableDate } from "@/lib/utils";
+import { formatBDT, getDhakaToday, formatReadableDate, formatEmployeeId } from "@/lib/utils";
 
 function SettingsContent() {
   const [activeTargetTab, setActiveTargetTab] = useState<"performance" | "config">("performance");
@@ -313,9 +313,12 @@ function SettingsContent() {
                       <tr key={t.id} className="hover:bg-slate-50 transition-colors">
                         <td className="py-3 px-4 font-semibold text-slate-900">
                           {emp ? (
-                            <span className="flex items-center gap-1.5">
+                            <span className="flex items-center gap-1.5 flex-wrap">
                               <Users className="w-3.5 h-3.5 text-green-700" />
-                              {emp.full_name}
+                              <span>{emp.full_name}</span>
+                              <span className="font-mono text-[9px] font-bold bg-slate-100 text-slate-700 border border-slate-200 px-1 py-0.2 rounded">
+                                {formatEmployeeId(emp.id)}
+                              </span>
                             </span>
                           ) : (
                             <Badge variant="neutral">Global Default</Badge>
@@ -456,7 +459,7 @@ function SettingsContent() {
                   <option value="global">Global Company Default</option>
                   {employees.map((emp) => (
                     <option key={emp.id} value={emp.id}>
-                      {emp.full_name} (@{emp.username})
+                      {emp.full_name} ({formatEmployeeId(emp.id)})
                     </option>
                   ))}
                 </select>

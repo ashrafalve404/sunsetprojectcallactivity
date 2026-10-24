@@ -26,7 +26,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { api, ApiError } from "@/lib/api";
 import { User, UserRole } from "@/types";
-import { formatReadableDate } from "@/lib/utils";
+import { formatReadableDate, formatEmployeeId } from "@/lib/utils";
 
 export default function EmployeesPage() {
   const { user: currentUser } = useAuth();
@@ -314,6 +314,7 @@ export default function EmployeesPage() {
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-100/70 border-b border-slate-200 text-slate-700 text-[11px] font-semibold">
+                  <th className="py-2.5 px-3 w-28">Employee ID</th>
                   <th className="py-2.5 px-4">Full Name</th>
                   <th className="py-2.5 px-3">Username</th>
                   <th className="py-2.5 px-3">Email</th>
@@ -327,6 +328,7 @@ export default function EmployeesPage() {
                 {loading && employees.length === 0 ? (
                   Array.from({ length: 4 }).map((_, i) => (
                     <tr key={i}>
+                      <td className="py-3 px-3"><Skeleton className="h-4 w-16" /></td>
                       <td className="py-3 px-4"><Skeleton className="h-4 w-32" /></td>
                       <td className="py-3 px-3"><Skeleton className="h-4 w-20" /></td>
                       <td className="py-3 px-3"><Skeleton className="h-4 w-36" /></td>
@@ -338,13 +340,18 @@ export default function EmployeesPage() {
                   ))
                 ) : displayedEmployees.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-400">
+                    <td colSpan={8} className="py-12 text-center text-slate-400">
                       No employees match your search criteria.
                     </td>
                   </tr>
                 ) : (
                   displayedEmployees.map((emp) => (
                     <tr key={emp.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-3 px-3">
+                        <span className="font-mono font-bold text-xs bg-slate-100 text-slate-800 border border-slate-200 px-2 py-0.5 rounded-md inline-flex items-center gap-1 shadow-2xs">
+                          {formatEmployeeId(emp.id)}
+                        </span>
+                      </td>
                       <td className="py-3 px-4 font-semibold text-slate-900">
                         {emp.full_name}
                         {currentUser?.id === emp.id && (
@@ -423,6 +430,20 @@ export default function EmployeesPage() {
             {formError && (
               <div className="p-3 bg-rose-50 border border-rose-200 rounded text-xs text-rose-800">
                 {formError}
+              </div>
+            )}
+
+            {editingEmployee ? (
+              <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between text-xs">
+                <span className="font-semibold text-slate-600">Employee ID:</span>
+                <span className="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-300">
+                  {formatEmployeeId(editingEmployee.id)} (System #{editingEmployee.id})
+                </span>
+              </div>
+            ) : (
+              <div className="p-2.5 bg-green-50/50 border border-green-200 rounded-lg text-[11px] text-green-900 flex items-center justify-between">
+                <span>Employee ID:</span>
+                <span className="font-semibold font-mono text-green-800">Auto-assigned by system</span>
               </div>
             )}
 

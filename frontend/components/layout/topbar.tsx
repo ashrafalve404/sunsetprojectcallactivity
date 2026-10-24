@@ -3,7 +3,7 @@
 import React from "react";
 import { Menu, LogOut, Calendar, ShieldCheck, User as UserIcon } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { formatReadableDate, getDhakaToday } from "@/lib/utils";
+import { formatReadableDate, getDhakaToday, formatEmployeeId } from "@/lib/utils";
 import { NotificationBell } from "./notification-bell";
 
 interface TopbarProps {
@@ -58,10 +58,15 @@ export function Topbar({ title, subtitle, onOpenMobileMenu }: TopbarProps) {
         {/* User Badge */}
         {user && (
           <div className="flex items-center gap-2">
-            <div className="hidden sm:flex flex-col text-right">
-              <span className="text-xs font-semibold text-slate-900 leading-none">
-                {user.full_name}
-              </span>
+            <div className="flex flex-col text-right">
+              <div className="flex items-center justify-end gap-1.5">
+                <span className="text-xs font-semibold text-slate-900 leading-none">
+                  {user.full_name}
+                </span>
+                <span className="font-mono text-[10px] font-bold bg-green-50 text-green-800 border border-green-200 px-1.5 py-0.5 rounded leading-none">
+                  {formatEmployeeId(user.id)}
+                </span>
+              </div>
               <span className="text-[10px] text-slate-500 uppercase tracking-wide flex items-center justify-end gap-1 mt-0.5">
                 {user.role === "admin" ? (
                   <>

@@ -38,7 +38,7 @@ import {
   MeetingActivityEntry,
   Report,
 } from "@/types";
-import { getDhakaToday, formatReadableDate, formatMinutes } from "@/lib/utils";
+import { getDhakaToday, formatReadableDate, formatMinutes, formatEmployeeId } from "@/lib/utils";
 
 /**
  * Mobile-friendly touch stepper input with prominent up/down increaser arrows.
@@ -444,9 +444,12 @@ function MeetingTimeDailyContent() {
 
                 <div className="h-4 w-px bg-slate-200 hidden sm:block" />
 
-                <div className="text-xs text-slate-600">
+                <div className="text-xs text-slate-600 flex items-center gap-1.5 flex-wrap">
                   <span className="text-slate-400">Employee: </span>
                   <span className="font-semibold text-slate-900">{report?.employee_name || user?.full_name}</span>
+                  <span className="font-mono text-[10px] font-bold bg-green-50 text-green-800 border border-green-200 px-1.5 py-0.2 rounded">
+                    {formatEmployeeId(report?.employee_id || targetEmployeeId || user?.id)}
+                  </span>
                 </div>
 
                 <Badge variant={isLocked ? "success" : "warning"}>

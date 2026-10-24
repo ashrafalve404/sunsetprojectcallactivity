@@ -39,10 +39,11 @@ import {
   formatMinutes,
   getDhakaToday,
   formatReadableDate,
+  formatEmployeeId,
 } from "@/lib/utils";
 
 function DashboardContent() {
-  const { isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   // Filters
   const [startDate, setStartDate] = useState("");
@@ -227,10 +228,20 @@ function DashboardContent() {
                       <option value="all">All Employees</option>
                       {employees.map((emp) => (
                         <option key={emp.id} value={emp.id}>
-                          {emp.full_name} (@{emp.username})
+                          {emp.full_name} ({formatEmployeeId(emp.id)})
                         </option>
                       ))}
                     </select>
+                  </div>
+                )}
+
+                {/* For regular employees: show their employee ID badge */}
+                {!isAdmin && user && (
+                  <div className="flex items-center gap-1.5 text-xs text-slate-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md">
+                    <span className="text-emerald-800 font-medium">Your Employee ID:</span>
+                    <span className="font-mono font-bold text-emerald-950 bg-white border border-emerald-300 px-1.5 py-0.2 rounded shadow-2xs">
+                      {formatEmployeeId(user.id)}
+                    </span>
                   </div>
                 )}
 

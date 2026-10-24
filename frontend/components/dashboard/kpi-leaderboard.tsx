@@ -22,7 +22,7 @@ import {
 import { Card, CardHeader, CardTitle, CardContent, Badge, Skeleton, Button } from "@/components/ui";
 import { PerformanceLeaderboardResponse, EmployeeLeaderboardItem } from "@/types";
 import { api } from "@/lib/api";
-import { formatBDT } from "@/lib/utils";
+import { formatBDT, formatEmployeeId } from "@/lib/utils";
 
 interface KPILeaderboardProps {
   startDate: string;
@@ -217,7 +217,10 @@ export function KPILeaderboard({
             <div>
               <CardTitle className="text-base sm:text-lg font-bold flex items-center gap-2 text-white">
                 <Target className="w-5 h-5 text-emerald-400" />
-                My Daily KPI Targets & Progress
+                <span>My Daily KPI Targets & Progress</span>
+                <span className="font-mono text-xs font-bold bg-emerald-900/90 text-emerald-300 border border-emerald-700/80 px-2 py-0.5 rounded-md">
+                  {formatEmployeeId(personal.employee_id)}
+                </span>
               </CardTitle>
               <p className="text-xs text-slate-300 mt-0.5">
                 Your assigned daily targets and real-time achievement progress today
@@ -596,7 +599,12 @@ export function KPILeaderboard({
                     {/* Employee info */}
                     <td className="py-3 px-3 font-semibold text-slate-900">
                       <div>
-                        <span className="text-xs font-bold text-slate-900">{emp.employee_name}</span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-xs font-bold text-slate-900">{emp.employee_name}</span>
+                          <span className="font-mono text-[9px] font-bold bg-slate-100 text-slate-700 border border-slate-200 px-1 py-0.2 rounded shadow-2xs">
+                            {formatEmployeeId(emp.employee_id)}
+                          </span>
+                        </div>
                         <div className="text-[10px] text-slate-500 font-mono">@{emp.username}</div>
                       </div>
                     </td>

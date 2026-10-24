@@ -84,3 +84,11 @@ export function formatReadableDate(dateStr: string): string {
     return dateStr;
   }
 }
+
+/**
+ * Format numeric user ID into standardized employee code (e.g. EMP-001, EMP-025).
+ */
+export function formatEmployeeId(id: number | null | undefined): string {
+  if (!id || id <= 0) return "EMP-000";
+  return `EMP-${String(id).padStart(3, "0")}`;
+}

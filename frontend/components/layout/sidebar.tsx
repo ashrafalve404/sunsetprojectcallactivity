@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useNoticesBadge } from "@/lib/use-notices-badge";
-import { cn } from "@/lib/utils";
+import { cn, formatEmployeeId } from "@/lib/utils";
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -135,14 +135,19 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       {/* User Footer Summary */}
       {user && (
         <div className="p-3 border-t border-slate-200 bg-slate-50">
-          <div className="flex items-center gap-3 px-2 py-1.5">
-            <div className="w-8 h-8 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center text-slate-700 font-bold text-xs uppercase">
+          <div className="flex items-center gap-2.5 px-2 py-1.5">
+            <div className="w-8 h-8 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center text-slate-700 font-bold text-xs uppercase shrink-0">
               {user.username.slice(0, 2)}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-slate-900 truncate">
-                {user.full_name}
-              </p>
+              <div className="flex items-center justify-between gap-1">
+                <p className="text-xs font-semibold text-slate-900 truncate">
+                  {user.full_name}
+                </p>
+                <span className="font-mono text-[9px] font-bold bg-green-100 text-green-900 border border-green-200 px-1 py-0.2 rounded shrink-0">
+                  {formatEmployeeId(user.id)}
+                </span>
+              </div>
               <p className="text-[11px] text-slate-500 truncate capitalize">
                 {user.role} • @{user.username}
               </p>
