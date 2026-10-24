@@ -44,6 +44,16 @@ export function KPILeaderboard({
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"score" | "dialed" | "connected" | "visits" | "collections">("score");
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
+
+  const handleSortChange = (key: "score" | "dialed" | "connected" | "visits" | "collections") => {
+    if (sortBy === key) {
+      setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"));
+    } else {
+      setSortBy(key);
+      setSortOrder("desc");
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -94,15 +104,34 @@ export function KPILeaderboard({
     }
 
     list.sort((a, b) => {
-      if (sortBy === "dialed") return b.dialed_calls - a.dialed_calls;
-      if (sortBy === "connected") return b.connected_calls - a.connected_calls;
-      if (sortBy === "visits") return b.outdoor_visits - a.outdoor_visits;
-      if (sortBy === "collections") return b.actual_collections - a.actual_collections;
-      return b.overall_score_pct - a.overall_score_pct;
+      let diff = 0;
+      if (sortBy === "dialed") {
+        diff = b.dialed_calls - a.dialed_calls;
+        if (diff === 0) diff = b.dialed_pct - a.dialed_pct;
+      } else if (sortBy === "connected") {
+        diff = b.connected_calls - a.connected_calls;
+        if (diff === 0) diff = b.connected_pct - a.connected_pct;
+      } else if (sortBy === "visits") {
+        diff = b.outdoor_visits - a.outdoor_visits;
+        if (diff === 0) diff = b.outdoor_pct - a.outdoor_pct;
+      } else if (sortBy === "collections") {
+        diff = b.actual_collections - a.actual_collections;
+        if (diff === 0) diff = b.collection_pct - a.collection_pct;
+      } else {
+        diff = b.overall_score_pct - a.overall_score_pct;
+      }
+
+      // Tie breaker
+      if (diff === 0) {
+        diff = b.overall_score_pct - a.overall_score_pct;
+        if (diff === 0) diff = b.dialed_calls - a.dialed_calls;
+      }
+
+      return sortOrder === "desc" ? diff : -diff;
     });
 
     return list;
-  }, [data, searchQuery, sortBy]);
+  }, [data, searchQuery, sortBy, sortOrder]);
 
   const getRankBadge = (rank: number) => {
     if (rank === 1) {
@@ -423,14 +452,18 @@ export function KPILeaderboard({
             ].map((s) => (
               <button
                 key={s.key}
-                onClick={() => setSortBy(s.key as any)}
-                className={`px-2 py-1 rounded text-xs font-medium transition-colors shrink-0 ${
+                type="button"
+                onClick={() => handleSortChange(s.key as any)}
+                className={`px-2.5 py-1 rounded text-xs font-semibold transition-all shrink-0 flex items-center gap-1 cursor-pointer ${
                   sortBy === s.key
-                    ? "bg-emerald-800 text-white font-semibold"
+                    ? "bg-emerald-800 text-white shadow-xs"
                     : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                 }`}
               >
-                {s.label}
+                <span>{s.label}</span>
+                {sortBy === s.key && (
+                  <span className="text-[10px] font-bold">{sortOrder === "desc" ? "↓" : "↑"}</span>
+                )}
               </button>
             ))}
           </div>
@@ -440,14 +473,89 @@ export function KPILeaderboard({
         <div className="overflow-x-auto border border-slate-200 rounded-lg">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-slate-700 text-[11px] font-bold">
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-700 text-[11px] font-bold select-none">
                 <th className="py-3 px-3 text-center w-12">Rank</th>
                 <th className="py-3 px-3">Employee</th>
-                <th className="py-3 px-3 min-w-[140px]">Dialed Target</th>
-                <th className="py-3 px-3 min-w-[140px]">Connected Target</th>
-                <th className="py-3 px-3 min-w-[120px]">Outdoor Visits</th>
-                <th className="py-3 px-3 min-w-[150px]">Collections Target</th>
-                <th className="py-3 px-3 text-center min-w-[130px]">Overall KPI Status</th>
+                <th
+                  onClick={() => handleSortChange("dialed")}
+                  className={`py-3 px-3 min-w-[140px] cursor-pointer hover:bg-slate-100 transition-colors ${
+                    sortBy === "dialed" ? "bg-emerald-50 text-emerald-950 font-extrabold" : ""
+                  }`}
+                  title="Click to sort by Dialed Calls"
+                >
+                  <div className="flex items-center justify-between">
+                    <span>Dialed Target</span>
+                    {sortBy === "dialed" ? (
+                      <span className="text-emerald-700 font-bold">{sortOrder === "desc" ? "↓" : "↑"}</span>
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
+                    )}
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSortChange("connected")}
+                  className={`py-3 px-3 min-w-[140px] cursor-pointer hover:bg-slate-100 transition-colors ${
+                    sortBy === "connected" ? "bg-emerald-50 text-emerald-950 font-extrabold" : ""
+                  }`}
+                  title="Click to sort by Connected Calls"
+                >
+                  <div className="flex items-center justify-between">
+                    <span>Connected Target</span>
+                    {sortBy === "connected" ? (
+                      <span className="text-emerald-700 font-bold">{sortOrder === "desc" ? "↓" : "↑"}</span>
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
+                    )}
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSortChange("visits")}
+                  className={`py-3 px-3 min-w-[120px] cursor-pointer hover:bg-slate-100 transition-colors ${
+                    sortBy === "visits" ? "bg-emerald-50 text-emerald-950 font-extrabold" : ""
+                  }`}
+                  title="Click to sort by Outdoor Visits"
+                >
+                  <div className="flex items-center justify-between">
+                    <span>Outdoor Visits</span>
+                    {sortBy === "visits" ? (
+                      <span className="text-emerald-700 font-bold">{sortOrder === "desc" ? "↓" : "↑"}</span>
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
+                    )}
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSortChange("collections")}
+                  className={`py-3 px-3 min-w-[150px] cursor-pointer hover:bg-slate-100 transition-colors ${
+                    sortBy === "collections" ? "bg-emerald-50 text-emerald-950 font-extrabold" : ""
+                  }`}
+                  title="Click to sort by Collections"
+                >
+                  <div className="flex items-center justify-between">
+                    <span>Collections Target</span>
+                    {sortBy === "collections" ? (
+                      <span className="text-emerald-700 font-bold">{sortOrder === "desc" ? "↓" : "↑"}</span>
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
+                    )}
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSortChange("score")}
+                  className={`py-3 px-3 text-center min-w-[130px] cursor-pointer hover:bg-slate-100 transition-colors ${
+                    sortBy === "score" ? "bg-emerald-50 text-emerald-950 font-extrabold" : ""
+                  }`}
+                  title="Click to sort by Overall KPI Score"
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    <span>Overall KPI Status</span>
+                    {sortBy === "score" ? (
+                      <span className="text-emerald-700 font-bold">{sortOrder === "desc" ? "↓" : "↑"}</span>
+                    ) : (
+                      <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-60" />
+                    )}
+                  </div>
+                </th>
                 <th className="py-3 px-3 text-right">Activity</th>
               </tr>
             </thead>
@@ -478,11 +586,11 @@ export function KPILeaderboard({
                   </td>
                 </tr>
               ) : (
-                sortedRankings.map((emp) => (
+                sortedRankings.map((emp, index) => (
                   <tr key={emp.employee_id} className="hover:bg-slate-50/80 transition-colors">
-                    {/* Rank */}
+                    {/* Dynamic Rank Badge based on current sort */}
                     <td className="py-3 px-3 text-center">
-                      {getRankBadge(emp.rank)}
+                      {getRankBadge(index + 1)}
                     </td>
 
                     {/* Employee info */}
@@ -494,7 +602,7 @@ export function KPILeaderboard({
                     </td>
 
                     {/* Dialed Target vs Actual */}
-                    <td className="py-3 px-3">
+                    <td className={`py-3 px-3 ${sortBy === "dialed" ? "bg-emerald-50/40" : ""}`}>
                       <div className="flex justify-between items-center text-xs">
                         <span className="font-semibold text-slate-800">
                           {emp.dialed_calls} <span className="text-slate-400 font-normal">/ {emp.dialed_target}</span>
@@ -507,7 +615,7 @@ export function KPILeaderboard({
                     </td>
 
                     {/* Connected Target vs Actual */}
-                    <td className="py-3 px-3">
+                    <td className={`py-3 px-3 ${sortBy === "connected" ? "bg-emerald-50/40" : ""}`}>
                       <div className="flex justify-between items-center text-xs">
                         <span className="font-semibold text-slate-800">
                           {emp.connected_calls} <span className="text-slate-400 font-normal">/ {emp.connected_target}</span>
@@ -520,7 +628,7 @@ export function KPILeaderboard({
                     </td>
 
                     {/* Outdoor Visits Target vs Actual */}
-                    <td className="py-3 px-3">
+                    <td className={`py-3 px-3 ${sortBy === "visits" ? "bg-emerald-50/40" : ""}`}>
                       <div className="flex justify-between items-center text-xs">
                         <span className="font-semibold text-slate-800">
                           {emp.outdoor_visits} <span className="text-slate-400 font-normal">/ {emp.outdoor_target}</span>
@@ -533,7 +641,7 @@ export function KPILeaderboard({
                     </td>
 
                     {/* Collections Target vs Actual */}
-                    <td className="py-3 px-3">
+                    <td className={`py-3 px-3 ${sortBy === "collections" ? "bg-emerald-50/40" : ""}`}>
                       <div className="flex justify-between items-center text-xs">
                         <span className="font-semibold text-slate-800">
                           {formatBDT(emp.actual_collections)}
@@ -549,7 +657,7 @@ export function KPILeaderboard({
                     </td>
 
                     {/* Overall KPI Status */}
-                    <td className="py-3 px-3 text-center">
+                    <td className={`py-3 px-3 text-center ${sortBy === "score" ? "bg-emerald-50/40" : ""}`}>
                       {getStatusBadge(emp.status, emp.overall_score_pct)}
                     </td>
 
