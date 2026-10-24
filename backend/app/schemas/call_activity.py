@@ -40,6 +40,8 @@ class CallEntryBase(BaseModel):
                 data["lead_status_fub"] = data["fub_count"]
             if "lead_status_ni" not in data and "ni_count" in data:
                 data["lead_status_ni"] = data["ni_count"]
+            if "total_connected" not in data and "connected_count" in data:
+                data["total_connected"] = data["connected_count"]
         return data
 
 

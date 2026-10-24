@@ -62,6 +62,8 @@ export interface CallActivityEntry {
   slot_10_to_1: number | null;
   slot_2_to_5: number | null;
   slot_5_to_6: number | null;
+  total_dialed?: number | null;
+  total_connected?: number | null;
   hp_count: number | null;
   p_count: number | null;
   fub_count: number | null;

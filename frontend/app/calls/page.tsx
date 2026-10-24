@@ -24,6 +24,7 @@ import {
   UserPlus,
   Phone,
   Edit2,
+  ArrowRightLeft,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import {
@@ -65,6 +66,59 @@ function DailyCallActivityContent() {
   // Report state
   const [report, setReport] = useState<Report | null>(null);
   const [carryForward, setCarryForward] = useState<CarryForwardInfo | null>(null);
+
+  // Today's New Leads and Status Movements per category
+  const [leadChanges, setLeadChanges] = useState<
+    Record<
+      LeadCategory,
+      {
+        new_leads: number;
+        delta_hp: number;
+        delta_p: number;
+        delta_fub: number;
+        delta_ni: number;
+      }
+    >
+  >(() => {
+    const init: Record<
+      string,
+      {
+        new_leads: number;
+        delta_hp: number;
+        delta_p: number;
+        delta_fub: number;
+        delta_ni: number;
+      }
+    > = {};
+    for (const cat of LEAD_CATEGORIES) {
+      init[cat.key] = {
+        new_leads: 0,
+        delta_hp: 0,
+        delta_p: 0,
+        delta_fub: 0,
+        delta_ni: 0,
+      };
+    }
+    return init as Record<
+      LeadCategory,
+      {
+        new_leads: number;
+        delta_hp: number;
+        delta_p: number;
+        delta_fub: number;
+        delta_ni: number;
+      }
+    >;
+  });
+
+  // Transfer Lead Status / Category Modal State
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [transferFromCat, setTransferFromCat] = useState<LeadCategory>("facebook");
+  const [transferFromStatus, setTransferFromStatus] = useState<"hp" | "p" | "fub" | "ni">("fub");
+  const [transferToCat, setTransferToCat] = useState<LeadCategory>("high_potential");
+  const [transferToStatus, setTransferToStatus] = useState<"hp" | "p" | "fub" | "ni">("hp");
+  const [transferCount, setTransferCount] = useState<number>(1);
+
   const [entries, setEntries] = useState<Record<LeadCategory, CallActivityEntry>>(() => {
     const init: Record<string, CallActivityEntry> = {};
     for (const cat of LEAD_CATEGORIES) {
@@ -74,6 +128,7 @@ function DailyCallActivityContent() {
         slot_10_to_1: null,
         slot_2_to_5: null,
         slot_5_to_6: null,
+        total_connected: null,
         hp_count: null,
         p_count: null,
         fub_count: null,
@@ -236,8 +291,10 @@ function DailyCallActivityContent() {
 
       // Load call activity entries & carry-forward info
       const callData = await api.calls.get(r.id);
-      setCarryForward(callData?.carry_forward || null);
+      const cf = callData?.carry_forward || null;
+      setCarryForward(cf);
 
+      const nextChanges: Record<string, { new_leads: number; delta_hp: number; delta_p: number; delta_fub: number; delta_ni: number }> = {};
 
       if (callData && callData.entries && callData.entries.length > 0) {
         const loaded: Record<string, CallActivityEntry> = {};
@@ -245,12 +302,47 @@ function DailyCallActivityContent() {
           const found = callData.entries.find(
             (e) => e.lead_category === cat.key || e.lead_category === cat.label
           );
-          const prevBaseline =
-            callData.carry_forward?.categories?.[cat.key]?.prev_till_today ||
-            callData.carry_forward?.categories?.[cat.label]?.prev_till_today ||
-            0;
-          const tillTodayVal =
-            found?.till_today_status ?? (prevBaseline > 0 ? prevBaseline : null);
+
+          const prev =
+            cf?.categories?.[cat.key] ||
+            cf?.categories?.[cat.label] ||
+            cf?.categories?.[cat.key.toLowerCase()] ||
+            cf?.categories?.[cat.label.toLowerCase()];
+
+          const prevHp = prev?.prev_hp || 0;
+          const prevP = prev?.prev_p || 0;
+          const prevFub = prev?.prev_fub || 0;
+          const prevNi = prev?.prev_ni || 0;
+          const prevStock = prev?.prev_till_today || (prevHp + prevP + prevFub + prevNi);
+
+          // Restore changes from notes if present
+          let parsedChanges: { new_leads: number; delta_hp: number; delta_p: number; delta_fub: number; delta_ni: number } | null = null;
+          if (found?.notes) {
+            try {
+              const parsed = JSON.parse(found.notes);
+              if (parsed && typeof parsed === "object" && parsed.changes) {
+                parsedChanges = parsed.changes;
+              }
+            } catch {
+              // ignore legacy note
+            }
+          }
+
+          if (parsedChanges) {
+            nextChanges[cat.key] = parsedChanges;
+          } else if (found && (found.hp_count !== null || found.p_count !== null || found.fub_count !== null || found.ni_count !== null)) {
+            nextChanges[cat.key] = {
+              new_leads: Math.max(0, (found.till_today_status ?? 0) - prevStock),
+              delta_hp: (found.hp_count ?? 0) - prevHp,
+              delta_p: (found.p_count ?? 0) - prevP,
+              delta_fub: (found.fub_count ?? 0) - prevFub,
+              delta_ni: (found.ni_count ?? 0) - prevNi,
+            };
+          } else {
+            nextChanges[cat.key] = { new_leads: 0, delta_hp: 0, delta_p: 0, delta_fub: 0, delta_ni: 0 };
+          }
+
+          const tillTodayVal = found?.till_today_status ?? (prevStock > 0 ? prevStock : null);
 
           loaded[cat.key] = found
             ? { ...found, till_today_status: tillTodayVal }
@@ -260,34 +352,47 @@ function DailyCallActivityContent() {
                 slot_10_to_1: null,
                 slot_2_to_5: null,
                 slot_5_to_6: null,
-                hp_count: null,
-                p_count: null,
-                fub_count: null,
-                ni_count: null,
+                total_connected: null,
+                hp_count: prevHp > 0 ? prevHp : null,
+                p_count: prevP > 0 ? prevP : null,
+                fub_count: prevFub > 0 ? prevFub : null,
+                ni_count: prevNi > 0 ? prevNi : null,
               };
         }
         setEntries(loaded as Record<LeadCategory, CallActivityEntry>);
+        setLeadChanges(nextChanges as Record<LeadCategory, { new_leads: number; delta_hp: number; delta_p: number; delta_fub: number; delta_ni: number }>);
       } else {
         // Reset empty entries with carry-forward baseline if available
         const reset: Record<string, CallActivityEntry> = {};
         for (const cat of LEAD_CATEGORIES) {
-          const prevBaseline =
-            callData?.carry_forward?.categories?.[cat.key]?.prev_till_today ||
-            callData?.carry_forward?.categories?.[cat.label]?.prev_till_today ||
-            0;
+          const prev =
+            cf?.categories?.[cat.key] ||
+            cf?.categories?.[cat.label] ||
+            cf?.categories?.[cat.key.toLowerCase()] ||
+            cf?.categories?.[cat.label.toLowerCase()];
+
+          const prevHp = prev?.prev_hp || 0;
+          const prevP = prev?.prev_p || 0;
+          const prevFub = prev?.prev_fub || 0;
+          const prevNi = prev?.prev_ni || 0;
+          const prevStock = prev?.prev_till_today || (prevHp + prevP + prevFub + prevNi);
+
+          nextChanges[cat.key] = { new_leads: 0, delta_hp: 0, delta_p: 0, delta_fub: 0, delta_ni: 0 };
           reset[cat.key] = {
             lead_category: cat.key,
-            till_today_status: prevBaseline > 0 ? prevBaseline : null,
+            till_today_status: prevStock > 0 ? prevStock : null,
             slot_10_to_1: null,
             slot_2_to_5: null,
             slot_5_to_6: null,
-            hp_count: null,
-            p_count: null,
-            fub_count: null,
-            ni_count: null,
+            total_connected: null,
+            hp_count: prevHp > 0 ? prevHp : null,
+            p_count: prevP > 0 ? prevP : null,
+            fub_count: prevFub > 0 ? prevFub : null,
+            ni_count: prevNi > 0 ? prevNi : null,
           };
         }
         setEntries(reset as Record<LeadCategory, CallActivityEntry>);
+        setLeadChanges(nextChanges as Record<LeadCategory, { new_leads: number; delta_hp: number; delta_p: number; delta_fub: number; delta_ni: number }>);
       }
     } catch (err: unknown) {
       if (err instanceof ApiError) {
@@ -325,86 +430,222 @@ function DailyCallActivityContent() {
     }));
   };
 
-  // Calculated totals across all categories (Today & Cumulative)
+  const handleLeadChange = (
+    category: LeadCategory,
+    field: "new_leads" | "delta_hp" | "delta_p" | "delta_fub" | "delta_ni",
+    valStr: string
+  ) => {
+    if (report?.is_submitted) return;
+    const trimmed = valStr.trim();
+    const num = trimmed === "" ? 0 : parseInt(trimmed, 10);
+    const validNum = isNaN(num) ? 0 : (field === "new_leads" ? Math.max(0, num) : num);
+
+    setLeadChanges((prev) => ({
+      ...prev,
+      [category]: {
+        ...prev[category],
+        [field]: validNum,
+      },
+    }));
+  };
+
+  const handleApplyTransfer = () => {
+    if (transferCount <= 0) return;
+    if (transferFromCat === transferToCat && transferFromStatus === transferToStatus) {
+      setStatusMessage({
+        type: "error",
+        text: "Source and destination status must be different to transfer.",
+      });
+      return;
+    }
+
+    setLeadChanges((prev) => {
+      const next = { ...prev };
+      const srcCat = transferFromCat;
+      const dstCat = transferToCat;
+      const srcField = `delta_${transferFromStatus}` as "delta_hp" | "delta_p" | "delta_fub" | "delta_ni";
+      const dstField = `delta_${transferToStatus}` as "delta_hp" | "delta_p" | "delta_fub" | "delta_ni";
+
+      next[srcCat] = {
+        ...next[srcCat],
+        [srcField]: (next[srcCat][srcField] || 0) - transferCount,
+      };
+
+      next[dstCat] = {
+        ...next[dstCat],
+        [dstField]: (next[dstCat][dstField] || 0) + transferCount,
+      };
+
+      return next;
+    });
+
+    const srcName = LEAD_CATEGORIES.find((c) => c.key === transferFromCat)?.label;
+    const dstName = LEAD_CATEGORIES.find((c) => c.key === transferToCat)?.label;
+    setStatusMessage({
+      type: "success",
+      text: `Transferred ${transferCount} lead(s) from ${srcName} (${transferFromStatus.toUpperCase()}) ➔ ${dstName} (${transferToStatus.toUpperCase()}).`,
+    });
+    setTransferModalOpen(false);
+  };
+
+  // Calculated totals across all categories (Call Activity & Pipeline)
   const totals = useMemo(() => {
-    let tillToday = 0;
     let slot1 = 0;
     let slot2 = 0;
     let slot3 = 0;
-    let hp = 0;
-    let p = 0;
-    let fub = 0;
-    let ni = 0;
+    let totalConnected = 0;
 
     let prevTotalHp = 0;
     let prevTotalP = 0;
     let prevTotalFub = 0;
     let prevTotalNi = 0;
+    let prevTotalStock = 0;
+
+    let totalNewLeads = 0;
+    let totalDeltaHp = 0;
+    let totalDeltaP = 0;
+    let totalDeltaFub = 0;
+    let totalDeltaNi = 0;
+
+    let updatedTotalHp = 0;
+    let updatedTotalP = 0;
+    let updatedTotalFub = 0;
+    let updatedTotalNi = 0;
+    let updatedTotalStock = 0;
 
     for (const cat of LEAD_CATEGORIES) {
       const e = entries[cat.key];
       if (e) {
-        if (e.till_today_status) tillToday += e.till_today_status;
         if (e.slot_10_to_1) slot1 += e.slot_10_to_1;
         if (e.slot_2_to_5) slot2 += e.slot_2_to_5;
         if (e.slot_5_to_6) slot3 += e.slot_5_to_6;
-        if (e.hp_count) hp += e.hp_count;
-        if (e.p_count) p += e.p_count;
-        if (e.fub_count) fub += e.fub_count;
-        if (e.ni_count) ni += e.ni_count;
+        if (e.total_connected) totalConnected += e.total_connected;
       }
 
-      if (carryForward?.categories) {
-        const prev =
-          carryForward.categories[cat.key] ||
-          carryForward.categories[cat.label] ||
-          carryForward.categories[cat.key.toLowerCase()] ||
-          carryForward.categories[cat.label.toLowerCase()];
-        if (prev) {
-          prevTotalHp += prev.prev_hp || 0;
-          prevTotalP += prev.prev_p || 0;
-          prevTotalFub += prev.prev_fub || 0;
-          prevTotalNi += prev.prev_ni || 0;
-        }
-      }
+      const prev =
+        carryForward?.categories?.[cat.key] ||
+        carryForward?.categories?.[cat.label] ||
+        carryForward?.categories?.[cat.key.toLowerCase()] ||
+        carryForward?.categories?.[cat.label.toLowerCase()];
+
+      const p_hp = prev?.prev_hp || 0;
+      const p_p = prev?.prev_p || 0;
+      const p_fub = prev?.prev_fub || 0;
+      const p_ni = prev?.prev_ni || 0;
+      const p_stock = prev?.prev_till_today || (p_hp + p_p + p_fub + p_ni);
+
+      prevTotalHp += p_hp;
+      prevTotalP += p_p;
+      prevTotalFub += p_fub;
+      prevTotalNi += p_ni;
+      prevTotalStock += p_stock;
+
+      const ch = leadChanges[cat.key] || {
+        new_leads: 0,
+        delta_hp: 0,
+        delta_p: 0,
+        delta_fub: 0,
+        delta_ni: 0,
+      };
+
+      totalNewLeads += ch.new_leads;
+      totalDeltaHp += ch.delta_hp;
+      totalDeltaP += ch.delta_p;
+      totalDeltaFub += ch.delta_fub;
+      totalDeltaNi += ch.delta_ni;
+
+      const u_hp = Math.max(0, p_hp + ch.delta_hp);
+      const u_p = Math.max(0, p_p + ch.delta_p);
+      const u_fub = Math.max(0, p_fub + ch.delta_fub);
+      const u_ni = Math.max(0, p_ni + ch.delta_ni);
+      const u_stock = Math.max(0, p_stock + ch.new_leads);
+
+      updatedTotalHp += u_hp;
+      updatedTotalP += u_p;
+      updatedTotalFub += u_fub;
+      updatedTotalNi += u_ni;
+      updatedTotalStock += u_stock;
     }
 
     const totalDialed = slot1 + slot2 + slot3;
-    const totalConnected = hp + p + fub;
     const connectionRate =
       totalDialed > 0 ? Math.round((totalConnected / totalDialed) * 100) : 0;
 
-    const prevTotalConnected = prevTotalHp + prevTotalP + prevTotalFub;
-    const cumHp = prevTotalHp + hp;
-    const cumP = prevTotalP + p;
-    const cumFub = prevTotalFub + fub;
-    const cumNi = prevTotalNi + ni;
-    const cumConnected = prevTotalConnected + totalConnected;
-
     return {
-      tillToday,
       slot1,
       slot2,
       slot3,
       totalDialed,
       totalConnected,
       connectionRate,
-      hp,
-      p,
-      fub,
-      ni,
       prevTotalHp,
       prevTotalP,
       prevTotalFub,
       prevTotalNi,
-      prevTotalConnected,
-      cumHp,
-      cumP,
-      cumFub,
-      cumNi,
-      cumConnected,
+      prevTotalStock,
+      totalNewLeads,
+      totalDeltaHp,
+      totalDeltaP,
+      totalDeltaFub,
+      totalDeltaNi,
+      updatedTotalHp,
+      updatedTotalP,
+      updatedTotalFub,
+      updatedTotalNi,
+      updatedTotalStock,
     };
-  }, [entries, carryForward]);
+  }, [entries, carryForward, leadChanges]);
+
+  // Build API upsert payload from current state & calculated updated totals
+  const buildPayload = (): CallActivityEntry[] => {
+    return LEAD_CATEGORIES.map((cat) => {
+      const e = entries[cat.key];
+      const prev =
+        carryForward?.categories?.[cat.key] ||
+        carryForward?.categories?.[cat.label] ||
+        carryForward?.categories?.[cat.key.toLowerCase()] ||
+        carryForward?.categories?.[cat.label.toLowerCase()];
+
+      const p_hp = prev?.prev_hp || 0;
+      const p_p = prev?.prev_p || 0;
+      const p_fub = prev?.prev_fub || 0;
+      const p_ni = prev?.prev_ni || 0;
+      const p_stock = prev?.prev_till_today || (p_hp + p_p + p_fub + p_ni);
+
+      const ch = leadChanges[cat.key] || {
+        new_leads: 0,
+        delta_hp: 0,
+        delta_p: 0,
+        delta_fub: 0,
+        delta_ni: 0,
+      };
+
+      const updatedHp = Math.max(0, p_hp + ch.delta_hp);
+      const updatedP = Math.max(0, p_p + ch.delta_p);
+      const updatedFub = Math.max(0, p_fub + ch.delta_fub);
+      const updatedNi = Math.max(0, p_ni + ch.delta_ni);
+      const updatedStock = Math.max(0, p_stock + ch.new_leads);
+      const rowDialed = (e.slot_10_to_1 || 0) + (e.slot_2_to_5 || 0) + (e.slot_5_to_6 || 0);
+
+      return {
+        lead_category: cat.key,
+        slot_10_to_1: e.slot_10_to_1 ?? null,
+        slot_2_to_5: e.slot_2_to_5 ?? null,
+        slot_5_to_6: e.slot_5_to_6 ?? null,
+        total_dialed: rowDialed > 0 ? rowDialed : null,
+        total_connected: e.total_connected ?? null,
+        hp_count: updatedHp,
+        p_count: updatedP,
+        fub_count: updatedFub,
+        ni_count: updatedNi,
+        till_today_status: updatedStock,
+        notes: JSON.stringify({
+          changes: ch,
+          raw_notes: e.notes || "",
+        }),
+      };
+    });
+  };
 
   // Save Draft
   const handleSaveDraft = async () => {
@@ -412,9 +653,7 @@ function DailyCallActivityContent() {
     setSaving(true);
     setStatusMessage(null);
     try {
-      const payload: CallActivityEntry[] = LEAD_CATEGORIES.map(
-        (cat) => entries[cat.key]
-      );
+      const payload = buildPayload();
       await api.calls.upsert(report.id, payload);
 
       // Persist client contacts in report notes
@@ -450,9 +689,7 @@ function DailyCallActivityContent() {
     setStatusMessage(null);
     try {
       // First save entries
-      const payload: CallActivityEntry[] = LEAD_CATEGORIES.map(
-        (cat) => entries[cat.key]
-      );
+      const payload = buildPayload();
       await api.calls.upsert(report.id, payload);
 
       // Save client directory
@@ -684,32 +921,123 @@ function DailyCallActivityContent() {
           </Alert>
         )}
 
-        {/* ── Smart Auto Carry-Forward Active Banner ───────────────────────── */}
-        {carryForward?.previous_report_date && (
-          <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-gradient-to-r from-emerald-50/90 via-teal-50/70 to-emerald-50/90 border border-emerald-200/80 rounded-lg text-xs text-emerald-950 shadow-2xs">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                <Sparkles className="w-4 h-4" />
+        {/* ── 3-Stage Carry-Forward Pipeline Overview Bar ───────────────────── */}
+        <div className="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            {/* Stage 1: Previous Total (Automatic) */}
+            <div className="flex-1 bg-slate-50/90 rounded-lg p-3 border border-slate-200">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                  1. Previous Total
+                </span>
+                <span className="text-[10px] font-semibold text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
+                  {carryForward?.previous_report_date
+                    ? `From ${formatReadableDate(carryForward.previous_report_date)}`
+                    : "Day 1 Baseline"}
+                </span>
               </div>
-              <div>
-                <div className="font-bold flex items-center gap-2 text-emerald-950">
-                  <span>Smart Auto Carry-Forward Active</span>
-                  <span className="text-[10px] font-semibold bg-emerald-100/90 text-emerald-800 px-2 py-0.5 rounded border border-emerald-300">
-                    Baseline: {formatReadableDate(carryForward.previous_report_date)}
-                  </span>
-                </div>
-                <div className="text-slate-600 text-[11px] mt-0.5">
-                  Previous cumulative totals for {carryForward.employee_name || report?.employee_name || "this employee"} have been loaded. Enter <strong>today&apos;s new changes</strong> in HP, P, Fub, and NI below — updated cumulative totals are computed live without double-counting.
-                </div>
+              <div className="flex items-center gap-1.5 flex-wrap text-xs font-semibold text-slate-700">
+                <span className="bg-red-50 text-red-800 px-2 py-0.5 rounded border border-red-200 text-[11px]">
+                  HP: <strong>{totals.prevTotalHp}</strong>
+                </span>
+                <span className="bg-blue-50 text-blue-800 px-2 py-0.5 rounded border border-blue-200 text-[11px]">
+                  P: <strong>{totals.prevTotalP}</strong>
+                </span>
+                <span className="bg-amber-50 text-amber-800 px-2 py-0.5 rounded border border-amber-200 text-[11px]">
+                  FUB: <strong>{totals.prevTotalFub}</strong>
+                </span>
+                <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200 text-[11px]">
+                  NI: <strong>{totals.prevTotalNi}</strong>
+                </span>
+                <span className="text-slate-400 font-normal text-[11px] ml-1">
+                  Total Stock: <strong className="text-slate-700">{totals.prevTotalStock}</strong>
+                </span>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-semibold text-emerald-800 bg-white/90 border border-emerald-200 px-2.5 py-1 rounded shadow-2xs">
-                Employee Isolated: #{carryForward.employee_id}
-              </span>
+
+            <div className="hidden lg:flex text-slate-400 items-center justify-center font-bold">
+              ➔
             </div>
+
+            {/* Stage 2: Today's Changes (Manual) */}
+            <div className="flex-1 bg-emerald-50/50 rounded-lg p-3 border border-emerald-200/80">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">
+                  2. Today&apos;s New & Changes
+                </span>
+                <span className="text-[10px] font-semibold text-emerald-800 bg-white px-2 py-0.5 rounded border border-emerald-200">
+                  Manual Entry
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap text-xs font-semibold text-emerald-950">
+                <span className="bg-white text-emerald-900 px-2 py-0.5 rounded border border-emerald-200 text-[11px]">
+                  New: <strong>+{totals.totalNewLeads}</strong>
+                </span>
+                <span className="bg-white text-red-800 px-2 py-0.5 rounded border border-red-200 text-[11px]">
+                  Δ HP: <strong>{totals.totalDeltaHp >= 0 ? `+${totals.totalDeltaHp}` : totals.totalDeltaHp}</strong>
+                </span>
+                <span className="bg-white text-blue-800 px-2 py-0.5 rounded border border-blue-200 text-[11px]">
+                  Δ P: <strong>{totals.totalDeltaP >= 0 ? `+${totals.totalDeltaP}` : totals.totalDeltaP}</strong>
+                </span>
+                <span className="bg-white text-amber-800 px-2 py-0.5 rounded border border-amber-200 text-[11px]">
+                  Δ FUB: <strong>{totals.totalDeltaFub >= 0 ? `+${totals.totalDeltaFub}` : totals.totalDeltaFub}</strong>
+                </span>
+                <span className="bg-white text-slate-700 px-2 py-0.5 rounded border border-slate-200 text-[11px]">
+                  Δ NI: <strong>{totals.totalDeltaNi >= 0 ? `+${totals.totalDeltaNi}` : totals.totalDeltaNi}</strong>
+                </span>
+              </div>
+            </div>
+
+            <div className="hidden lg:flex text-slate-400 items-center justify-center font-bold">
+              ➔
+            </div>
+
+            {/* Stage 3: Live Updated Total (Automatic) */}
+            <div className="flex-1 bg-green-50/70 rounded-lg p-3 border border-green-300">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[11px] font-bold text-green-900 uppercase tracking-wider">
+                  3. Updated Total
+                </span>
+                <span className="text-[10px] font-bold text-green-800 bg-green-100 px-2 py-0.5 rounded border border-green-300">
+                  No Double-Counting
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap text-xs font-bold text-green-950">
+                <span className="bg-white text-red-900 px-2 py-0.5 rounded border border-red-300 text-[11px] shadow-2xs">
+                  HP: {totals.updatedTotalHp}
+                </span>
+                <span className="bg-white text-blue-900 px-2 py-0.5 rounded border border-blue-300 text-[11px] shadow-2xs">
+                  P: {totals.updatedTotalP}
+                </span>
+                <span className="bg-white text-amber-900 px-2 py-0.5 rounded border border-amber-300 text-[11px] shadow-2xs">
+                  FUB: {totals.updatedTotalFub}
+                </span>
+                <span className="bg-white text-slate-800 px-2 py-0.5 rounded border border-slate-300 text-[11px] shadow-2xs">
+                  NI: {totals.updatedTotalNi}
+                </span>
+                <span className="text-green-800 font-semibold text-[11px] ml-1">
+                  Updated Stock: <strong className="text-green-900">{totals.updatedTotalStock}</strong>
+                </span>
+              </div>
+            </div>
+
+            {/* Transfer Lead Status Button */}
+            {!isLocked && (
+              <div className="flex items-center lg:self-center shrink-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTransferModalOpen(true)}
+                  className="flex items-center gap-1.5 text-xs font-bold border-emerald-300 text-emerald-800 bg-emerald-50/60 hover:bg-emerald-100"
+                >
+                  <ArrowRightLeft className="w-3.5 h-3.5" />
+                  Transfer Lead Status
+                </Button>
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
         {/* ── Mobile App Cards View ───────────────────────────────────────── */}
         {viewMode === "cards" && (
@@ -729,7 +1057,7 @@ function DailyCallActivityContent() {
               </button>
               {LEAD_CATEGORIES.map((cat) => {
                 const e = entries[cat.key];
-                const rowConnected = (e.hp_count || 0) + (e.p_count || 0) + (e.fub_count || 0);
+                const rowConnected = e.total_connected || 0;
                 const isActive = activeCategoryFilter === cat.key;
                 return (
                   <button
@@ -781,19 +1109,21 @@ function DailyCallActivityContent() {
                 const prevP = prev?.prev_p || 0;
                 const prevFub = prev?.prev_fub || 0;
                 const prevNi = prev?.prev_ni || 0;
+                const prevStock = prev?.prev_till_today || (prevHp + prevP + prevFub + prevNi);
 
-                const todayHp = e.hp_count || 0;
-                const todayP = e.p_count || 0;
-                const todayFub = e.fub_count || 0;
-                const todayNi = e.ni_count || 0;
+                const ch = leadChanges[cat.key] || {
+                  new_leads: 0,
+                  delta_hp: 0,
+                  delta_p: 0,
+                  delta_fub: 0,
+                  delta_ni: 0,
+                };
 
-                const cumHp = prevHp + todayHp;
-                const cumP = prevP + todayP;
-                const cumFub = prevFub + todayFub;
-                const cumNi = prevNi + todayNi;
-
-                const rowConnected = todayHp + todayP + todayFub;
-                const cumConnected = cumHp + cumP + cumFub;
+                const updatedHp = Math.max(0, prevHp + ch.delta_hp);
+                const updatedP = Math.max(0, prevP + ch.delta_p);
+                const updatedFub = Math.max(0, prevFub + ch.delta_fub);
+                const updatedNi = Math.max(0, prevNi + ch.delta_ni);
+                const updatedStock = Math.max(0, prevStock + ch.new_leads);
 
                 return (
                   <div
@@ -813,18 +1143,13 @@ function DailyCallActivityContent() {
                           Dialed: {rowDialed}
                         </span>
                         <span className="bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-md text-[11px] font-bold border border-emerald-200">
-                          Conn: {rowConnected}
-                          {cumConnected > rowConnected && (
-                            <span className="text-[10px] text-emerald-950 font-normal ml-1">
-                              (Cum: {cumConnected})
-                            </span>
-                          )}
+                          Conn: {e.total_connected || 0}
                         </span>
                       </div>
                     </div>
 
                     <div className="p-4 space-y-4">
-                      {/* Section 1: Time Slots */}
+                      {/* Section 1: Calls Dialed & Connected (Separate Activity) */}
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
@@ -834,10 +1159,10 @@ function DailyCallActivityContent() {
                             Total: <strong className="text-green-800">{rowDialed}</strong>
                           </span>
                         </div>
-                        <div className="grid grid-cols-3 gap-2">
-                          <div className="bg-green-50/40 p-2.5 rounded-xl border border-green-200/70 text-center">
+                        <div className="grid grid-cols-4 gap-2">
+                          <div className="bg-green-50/40 p-2 rounded-xl border border-green-200/70 text-center">
                             <span className="text-[10px] font-bold uppercase text-slate-600 block mb-1">
-                              10am – 1pm
+                              10am–1pm
                             </span>
                             <input
                               type="number"
@@ -848,13 +1173,13 @@ function DailyCallActivityContent() {
                                 handleCellChange(cat.key, "slot_10_to_1", ev.target.value)
                               }
                               placeholder="0"
-                              className="w-full text-center py-2 text-base font-bold bg-white border border-green-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:outline-none text-slate-900 shadow-2xs"
+                              className="w-full text-center py-1.5 text-base font-bold bg-white border border-green-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:outline-none text-slate-900 shadow-2xs"
                             />
                           </div>
 
-                          <div className="bg-green-50/40 p-2.5 rounded-xl border border-green-200/70 text-center">
+                          <div className="bg-green-50/40 p-2 rounded-xl border border-green-200/70 text-center">
                             <span className="text-[10px] font-bold uppercase text-slate-600 block mb-1">
-                              2pm – 5pm
+                              2pm–5pm
                             </span>
                             <input
                               type="number"
@@ -865,13 +1190,13 @@ function DailyCallActivityContent() {
                                 handleCellChange(cat.key, "slot_2_to_5", ev.target.value)
                               }
                               placeholder="0"
-                              className="w-full text-center py-2 text-base font-bold bg-white border border-green-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:outline-none text-slate-900 shadow-2xs"
+                              className="w-full text-center py-1.5 text-base font-bold bg-white border border-green-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:outline-none text-slate-900 shadow-2xs"
                             />
                           </div>
 
-                          <div className="bg-green-50/40 p-2.5 rounded-xl border border-green-200/70 text-center">
+                          <div className="bg-green-50/40 p-2 rounded-xl border border-green-200/70 text-center">
                             <span className="text-[10px] font-bold uppercase text-slate-600 block mb-1">
-                              5pm – 6pm
+                              5pm–6pm
                             </span>
                             <input
                               type="number"
@@ -882,165 +1207,186 @@ function DailyCallActivityContent() {
                                 handleCellChange(cat.key, "slot_5_to_6", ev.target.value)
                               }
                               placeholder="0"
-                              className="w-full text-center py-2 text-base font-bold bg-white border border-green-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:outline-none text-slate-900 shadow-2xs"
+                              className="w-full text-center py-1.5 text-base font-bold bg-white border border-green-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:outline-none text-slate-900 shadow-2xs"
+                            />
+                          </div>
+
+                          {/* Independent Connected Input */}
+                          <div className="bg-emerald-50/50 p-2 rounded-xl border border-emerald-300 text-center">
+                            <span className="text-[10px] font-bold uppercase text-emerald-800 block mb-1">
+                              Connected
+                            </span>
+                            <input
+                              type="number"
+                              min="0"
+                              disabled={isLocked || loading}
+                              value={e.total_connected ?? ""}
+                              onChange={(ev) =>
+                                handleCellChange(cat.key, "total_connected", ev.target.value)
+                              }
+                              placeholder="0"
+                              className="w-full text-center py-1.5 text-base font-bold bg-white border border-emerald-400 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none text-emerald-950 shadow-2xs"
                             />
                           </div>
                         </div>
                       </div>
 
-                      {/* Section 2: Lead Qualification & Auto Carry-Forward */}
+                      {/* Section 2: Lead Stock & Status Progression (3-Stage Workflow) */}
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                            Lead Conversions (Today&apos;s New)
+                            Lead Stock & Status Progression
                           </label>
-                          <span className="text-[10px] text-emerald-800 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                            Auto Cumulative Active
-                          </span>
+                          {!isLocked && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setTransferFromCat(cat.key);
+                                setTransferModalOpen(true);
+                              }}
+                              className="text-[10px] text-emerald-800 font-bold bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300 flex items-center gap-1"
+                            >
+                              <ArrowRightLeft className="w-3 h-3" />
+                              Transfer Status
+                            </button>
+                          )}
                         </div>
-                        <div className="grid grid-cols-2 gap-2.5">
-                          {/* HP Box */}
-                          <div className="bg-emerald-50/50 p-2.5 rounded-xl border border-emerald-200 flex flex-col justify-between shadow-2xs">
-                            <div className="flex items-center justify-between mb-1.5">
-                              <span className="text-xs font-bold text-emerald-950 flex items-center gap-1">
-                                <Flame className="w-3.5 h-3.5 text-emerald-600" /> HP
-                              </span>
-                              {prevHp > 0 && (
-                                <span className="text-[10px] font-bold text-emerald-900 bg-emerald-100 px-1.5 py-0.2 rounded border border-emerald-200">
-                                  Cum: {cumHp}
-                                </span>
-                              )}
-                            </div>
+
+                        {/* Today's New Leads Input */}
+                        <div className="mb-2.5 p-2 bg-emerald-50/40 rounded-xl border border-emerald-200/80 flex items-center justify-between">
+                          <div className="text-xs">
+                            <span className="font-bold text-emerald-950 block">Today&apos;s New Leads</span>
+                            <span className="text-[10px] text-slate-500">Increases total pipeline stock</span>
+                          </div>
+                          <div className="w-24">
                             <input
                               type="number"
                               min="0"
                               disabled={isLocked || loading}
-                              value={e.hp_count ?? ""}
+                              value={ch.new_leads === 0 ? "" : ch.new_leads}
                               onChange={(ev) =>
-                                handleCellChange(cat.key, "hp_count", ev.target.value)
+                                handleLeadChange(cat.key, "new_leads", ev.target.value)
                               }
-                              placeholder={prevHp > 0 ? "+0" : "0"}
-                              className="w-full text-center py-2 text-lg font-bold bg-white border border-emerald-300 rounded-lg focus:ring-2 focus:ring-emerald-600 text-slate-900 shadow-2xs"
+                              placeholder="+0"
+                              className="w-full text-center py-1 text-sm font-bold bg-white border border-emerald-300 rounded-lg focus:ring-2 focus:ring-emerald-600 text-emerald-900 shadow-2xs"
                             />
-                            <div className="text-[10px] text-emerald-800 text-center font-medium mt-1">
-                              {prevHp > 0
-                                ? `Base: ${prevHp} + Today: ${todayHp}`
-                                : "High Potential"}
+                          </div>
+                        </div>
+
+                        {/* 4 Status Delta Boxes */}
+                        <div className="grid grid-cols-2 gap-2.5">
+                          {/* HP Box */}
+                          <div className="bg-red-50/40 p-2.5 rounded-xl border border-red-200 flex flex-col justify-between shadow-2xs">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs font-bold text-red-950 flex items-center gap-1">
+                                <Flame className="w-3.5 h-3.5 text-red-600" /> HP
+                              </span>
+                              <span className="text-[10px] font-bold text-red-900 bg-red-100 px-1.5 py-0.2 rounded border border-red-200">
+                                Total: {updatedHp}
+                              </span>
+                            </div>
+                            <input
+                              type="number"
+                              disabled={isLocked || loading}
+                              value={ch.delta_hp === 0 ? "" : ch.delta_hp}
+                              onChange={(ev) =>
+                                handleLeadChange(cat.key, "delta_hp", ev.target.value)
+                              }
+                              placeholder="+0"
+                              className="w-full text-center py-1.5 text-base font-bold bg-white border border-red-300 rounded-lg focus:ring-2 focus:ring-red-600 text-slate-900 shadow-2xs"
+                            />
+                            <div className="text-[10px] text-slate-500 text-center font-medium mt-1">
+                              Base: {prevHp} {ch.delta_hp !== 0 ? `(${ch.delta_hp > 0 ? `+${ch.delta_hp}` : ch.delta_hp})` : ""}
                             </div>
                           </div>
 
                           {/* P Box */}
-                          <div className="bg-blue-50/50 p-2.5 rounded-xl border border-blue-200 flex flex-col justify-between shadow-2xs">
-                            <div className="flex items-center justify-between mb-1.5">
+                          <div className="bg-blue-50/40 p-2.5 rounded-xl border border-blue-200 flex flex-col justify-between shadow-2xs">
+                            <div className="flex items-center justify-between mb-1">
                               <span className="text-xs font-bold text-blue-950 flex items-center gap-1">
                                 <Target className="w-3.5 h-3.5 text-blue-600" /> P
                               </span>
-                              {prevP > 0 && (
-                                <span className="text-[10px] font-bold text-blue-900 bg-blue-100 px-1.5 py-0.2 rounded border border-blue-200">
-                                  Cum: {cumP}
-                                </span>
-                              )}
+                              <span className="text-[10px] font-bold text-blue-900 bg-blue-100 px-1.5 py-0.2 rounded border border-blue-200">
+                                Total: {updatedP}
+                              </span>
                             </div>
                             <input
                               type="number"
-                              min="0"
                               disabled={isLocked || loading}
-                              value={e.p_count ?? ""}
+                              value={ch.delta_p === 0 ? "" : ch.delta_p}
                               onChange={(ev) =>
-                                handleCellChange(cat.key, "p_count", ev.target.value)
+                                handleLeadChange(cat.key, "delta_p", ev.target.value)
                               }
-                              placeholder={prevP > 0 ? "+0" : "0"}
-                              className="w-full text-center py-2 text-lg font-bold bg-white border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-600 text-slate-900 shadow-2xs"
+                              placeholder="+0"
+                              className="w-full text-center py-1.5 text-base font-bold bg-white border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-600 text-slate-900 shadow-2xs"
                             />
-                            <div className="text-[10px] text-blue-800 text-center font-medium mt-1">
-                              {prevP > 0
-                                ? `Base: ${prevP} + Today: ${todayP}`
-                                : "Potential"}
+                            <div className="text-[10px] text-slate-500 text-center font-medium mt-1">
+                              Base: {prevP} {ch.delta_p !== 0 ? `(${ch.delta_p > 0 ? `+${ch.delta_p}` : ch.delta_p})` : ""}
                             </div>
                           </div>
 
                           {/* Fub Box */}
-                          <div className="bg-amber-50/50 p-2.5 rounded-xl border border-amber-200 flex flex-col justify-between shadow-2xs">
-                            <div className="flex items-center justify-between mb-1.5">
+                          <div className="bg-amber-50/40 p-2.5 rounded-xl border border-amber-200 flex flex-col justify-between shadow-2xs">
+                            <div className="flex items-center justify-between mb-1">
                               <span className="text-xs font-bold text-amber-950 flex items-center gap-1">
-                                <Clock className="w-3.5 h-3.5 text-amber-600" /> Fub
+                                <Clock className="w-3.5 h-3.5 text-amber-600" /> FUB
                               </span>
-                              {prevFub > 0 && (
-                                <span className="text-[10px] font-bold text-amber-900 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-200">
-                                  Cum: {cumFub}
-                                </span>
-                              )}
+                              <span className="text-[10px] font-bold text-amber-900 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-200">
+                                Total: {updatedFub}
+                              </span>
                             </div>
                             <input
                               type="number"
-                              min="0"
                               disabled={isLocked || loading}
-                              value={e.fub_count ?? ""}
+                              value={ch.delta_fub === 0 ? "" : ch.delta_fub}
                               onChange={(ev) =>
-                                handleCellChange(cat.key, "fub_count", ev.target.value)
+                                handleLeadChange(cat.key, "delta_fub", ev.target.value)
                               }
-                              placeholder={prevFub > 0 ? "+0" : "0"}
-                              className="w-full text-center py-2 text-lg font-bold bg-white border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-600 text-slate-900 shadow-2xs"
+                              placeholder="+0"
+                              className="w-full text-center py-1.5 text-base font-bold bg-white border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-600 text-slate-900 shadow-2xs"
                             />
-                            <div className="text-[10px] text-amber-800 text-center font-medium mt-1">
-                              {prevFub > 0
-                                ? `Base: ${prevFub} + Today: ${todayFub}`
-                                : "Follow-Up"}
+                            <div className="text-[10px] text-slate-500 text-center font-medium mt-1">
+                              Base: {prevFub} {ch.delta_fub !== 0 ? `(${ch.delta_fub > 0 ? `+${ch.delta_fub}` : ch.delta_fub})` : ""}
                             </div>
                           </div>
 
                           {/* NI Box */}
                           <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex flex-col justify-between shadow-2xs">
-                            <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center justify-between mb-1">
                               <span className="text-xs font-bold text-slate-700 flex items-center gap-1">
                                 <XCircle className="w-3.5 h-3.5 text-slate-500" /> NI
                               </span>
-                              {prevNi > 0 && (
-                                <span className="text-[10px] font-bold text-slate-800 bg-slate-200 px-1.5 py-0.2 rounded border border-slate-300">
-                                  Cum: {cumNi}
-                                </span>
-                              )}
+                              <span className="text-[10px] font-bold text-slate-800 bg-slate-200 px-1.5 py-0.2 rounded border border-slate-300">
+                                Total: {updatedNi}
+                              </span>
                             </div>
                             <input
                               type="number"
-                              min="0"
                               disabled={isLocked || loading}
-                              value={e.ni_count ?? ""}
+                              value={ch.delta_ni === 0 ? "" : ch.delta_ni}
                               onChange={(ev) =>
-                                handleCellChange(cat.key, "ni_count", ev.target.value)
+                                handleLeadChange(cat.key, "delta_ni", ev.target.value)
                               }
-                              placeholder={prevNi > 0 ? "+0" : "0"}
-                              className="w-full text-center py-2 text-lg font-bold bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 text-slate-900 shadow-2xs"
+                              placeholder="+0"
+                              className="w-full text-center py-1.5 text-base font-bold bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-500 text-slate-900 shadow-2xs"
                             />
-                            <div className="text-[10px] text-slate-600 text-center font-medium mt-1">
-                              {prevNi > 0
-                                ? `Base: ${prevNi} + Today: ${todayNi}`
-                                : "Not Interested"}
+                            <div className="text-[10px] text-slate-500 text-center font-medium mt-1">
+                              Base: {prevNi} {ch.delta_ni !== 0 ? `(${ch.delta_ni > 0 ? `+${ch.delta_ni}` : ch.delta_ni})` : ""}
                             </div>
                           </div>
                         </div>
                       </div>
 
-                      {/* Section 3: Till Today Baseline Footer */}
+                      {/* Section 3: Till Today Cumulative Stock Footer */}
                       <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                        <span className="text-slate-500 font-medium">Till Today Stock:</span>
-                        <div className="flex items-center gap-1.5">
-                          <input
-                            type="number"
-                            min="0"
-                            disabled={isLocked || loading}
-                            value={e.till_today_status ?? ""}
-                            onChange={(ev) =>
-                              handleCellChange(cat.key, "till_today_status", ev.target.value)
-                            }
-                            placeholder={prev?.prev_till_today ? String(prev.prev_till_today) : "0"}
-                            className="w-20 text-center py-1 text-xs font-bold bg-white border border-slate-300 rounded focus:ring-1 focus:ring-green-600"
-                          />
-                          {prev?.prev_till_today ? (
-                            <span className="text-[10px] text-slate-500">
-                              (Base: {prev.prev_till_today})
-                            </span>
-                          ) : null}
+                        <span className="text-slate-500 font-medium">Cumulative Pipeline Stock:</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-slate-400 text-[11px]">
+                            Base: {prevStock} {ch.new_leads > 0 ? `+ New: ${ch.new_leads}` : ""}
+                          </span>
+                          <span className="font-extrabold text-sm text-green-900 bg-green-100/70 px-2 py-0.5 rounded border border-green-300">
+                            {updatedStock}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -1055,76 +1401,93 @@ function DailyCallActivityContent() {
         {viewMode === "table" && (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <PhoneCall className="w-4 h-4 text-green-700" />
-                Daily Dialed & Lead Classification Table
-              </CardTitle>
-              <div className="flex items-center gap-2 text-xs text-slate-500">
-                <span>{formatReadableDate(reportDate)}</span>
-                {carryForward?.previous_report_date && (
-                  <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    Carried Forward from {carryForward.previous_report_date}
-                  </span>
-                )}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <CardTitle className="flex items-center gap-2">
+                  <PhoneCall className="w-4 h-4 text-green-700" />
+                  Daily Dialed & Lead Classification Pipeline
+                </CardTitle>
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <span>{formatReadableDate(reportDate)}</span>
+                  {carryForward?.previous_report_date && (
+                    <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      Baseline from {carryForward.previous_report_date}
+                    </span>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="bg-slate-100/70 border-b border-slate-200 text-slate-700 text-[11px] font-semibold">
-                    <th className="py-2.5 px-3 min-w-[160px] sticky left-0 bg-slate-100/90 z-10">
+                  <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 text-[11px] font-semibold">
+                    <th className="py-2.5 px-3 min-w-[150px] sticky left-0 bg-slate-100/95 z-10">
                       Lead Category
                     </th>
-                    <th className="py-2.5 px-2 text-center w-24">
-                      <Tooltip content="Till Today Status" subcontent="Cumulative leads status worked or reached up to today (auto-loaded from previous baseline).">
-                        <span className="border-b border-dotted border-slate-400 hover:text-slate-900">Till Today</span>
-                      </Tooltip>
-                    </th>
-                    <th className="py-2.5 px-2 text-center w-24 bg-green-50/50">
+                    <th className="py-2.5 px-2 text-center w-20 bg-green-50/40">
                       <Tooltip content="10:00 AM – 1:00 PM" subcontent="Morning call block dials.">
                         <span className="border-b border-dotted border-slate-400 hover:text-slate-900">10am-1pm</span>
                       </Tooltip>
                     </th>
-                    <th className="py-2.5 px-2 text-center w-24 bg-green-50/50">
+                    <th className="py-2.5 px-2 text-center w-20 bg-green-50/40">
                       <Tooltip content="2:00 PM – 5:00 PM" subcontent="Afternoon call block dials.">
                         <span className="border-b border-dotted border-slate-400 hover:text-slate-900">2pm-5pm</span>
                       </Tooltip>
                     </th>
-                    <th className="py-2.5 px-2 text-center w-24 bg-green-50/50">
+                    <th className="py-2.5 px-2 text-center w-20 bg-green-50/40">
                       <Tooltip content="5:00 PM – 6:00 PM" subcontent="Late afternoon wrap-up call block dials.">
                         <span className="border-b border-dotted border-slate-400 hover:text-slate-900">5pm-6pm</span>
                       </Tooltip>
                     </th>
-                    <th className="py-2.5 px-2 text-center w-24 bg-slate-50 font-bold">
+                    <th className="py-2.5 px-2 text-center w-20 bg-slate-50 font-bold">
                       <Tooltip content="Total Dialed" subcontent="Sum of calls dialed across all 3 time blocks today.">
-                        <span className="border-b border-dotted border-slate-500 font-bold text-slate-900">Total Dialed</span>
+                        <span className="border-b border-dotted border-slate-500 font-bold text-slate-900">Dialed</span>
                       </Tooltip>
                     </th>
-                    <th className="py-2.5 px-2 text-center w-20">
-                      <Tooltip content="HP — High Potential" subcontent="Highly interested client ready for booking. Enter today's change; cumulative total updates live.">
-                        <span className="font-bold text-emerald-800 border-b border-dotted border-emerald-600 hover:text-emerald-950">HP</span>
-                      </Tooltip>
-                    </th>
-                    <th className="py-2.5 px-2 text-center w-20">
-                      <Tooltip content="P — Potential" subcontent="General interested client. Enter today's change; cumulative total updates live.">
-                        <span className="font-bold text-slate-800 border-b border-dotted border-slate-500 hover:text-slate-950">P</span>
-                      </Tooltip>
-                    </th>
-                    <th className="py-2.5 px-2 text-center w-20">
-                      <Tooltip content="Fub — Follow-Up Booked" subcontent="Scheduled call back. Enter today's change; cumulative total updates live.">
-                        <span className="font-bold text-slate-800 border-b border-dotted border-slate-500 hover:text-slate-950">Fub</span>
-                      </Tooltip>
-                    </th>
-                    <th className="py-2.5 px-2 text-center w-20">
-                      <Tooltip content="NI — Not Interested" subcontent="Client declined or wrong number. Enter today's change; cumulative total updates live.">
-                        <span className="font-bold text-slate-600 border-b border-dotted border-slate-400 hover:text-slate-900">NI</span>
-                      </Tooltip>
-                    </th>
-                    <th className="py-2.5 px-2 text-center w-24 bg-emerald-50/50 font-bold">
-                      <Tooltip content="Connected (HP + P + Fub)" subcontent="Today's productive conversations and updated cumulative connected count." align="right">
+                    <th className="py-2.5 px-2 text-center w-22 bg-emerald-50/60 font-bold">
+                      <Tooltip content="Connected Calls" subcontent="Productive calls connected with clients today (independent call metric).">
                         <span className="font-bold text-emerald-900 border-b border-dotted border-emerald-700 hover:text-emerald-950">Connected</span>
                       </Tooltip>
                     </th>
+                    <th className="py-2.5 px-2 text-center w-20 bg-slate-50">
+                      <Tooltip content="Previous Total Stock" subcontent="Cumulative leads loaded from previous day's report baseline.">
+                        <span className="border-b border-dotted border-slate-400 hover:text-slate-900">Prev Stock</span>
+                      </Tooltip>
+                    </th>
+                    <th className="py-2.5 px-2 text-center w-22 bg-emerald-50/30">
+                      <Tooltip content="Today's New Leads" subcontent="Fresh new leads acquired today in this category (adds to cumulative stock).">
+                        <span className="font-bold text-emerald-800 border-b border-dotted border-emerald-600 hover:text-emerald-950">+ New Leads</span>
+                      </Tooltip>
+                    </th>
+                    <th className="py-2.5 px-2 text-center w-20">
+                      <Tooltip content="HP — High Potential" subcontent="Enter today's status change. Live total is auto-calculated from previous baseline.">
+                        <span className="font-bold text-red-800 border-b border-dotted border-red-600 hover:text-red-950">Δ HP</span>
+                      </Tooltip>
+                    </th>
+                    <th className="py-2.5 px-2 text-center w-20">
+                      <Tooltip content="P — Potential" subcontent="Enter today's status change. Live total is auto-calculated from previous baseline.">
+                        <span className="font-bold text-blue-800 border-b border-dotted border-blue-600 hover:text-blue-950">Δ P</span>
+                      </Tooltip>
+                    </th>
+                    <th className="py-2.5 px-2 text-center w-20">
+                      <Tooltip content="FUB — Follow-Up Booked" subcontent="Enter today's status change. Live total is auto-calculated from previous baseline.">
+                        <span className="font-bold text-amber-800 border-b border-dotted border-amber-600 hover:text-amber-950">Δ FUB</span>
+                      </Tooltip>
+                    </th>
+                    <th className="py-2.5 px-2 text-center w-20">
+                      <Tooltip content="NI — Not Interested" subcontent="Enter today's status change. Live total is auto-calculated from previous baseline.">
+                        <span className="font-bold text-slate-600 border-b border-dotted border-slate-400 hover:text-slate-900">Δ NI</span>
+                      </Tooltip>
+                    </th>
+                    <th className="py-2.5 px-2 text-center w-22 bg-green-50/50 font-bold">
+                      <Tooltip content="Updated Cumulative Stock" subcontent="Live total cumulative stock: Prev Stock + Today's New Leads." align="right">
+                        <span className="font-bold text-green-900 border-b border-dotted border-green-700 hover:text-green-950">Updated Stock</span>
+                      </Tooltip>
+                    </th>
+                    {!isLocked && (
+                      <th className="py-2.5 px-2 text-center w-16">
+                        <span>Action</span>
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -1145,19 +1508,21 @@ function DailyCallActivityContent() {
                     const prevP = prev?.prev_p || 0;
                     const prevFub = prev?.prev_fub || 0;
                     const prevNi = prev?.prev_ni || 0;
+                    const prevStock = prev?.prev_till_today || (prevHp + prevP + prevFub + prevNi);
 
-                    const todayHp = e.hp_count || 0;
-                    const todayP = e.p_count || 0;
-                    const todayFub = e.fub_count || 0;
-                    const todayNi = e.ni_count || 0;
+                    const ch = leadChanges[cat.key] || {
+                      new_leads: 0,
+                      delta_hp: 0,
+                      delta_p: 0,
+                      delta_fub: 0,
+                      delta_ni: 0,
+                    };
 
-                    const cumHp = prevHp + todayHp;
-                    const cumP = prevP + todayP;
-                    const cumFub = prevFub + todayFub;
-                    const cumNi = prevNi + todayNi;
-
-                    const rowConnected = todayHp + todayP + todayFub;
-                    const cumConnected = cumHp + cumP + cumFub;
+                    const updatedHp = Math.max(0, prevHp + ch.delta_hp);
+                    const updatedP = Math.max(0, prevP + ch.delta_p);
+                    const updatedFub = Math.max(0, prevFub + ch.delta_fub);
+                    const updatedNi = Math.max(0, prevNi + ch.delta_ni);
+                    const updatedStock = Math.max(0, prevStock + ch.new_leads);
 
                     return (
                       <tr
@@ -1165,32 +1530,17 @@ function DailyCallActivityContent() {
                         className="hover:bg-slate-50/80 transition-colors"
                       >
                         {/* Category Label */}
-                        <td className="py-2.5 px-3 font-semibold text-slate-900 sticky left-0 bg-white z-10 border-r border-slate-100 align-top">
+                        <td className="py-2.5 px-3 font-semibold text-slate-900 sticky left-0 bg-white z-10 border-r border-slate-100 align-middle">
                           <div className="font-medium text-slate-900">{cat.label}</div>
-                          {prev && (prevHp > 0 || prevP > 0 || prevFub > 0) && (
+                          {prev && (prevHp > 0 || prevP > 0 || prevFub > 0 || prevNi > 0) && (
                             <div className="text-[10px] text-slate-500 font-normal mt-0.5">
-                              Baseline: {prevHp} HP, {prevP} P, {prevFub} Fub
+                              Base: {prevHp} HP, {prevP} P, {prevFub} FUB, {prevNi} NI
                             </div>
                           )}
                         </td>
 
-                        {/* Till Today Status */}
-                        <td className="p-1 text-center align-top">
-                          <input
-                            type="number"
-                            min="0"
-                            disabled={isLocked || loading}
-                            value={e.till_today_status ?? ""}
-                            onChange={(ev) =>
-                              handleCellChange(cat.key, "till_today_status", ev.target.value)
-                            }
-                            placeholder={prev?.prev_till_today ? String(prev.prev_till_today) : "—"}
-                            className="w-full text-center py-1 border border-slate-300 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
-                          />
-                        </td>
-
                         {/* 10 AM to 1 PM */}
-                        <td className="p-1 text-center bg-green-50/20 align-top">
+                        <td className="p-1 text-center bg-green-50/20 align-middle">
                           <input
                             type="number"
                             min="0"
@@ -1205,7 +1555,7 @@ function DailyCallActivityContent() {
                         </td>
 
                         {/* 2 PM to 5 PM */}
-                        <td className="p-1 text-center bg-green-50/20 align-top">
+                        <td className="p-1 text-center bg-green-50/20 align-middle">
                           <input
                             type="number"
                             min="0"
@@ -1220,7 +1570,7 @@ function DailyCallActivityContent() {
                         </td>
 
                         {/* 5 PM to 6 PM */}
-                        <td className="p-1 text-center bg-green-50/20 align-top">
+                        <td className="p-1 text-center bg-green-50/20 align-middle">
                           <input
                             type="number"
                             min="0"
@@ -1235,124 +1585,156 @@ function DailyCallActivityContent() {
                         </td>
 
                         {/* Row Total Dialed */}
-                        <td className="py-2.5 px-2.5 text-center font-bold text-slate-900 bg-slate-50/80 align-top">
+                        <td className="py-2 px-2 text-center font-bold text-slate-900 bg-slate-50/80 align-middle">
                           {rowDialed > 0 ? rowDialed : "—"}
                         </td>
 
-                        {/* HP */}
-                        <td className="p-1 text-center align-top">
+                        {/* Connected Calls Input (Independent) */}
+                        <td className="p-1 text-center bg-emerald-50/30 align-middle">
                           <input
                             type="number"
                             min="0"
                             disabled={isLocked || loading}
-                            value={e.hp_count ?? ""}
+                            value={e.total_connected ?? ""}
                             onChange={(ev) =>
-                              handleCellChange(cat.key, "hp_count", ev.target.value)
+                              handleCellChange(cat.key, "total_connected", ev.target.value)
                             }
-                            placeholder={prevHp > 0 ? "+0" : "—"}
-                            className="w-full text-center py-1 border border-slate-300 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                            placeholder="0"
+                            className="w-full text-center py-1 border border-emerald-300 rounded text-xs font-bold text-emerald-950 placeholder:text-slate-400 focus:ring-1 focus:ring-emerald-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                           />
-                          {prevHp > 0 && (
-                            <div className="mt-1 flex items-center justify-center">
-                              <span
-                                className="inline-flex items-center text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200/80 cursor-help"
-                                title={`Carried Forward: ${prevHp} + Today: ${todayHp} = Cumulative: ${cumHp}`}
-                              >
-                                Cum: {cumHp}
-                              </span>
-                            </div>
-                          )}
                         </td>
 
-                        {/* P */}
-                        <td className="p-1 text-center align-top">
+                        {/* Prev Stock (Baseline) */}
+                        <td className="py-2 px-2 text-center font-semibold text-slate-600 bg-slate-50/60 align-middle">
+                          {prevStock}
+                        </td>
+
+                        {/* Today's New Leads Input */}
+                        <td className="p-1 text-center bg-emerald-50/20 align-middle">
                           <input
                             type="number"
                             min="0"
                             disabled={isLocked || loading}
-                            value={e.p_count ?? ""}
+                            value={ch.new_leads === 0 ? "" : ch.new_leads}
                             onChange={(ev) =>
-                              handleCellChange(cat.key, "p_count", ev.target.value)
+                              handleLeadChange(cat.key, "new_leads", ev.target.value)
                             }
-                            placeholder={prevP > 0 ? "+0" : "—"}
-                            className="w-full text-center py-1 border border-slate-300 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                            placeholder="+0"
+                            className="w-full text-center py-1 border border-emerald-300 rounded text-xs font-bold text-emerald-900 placeholder:text-slate-400 focus:ring-1 focus:ring-emerald-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                           />
-                          {prevP > 0 && (
-                            <div className="mt-1 flex items-center justify-center">
-                              <span
-                                className="inline-flex items-center text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200/80 cursor-help"
-                                title={`Carried Forward: ${prevP} + Today: ${todayP} = Cumulative: ${cumP}`}
-                              >
-                                Cum: {cumP}
-                              </span>
-                            </div>
-                          )}
                         </td>
 
-                        {/* Fub */}
-                        <td className="p-1 text-center align-top">
+                        {/* Delta HP */}
+                        <td className="p-1 text-center align-middle">
                           <input
                             type="number"
-                            min="0"
                             disabled={isLocked || loading}
-                            value={e.fub_count ?? ""}
+                            value={ch.delta_hp === 0 ? "" : ch.delta_hp}
                             onChange={(ev) =>
-                              handleCellChange(cat.key, "fub_count", ev.target.value)
+                              handleLeadChange(cat.key, "delta_hp", ev.target.value)
                             }
-                            placeholder={prevFub > 0 ? "+0" : "—"}
-                            className="w-full text-center py-1 border border-slate-300 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                            placeholder="+0"
+                            className="w-full text-center py-1 border border-red-200 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-red-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                           />
-                          {prevFub > 0 && (
-                            <div className="mt-1 flex items-center justify-center">
-                              <span
-                                className="inline-flex items-center text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200/80 cursor-help"
-                                title={`Carried Forward: ${prevFub} + Today: ${todayFub} = Cumulative: ${cumFub}`}
-                              >
-                                Cum: {cumFub}
-                              </span>
-                            </div>
-                          )}
+                          <div className="mt-0.5">
+                            <span
+                              className="inline-block text-[10px] font-bold text-red-900 bg-red-50 px-1 py-0.2 rounded border border-red-200 cursor-help"
+                              title={`Base: ${prevHp} + Delta: ${ch.delta_hp} = Live Total: ${updatedHp}`}
+                            >
+                              Tot: {updatedHp}
+                            </span>
+                          </div>
                         </td>
 
-                        {/* NI */}
-                        <td className="p-1 text-center align-top">
+                        {/* Delta P */}
+                        <td className="p-1 text-center align-middle">
                           <input
                             type="number"
-                            min="0"
                             disabled={isLocked || loading}
-                            value={e.ni_count ?? ""}
+                            value={ch.delta_p === 0 ? "" : ch.delta_p}
                             onChange={(ev) =>
-                              handleCellChange(cat.key, "ni_count", ev.target.value)
+                              handleLeadChange(cat.key, "delta_p", ev.target.value)
                             }
-                            placeholder={prevNi > 0 ? "+0" : "—"}
-                            className="w-full text-center py-1 border border-slate-300 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                            placeholder="+0"
+                            className="w-full text-center py-1 border border-blue-200 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-blue-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
                           />
-                          {prevNi > 0 && (
-                            <div className="mt-1 flex items-center justify-center">
-                              <span
-                                className="inline-flex items-center text-[10px] font-semibold text-slate-700 bg-slate-100 px-1 py-0.5 rounded border border-slate-200 cursor-help"
-                                title={`Carried Forward: ${prevNi} + Today: ${todayNi} = Cumulative: ${cumNi}`}
-                              >
-                                Cum: {cumNi}
-                              </span>
-                            </div>
-                          )}
+                          <div className="mt-0.5">
+                            <span
+                              className="inline-block text-[10px] font-bold text-blue-900 bg-blue-50 px-1 py-0.2 rounded border border-blue-200 cursor-help"
+                              title={`Base: ${prevP} + Delta: ${ch.delta_p} = Live Total: ${updatedP}`}
+                            >
+                              Tot: {updatedP}
+                            </span>
+                          </div>
                         </td>
 
-                        {/* Row Total Connected */}
-                        <td className="py-2.5 px-2.5 text-center font-bold text-emerald-700 bg-emerald-50/30 align-top">
-                          <div className="text-xs">{rowConnected > 0 ? rowConnected : "—"}</div>
-                          {cumConnected > rowConnected && (
-                            <div className="mt-1">
-                              <span
-                                className="inline-flex items-center text-[10px] font-semibold text-emerald-800 bg-emerald-100/70 px-1.5 py-0.5 rounded cursor-help"
-                                title={`Carried Forward: ${cumConnected - rowConnected} + Today: ${rowConnected} = Cumulative: ${cumConnected}`}
-                              >
-                                Cum: {cumConnected}
-                              </span>
-                            </div>
-                          )}
+                        {/* Delta FUB */}
+                        <td className="p-1 text-center align-middle">
+                          <input
+                            type="number"
+                            disabled={isLocked || loading}
+                            value={ch.delta_fub === 0 ? "" : ch.delta_fub}
+                            onChange={(ev) =>
+                              handleLeadChange(cat.key, "delta_fub", ev.target.value)
+                            }
+                            placeholder="+0"
+                            className="w-full text-center py-1 border border-amber-200 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-amber-500 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                          />
+                          <div className="mt-0.5">
+                            <span
+                              className="inline-block text-[10px] font-bold text-amber-900 bg-amber-50 px-1 py-0.2 rounded border border-amber-200 cursor-help"
+                              title={`Base: ${prevFub} + Delta: ${ch.delta_fub} = Live Total: ${updatedFub}`}
+                            >
+                              Tot: {updatedFub}
+                            </span>
+                          </div>
                         </td>
+
+                        {/* Delta NI */}
+                        <td className="p-1 text-center align-middle">
+                          <input
+                            type="number"
+                            disabled={isLocked || loading}
+                            value={ch.delta_ni === 0 ? "" : ch.delta_ni}
+                            onChange={(ev) =>
+                              handleLeadChange(cat.key, "delta_ni", ev.target.value)
+                            }
+                            placeholder="+0"
+                            className="w-full text-center py-1 border border-slate-200 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-slate-400 focus:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                          />
+                          <div className="mt-0.5">
+                            <span
+                              className="inline-block text-[10px] font-bold text-slate-700 bg-slate-100 px-1 py-0.2 rounded border border-slate-200 cursor-help"
+                              title={`Base: ${prevNi} + Delta: ${ch.delta_ni} = Live Total: ${updatedNi}`}
+                            >
+                              Tot: {updatedNi}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Updated Stock */}
+                        <td className="py-2 px-2 text-center font-bold text-green-950 bg-green-50/40 align-middle">
+                          <span className="text-xs bg-white px-2 py-0.5 rounded border border-green-300">
+                            {updatedStock}
+                          </span>
+                        </td>
+
+                        {/* Transfer Action Button */}
+                        {!isLocked && (
+                          <td className="py-2 px-1 text-center align-middle">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setTransferFromCat(cat.key);
+                                setTransferModalOpen(true);
+                              }}
+                              className="p-1 rounded hover:bg-emerald-100 text-emerald-800 border border-emerald-200 active:scale-95 transition-all"
+                              title={`Transfer lead status for ${cat.label}`}
+                            >
+                              <ArrowRightLeft className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}
@@ -1362,58 +1744,60 @@ function DailyCallActivityContent() {
                     <td className="py-3 px-3 uppercase tracking-wider text-[11px] sticky left-0 bg-slate-100 z-10 border-r border-slate-200">
                       Grand Total
                     </td>
-                    <td className="py-3 px-2 text-center text-slate-700">{totals.tillToday || 0}</td>
                     <td className="py-3 px-2 text-center text-green-800 bg-green-100/50">{totals.slot1 || 0}</td>
                     <td className="py-3 px-2 text-center text-green-800 bg-green-100/50">{totals.slot2 || 0}</td>
                     <td className="py-3 px-2 text-center text-green-800 bg-green-100/50">{totals.slot3 || 0}</td>
-                    <td className="py-3 px-2.5 text-center text-base font-extrabold text-green-900 bg-slate-200/80">
+                    <td className="py-3 px-2 text-center text-sm font-extrabold text-slate-900 bg-slate-200/80">
                       {totals.totalDialed || 0}
                     </td>
+                    <td className="py-3 px-2 text-center text-sm font-extrabold text-emerald-900 bg-emerald-100/60">
+                      {totals.totalConnected || 0}
+                    </td>
+                    <td className="py-3 px-2 text-center text-slate-700 bg-slate-100">{totals.prevTotalStock || 0}</td>
+                    <td className="py-3 px-2 text-center text-emerald-900 bg-emerald-100/40 font-extrabold">
+                      +{totals.totalNewLeads || 0}
+                    </td>
                     {/* HP Total */}
-                    <td className="py-2.5 px-2 text-center text-slate-700">
-                      <div className="font-bold">{totals.hp || 0}</div>
-                      {totals.cumHp > totals.hp && (
-                        <div className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 rounded px-1 mt-0.5" title={`Carried Forward: ${totals.cumHp - totals.hp} + Today: ${totals.hp}`}>
-                          Cum: {totals.cumHp}
+                    <td className="py-2.5 px-2 text-center text-red-900 bg-red-50/50">
+                      <div className="font-extrabold">{totals.updatedTotalHp || 0}</div>
+                      {totals.totalDeltaHp !== 0 && (
+                        <div className="text-[10px] text-red-700 font-medium">
+                          {totals.totalDeltaHp > 0 ? `+${totals.totalDeltaHp}` : totals.totalDeltaHp}
                         </div>
                       )}
                     </td>
                     {/* P Total */}
-                    <td className="py-2.5 px-2 text-center text-slate-700">
-                      <div className="font-bold">{totals.p || 0}</div>
-                      {totals.cumP > totals.p && (
-                        <div className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 rounded px-1 mt-0.5" title={`Carried Forward: ${totals.cumP - totals.p} + Today: ${totals.p}`}>
-                          Cum: {totals.cumP}
+                    <td className="py-2.5 px-2 text-center text-blue-900 bg-blue-50/50">
+                      <div className="font-extrabold">{totals.updatedTotalP || 0}</div>
+                      {totals.totalDeltaP !== 0 && (
+                        <div className="text-[10px] text-blue-700 font-medium">
+                          {totals.totalDeltaP > 0 ? `+${totals.totalDeltaP}` : totals.totalDeltaP}
                         </div>
                       )}
                     </td>
-                    {/* Fub Total */}
-                    <td className="py-2.5 px-2 text-center text-slate-700">
-                      <div className="font-bold">{totals.fub || 0}</div>
-                      {totals.cumFub > totals.fub && (
-                        <div className="text-[10px] font-semibold text-emerald-800 bg-emerald-50 rounded px-1 mt-0.5" title={`Carried Forward: ${totals.cumFub - totals.fub} + Today: ${totals.fub}`}>
-                          Cum: {totals.cumFub}
+                    {/* FUB Total */}
+                    <td className="py-2.5 px-2 text-center text-amber-900 bg-amber-50/50">
+                      <div className="font-extrabold">{totals.updatedTotalFub || 0}</div>
+                      {totals.totalDeltaFub !== 0 && (
+                        <div className="text-[10px] text-amber-700 font-medium">
+                          {totals.totalDeltaFub > 0 ? `+${totals.totalDeltaFub}` : totals.totalDeltaFub}
                         </div>
                       )}
                     </td>
                     {/* NI Total */}
-                    <td className="py-2.5 px-2 text-center text-slate-700">
-                      <div className="font-bold">{totals.ni || 0}</div>
-                      {totals.cumNi > totals.ni && (
-                        <div className="text-[10px] font-semibold text-slate-700 bg-slate-200/60 rounded px-1 mt-0.5" title={`Carried Forward: ${totals.cumNi - totals.ni} + Today: ${totals.ni}`}>
-                          Cum: {totals.cumNi}
+                    <td className="py-2.5 px-2 text-center text-slate-800 bg-slate-100">
+                      <div className="font-extrabold">{totals.updatedTotalNi || 0}</div>
+                      {totals.totalDeltaNi !== 0 && (
+                        <div className="text-[10px] text-slate-600 font-medium">
+                          {totals.totalDeltaNi > 0 ? `+${totals.totalDeltaNi}` : totals.totalDeltaNi}
                         </div>
                       )}
                     </td>
-                    {/* Connected Total */}
-                    <td className="py-2.5 px-2.5 text-center text-base font-extrabold text-emerald-800 bg-emerald-100/50">
-                      <div>{totals.totalConnected || 0}</div>
-                      {totals.cumConnected > totals.totalConnected && (
-                        <div className="text-[11px] font-bold text-emerald-950 bg-emerald-200/70 rounded px-1.5 py-0.5 mt-0.5 tracking-normal inline-block" title={`Carried Forward Connected: ${totals.cumConnected - totals.totalConnected} + Today: ${totals.totalConnected}`}>
-                          Cum: {totals.cumConnected}
-                        </div>
-                      )}
+                    {/* Updated Stock Total */}
+                    <td className="py-2.5 px-2 text-center text-sm font-extrabold text-green-950 bg-green-100/70">
+                      {totals.updatedTotalStock || 0}
                     </td>
+                    {!isLocked && <td className="py-2.5 px-1 bg-slate-100" />}
                   </tr>
                 </tbody>
               </table>
@@ -1584,14 +1968,9 @@ function DailyCallActivityContent() {
               <div className="text-2xl font-bold text-emerald-700">
                 {totals.totalConnected}
               </div>
-              {totals.cumConnected > totals.totalConnected && (
-                <span className="text-xs font-semibold text-emerald-800 bg-emerald-100/80 px-1.5 py-0.5 rounded border border-emerald-300">
-                  Cum: {totals.cumConnected}
-                </span>
-              )}
             </div>
             <p className="text-xs text-slate-600 font-medium mt-0.5">
-              {totals.cumConnected > totals.totalConnected ? `+${totals.totalConnected} today (Cum: ${totals.cumConnected})` : "HP + Potential + Follow-up"}
+              Productive calls connected
             </p>
           </Card>
 
@@ -1611,16 +1990,16 @@ function DailyCallActivityContent() {
             </span>
             <div className="flex items-baseline gap-2 mt-1">
               <div className="text-2xl font-bold text-slate-900">
-                {totals.hp}
+                {totals.updatedTotalHp}
               </div>
-              {totals.cumHp > totals.hp && (
+              {totals.totalDeltaHp !== 0 && (
                 <span className="text-xs font-semibold text-emerald-800 bg-emerald-100/80 px-1.5 py-0.5 rounded border border-emerald-300">
-                  Cum: {totals.cumHp}
+                  {totals.totalDeltaHp > 0 ? `+${totals.totalDeltaHp}` : totals.totalDeltaHp} today
                 </span>
               )}
             </div>
             <p className="text-xs text-slate-600 font-medium mt-0.5">
-              {totals.cumHp > totals.hp ? `+${totals.hp} today (Pipeline: ${totals.cumHp})` : "Immediate closing priority"}
+              Live updated HP pipeline total
             </p>
           </Card>
         </div>
@@ -1634,7 +2013,7 @@ function DailyCallActivityContent() {
               <span>Conn: <strong className="text-emerald-700">{totals.totalConnected}</strong></span>
             </div>
             <div className="text-[11px] text-slate-600 font-medium">
-              HP: {totals.hp} {totals.cumHp > totals.hp && `(Cum: ${totals.cumHp})`}
+              HP: {totals.updatedTotalHp} {totals.totalDeltaHp !== 0 && `(${totals.totalDeltaHp > 0 ? `+${totals.totalDeltaHp}` : totals.totalDeltaHp})`}
             </div>
           </div>
 
@@ -1721,6 +2100,132 @@ function DailyCallActivityContent() {
                 loading={submitting}
               >
                 Confirm & Submit Report
+              </Button>
+            </div>
+          </div>
+        </Modal>
+
+        {/* ── Transfer Lead Status / Category Modal ──────────────────────── */}
+        <Modal
+          isOpen={transferModalOpen}
+          onClose={() => setTransferModalOpen(false)}
+          title="Transfer Lead Status or Category"
+          description="Move existing leads between statuses (e.g. FUB ➔ HP) or across lead sources without changing total stock."
+        >
+          <div className="space-y-4 text-xs">
+            {/* From Source */}
+            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
+              <span className="font-bold text-slate-700 uppercase tracking-wider block">
+                Source Lead
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                    From Category
+                  </label>
+                  <select
+                    value={transferFromCat}
+                    onChange={(e) => setTransferFromCat(e.target.value as LeadCategory)}
+                    className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs font-medium text-slate-800 bg-white focus:ring-1 focus:ring-emerald-600 focus:outline-none"
+                  >
+                    {LEAD_CATEGORIES.map((c) => (
+                      <option key={c.key} value={c.key}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                    From Status
+                  </label>
+                  <select
+                    value={transferFromStatus}
+                    onChange={(e) => setTransferFromStatus(e.target.value as "hp" | "p" | "fub" | "ni")}
+                    className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs font-medium text-slate-800 bg-white focus:ring-1 focus:ring-emerald-600 focus:outline-none"
+                  >
+                    <option value="hp">HP (High Potential)</option>
+                    <option value="p">P (Potential)</option>
+                    <option value="fub">FUB (Follow-Up Booked)</option>
+                    <option value="ni">NI (Not Interested)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* To Destination */}
+            <div className="p-3 bg-emerald-50/50 rounded-lg border border-emerald-200 space-y-2">
+              <span className="font-bold text-emerald-900 uppercase tracking-wider block">
+                Destination Lead
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                    To Category
+                  </label>
+                  <select
+                    value={transferToCat}
+                    onChange={(e) => setTransferToCat(e.target.value as LeadCategory)}
+                    className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs font-medium text-slate-800 bg-white focus:ring-1 focus:ring-emerald-600 focus:outline-none"
+                  >
+                    {LEAD_CATEGORIES.map((c) => (
+                      <option key={c.key} value={c.key}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                    To Status
+                  </label>
+                  <select
+                    value={transferToStatus}
+                    onChange={(e) => setTransferToStatus(e.target.value as "hp" | "p" | "fub" | "ni")}
+                    className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-xs font-medium text-slate-800 bg-white focus:ring-1 focus:ring-emerald-600 focus:outline-none"
+                  >
+                    <option value="hp">HP (High Potential)</option>
+                    <option value="p">P (Potential)</option>
+                    <option value="fub">FUB (Follow-Up Booked)</option>
+                    <option value="ni">NI (Not Interested)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Count */}
+            <div>
+              <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                Number of Leads to Transfer
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={transferCount}
+                onChange={(e) => setTransferCount(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-bold text-slate-800 bg-white focus:ring-1 focus:ring-emerald-600 focus:outline-none"
+              />
+              <span className="text-[11px] text-slate-500 mt-1 block">
+                This will automatically subtract {transferCount} from source and add {transferCount} to destination.
+              </span>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setTransferModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={handleApplyTransfer}
+              >
+                Apply Transfer
               </Button>
             </div>
           </div>

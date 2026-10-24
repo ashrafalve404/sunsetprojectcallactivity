@@ -82,37 +82,26 @@ class CallService:
                     all_categories.add(e.lead_category)
 
         for cat in all_categories:
-            prev_hp = sum(
-                (e.lead_status_hp or 0)
-                for r in prev_reports
-                for e in r.call_entries
-                if e.lead_category == cat
-            )
-            prev_p = sum(
-                (e.lead_status_p or 0)
-                for r in prev_reports
-                for e in r.call_entries
-                if e.lead_category == cat
-            )
-            prev_fub = sum(
-                (e.lead_status_fub or 0)
-                for r in prev_reports
-                for e in r.call_entries
-                if e.lead_category == cat
-            )
-            prev_ni = sum(
-                (e.lead_status_ni or 0)
-                for r in prev_reports
-                for e in r.call_entries
-                if e.lead_category == cat
-            )
-
-            # Most recent non-null till_today_status
+            prev_hp = 0
+            prev_p = 0
+            prev_fub = 0
+            prev_ni = 0
             prev_till_today = 0
+
+            # Load the exact totals from the most recent previous report containing this category
             for r in reversed(prev_reports):
                 matching = [e for e in r.call_entries if e.lead_category == cat]
-                if matching and matching[0].till_today_status is not None:
-                    prev_till_today = matching[0].till_today_status
+                if matching:
+                    e = matching[0]
+                    prev_hp = e.lead_status_hp or 0
+                    prev_p = e.lead_status_p or 0
+                    prev_fub = e.lead_status_fub or 0
+                    prev_ni = e.lead_status_ni or 0
+                    prev_till_today = (
+                        e.till_today_status
+                        if e.till_today_status is not None
+                        else (prev_hp + prev_p + prev_fub + prev_ni)
+                    )
                     break
 
             categories_dict[cat] = CategoryCarryForward(
