@@ -26,7 +26,8 @@ import {
 } from "@/components/ui";
 import { useAuth } from "@/lib/auth-context";
 import { api, ApiError } from "@/lib/api";
-import { Report, User } from "@/types";
+import { Report, User, MeetingActivityEntry, ClientContactEntry } from "@/types";
+import { exportFullReportToCSV } from "@/lib/export-report-csv";
 import {
   getDhakaToday,
   getDhakaDateOffset,
@@ -55,6 +56,57 @@ function ReportsContent() {
   const [endDate, setEndDate] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "submitted" | "draft">("all");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | "all">("all");
+  const [downloadingReportId, setDownloadingReportId] = useState<number | null>(null);
+
+  const handleDownloadSingleReportCSV = async (repId: number) => {
+    try {
+      setDownloadingReportId(repId);
+      const [rep, sumRes, callsRes, meetRes, salesRes] = await Promise.allSettled([
+        api.reports.getById(repId),
+        api.reports.getSummary(repId),
+        api.calls.get(repId),
+        api.meetings.get(repId),
+        api.sales.get(repId),
+      ]);
+
+      if (rep.status !== "fulfilled") return;
+
+      const reportData = rep.value;
+      let parsedContacts: ClientContactEntry[] = [];
+      if (reportData.notes) {
+        try {
+          const parsed = JSON.parse(reportData.notes);
+          if (Array.isArray(parsed?.client_contacts)) {
+            parsedContacts = parsed.client_contacts;
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      const summaryData = sumRes.status === "fulfilled" ? sumRes.value : null;
+      const callList = callsRes.status === "fulfilled" ? callsRes.value?.entries || [] : [];
+      const rawMeet = meetRes.status === "fulfilled" ? meetRes.value : [];
+      const meetList = Array.isArray(rawMeet)
+        ? rawMeet
+        : (rawMeet as unknown as { entries?: MeetingActivityEntry[] })?.entries || [];
+      const salesList =
+        salesRes.status === "fulfilled" ? salesRes.value?.entries || [] : [];
+
+      exportFullReportToCSV({
+        report: reportData,
+        summary: summaryData,
+        callEntries: callList,
+        clientContacts: parsedContacts,
+        meetingEntries: meetList,
+        salesEntries: salesList,
+      });
+    } catch (err) {
+      console.error("Failed to download single report CSV:", err);
+    } finally {
+      setDownloadingReportId(null);
+    }
+  };
 
   useEffect(() => {
     const today = getDhakaToday();
@@ -517,14 +569,19 @@ function ReportsContent() {
                           >
                             <Printer className="w-3.5 h-3.5" />
                           </Link>
-                          <Link
-                            href={`/reports/${report.id}/print?download=csv`}
-                            target="_blank"
-                            className="p-1 text-slate-500 hover:text-emerald-700 rounded transition-colors inline-flex items-center"
-                            title="Download Daily Report as CSV"
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadSingleReportCSV(report.id)}
+                            disabled={downloadingReportId === report.id}
+                            className="p-1 text-slate-500 hover:text-emerald-700 rounded transition-colors inline-flex items-center disabled:opacity-50"
+                            title="Download Daily Report as Excel/CSV"
                           >
-                            <FileSpreadsheet className="w-3.5 h-3.5" />
-                          </Link>
+                            {downloadingReportId === report.id ? (
+                              <div className="w-3.5 h-3.5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <FileSpreadsheet className="w-3.5 h-3.5" />
+                            )}
+                          </button>
                           {isAdmin && (
                             <button
                               onClick={() => setDeleteReportId(report.id)}

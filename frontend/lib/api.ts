@@ -37,7 +37,7 @@ class ApiError extends Error {
   }
 }
 
-// Token storage in browser
+// Token storage in browser (syncs across tabs via localStorage, with sessionStorage fallback)
 let memoryToken: string | null = null;
 
 export const setAccessToken = (token: string | null) => {
@@ -45,8 +45,18 @@ export const setAccessToken = (token: string | null) => {
   if (typeof window !== "undefined") {
     if (token) {
       sessionStorage.setItem("sunset_access_token", token);
+      try {
+        localStorage.setItem("sunset_access_token", token);
+      } catch {
+        // ignore quota/storage restrictions
+      }
     } else {
       sessionStorage.removeItem("sunset_access_token");
+      try {
+        localStorage.removeItem("sunset_access_token");
+      } catch {
+        // ignore
+      }
     }
   }
 };
@@ -54,7 +64,10 @@ export const setAccessToken = (token: string | null) => {
 export const getAccessToken = (): string | null => {
   if (memoryToken) return memoryToken;
   if (typeof window !== "undefined") {
-    return sessionStorage.getItem("sunset_access_token");
+    return (
+      sessionStorage.getItem("sunset_access_token") ||
+      localStorage.getItem("sunset_access_token")
+    );
   }
   return null;
 };

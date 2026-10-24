@@ -48,10 +48,12 @@ import {
   LEAD_CATEGORIES,
   LeadCategory,
   CallActivityEntry,
+  MeetingActivityEntry,
   Report,
   ClientContactEntry,
 } from "@/types";
 import { getDhakaToday, formatReadableDate, formatEmployeeId } from "@/lib/utils";
+import { exportFullReportToCSV } from "@/lib/export-report-csv";
 
 /**
  * Mobile-friendly touch stepper input with prominent up/down increaser arrows.
@@ -166,6 +168,7 @@ function DailyCallActivityContent() {
 
   const [adminDeleteModalOpen, setAdminDeleteModalOpen] = useState(false);
   const [deletingReport, setDeletingReport] = useState(false);
+  const [downloadingCsv, setDownloadingCsv] = useState(false);
 
   // Auto-Save State & Timers
   const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "unsaved" | "saving" | "saved" | "error">("idle");
@@ -935,7 +938,41 @@ function DailyCallActivityContent() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => window.open(`/reports/${report.id}/print?download=csv`, "_blank")}
+                      onClick={async () => {
+                        if (!report) return;
+                        try {
+                          setDownloadingCsv(true);
+                          const [sumRes, meetRes, salesRes] = await Promise.allSettled([
+                            api.reports.getSummary(report.id),
+                            api.meetings.get(report.id),
+                            api.sales.get(report.id),
+                          ]);
+
+                          const summaryData = sumRes.status === "fulfilled" ? sumRes.value : null;
+                          const rawMeet = meetRes.status === "fulfilled" ? meetRes.value : [];
+                          const meetList = Array.isArray(rawMeet)
+                            ? rawMeet
+                            : (rawMeet as unknown as { entries?: MeetingActivityEntry[] })?.entries || [];
+                          const salesList =
+                            salesRes.status === "fulfilled"
+                              ? salesRes.value?.entries || []
+                              : [];
+
+                          exportFullReportToCSV({
+                            report,
+                            summary: summaryData,
+                            callEntries: Object.values(entries),
+                            clientContacts,
+                            meetingEntries: meetList,
+                            salesEntries: salesList,
+                          });
+                        } catch (err) {
+                          console.error("Failed to download CSV:", err);
+                        } finally {
+                          setDownloadingCsv(false);
+                        }
+                      }}
+                      loading={downloadingCsv}
                       title="Download Complete Daily Report Data as Excel/CSV"
                     >
                       <FileSpreadsheet className="w-4 h-4 mr-1.5 text-emerald-700" />
