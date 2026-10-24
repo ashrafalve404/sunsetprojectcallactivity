@@ -51,16 +51,56 @@ interface DetailedReportRow extends Report {
   };
 }
 
+type DatePreset = "today" | "week" | "month" | "year" | "30days" | "custom";
+
+function getDatePresetRange(preset: Exclude<DatePreset, "custom">) {
+  const today = getDhakaToday();
+  const [yearStr, monthStr, dayStr] = today.split("-");
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  const day = parseInt(dayStr, 10);
+
+  if (preset === "today") {
+    return { start: today, end: today };
+  }
+  if (preset === "week") {
+    // Current week starting Saturday (standard business week in Bangladesh)
+    const d = new Date(year, month - 1, day);
+    const dayOfWeek = d.getDay(); // 0: Sun, 1: Mon, ..., 6: Sat
+    const diff = (dayOfWeek + 1) % 7;
+    const startD = new Date(year, month - 1, day - diff);
+    const startStr = `${startD.getFullYear()}-${String(startD.getMonth() + 1).padStart(2, "0")}-${String(startD.getDate()).padStart(2, "0")}`;
+    return { start: startStr, end: today };
+  }
+  if (preset === "month") {
+    const startStr = `${yearStr}-${monthStr}-01`;
+    return { start: startStr, end: today };
+  }
+  if (preset === "year") {
+    const startStr = `${yearStr}-01-01`;
+    return { start: startStr, end: today };
+  }
+  return { start: getDhakaDateOffset(-30), end: today };
+}
+
 function ReportsContent() {
   const { isAdmin } = useAuth();
 
   // Filters
+  const [datePreset, setDatePreset] = useState<DatePreset>("30days");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "submitted" | "draft">("all");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | "all">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [downloadingReportId, setDownloadingReportId] = useState<number | null>(null);
+
+  const applyDatePreset = (preset: Exclude<DatePreset, "custom">) => {
+    setDatePreset(preset);
+    const { start, end } = getDatePresetRange(preset);
+    setStartDate(start);
+    setEndDate(end);
+  };
 
   const handleDownloadSingleReportCSV = async (repId: number) => {
     try {
@@ -113,9 +153,9 @@ function ReportsContent() {
   };
 
   useEffect(() => {
-    const today = getDhakaToday();
-    setStartDate(getDhakaDateOffset(-30));
-    setEndDate(today);
+    const { start, end } = getDatePresetRange("30days");
+    setStartDate(start);
+    setEndDate(end);
   }, []);
 
   // State
@@ -317,9 +357,7 @@ function ReportsContent() {
   };
 
   const handleResetFilters = () => {
-    const today = getDhakaToday();
-    setStartDate(getDhakaDateOffset(-30));
-    setEndDate(today);
+    applyDatePreset("30days");
     setStatusFilter("all");
     setSelectedEmployeeId("all");
     setSearchQuery("");
@@ -403,12 +441,41 @@ function ReportsContent() {
                 </div>
               </div>
 
-              {/* Row 2: Structured Filters (Dates, Status, Employee) */}
+              {/* Row 2: Structured Filters (Quick Presets, Dates, Status, Employee) */}
               <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-slate-100">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 mr-1">
-                  <Filter className="w-3.5 h-3.5 text-green-700" />
-                  <span>Filters:</span>
+                {/* Quick Date Presets */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mr-0.5">
+                    Quick:
+                  </span>
+                  {[
+                    { id: "today", label: "Today" },
+                    { id: "week", label: "This Week" },
+                    { id: "month", label: "This Month" },
+                    { id: "year", label: "This Year" },
+                    { id: "30days", label: "30 Days" },
+                  ].map((p) => {
+                    const active = datePreset === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() =>
+                          applyDatePreset(p.id as Exclude<DatePreset, "custom">)
+                        }
+                        className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer ${
+                          active
+                            ? "bg-green-700 text-white shadow-xs font-bold"
+                            : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                        }`}
+                      >
+                        {p.label}
+                      </button>
+                    );
+                  })}
                 </div>
+
+                <div className="h-4 w-px bg-slate-200 mx-0.5 hidden sm:block" />
 
                 {/* Date range */}
                 <div className="flex items-center gap-2 text-sm">
@@ -416,7 +483,10 @@ function ReportsContent() {
                   <input
                     type="date"
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
+                    onChange={(e) => {
+                      setStartDate(e.target.value);
+                      setDatePreset("custom");
+                    }}
                     className="border border-slate-300 rounded px-2.5 py-1 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
                   />
                 </div>
@@ -426,7 +496,10 @@ function ReportsContent() {
                   <input
                     type="date"
                     value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
+                    onChange={(e) => {
+                      setEndDate(e.target.value);
+                      setDatePreset("custom");
+                    }}
                     className="border border-slate-300 rounded px-2.5 py-1 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
                   />
                 </div>
