@@ -136,6 +136,35 @@ async function request<T>(
   return data as T;
 }
 
+function normalizeReport(raw: Record<string, unknown>): Report {
+  const employeeObj =
+    raw.employee && typeof raw.employee === "object"
+      ? (raw.employee as Record<string, unknown>)
+      : null;
+
+  const resolvedName =
+    typeof raw.employee_name === "string" && raw.employee_name.trim()
+      ? raw.employee_name.trim()
+      : employeeObj && typeof employeeObj.full_name === "string" && employeeObj.full_name.trim()
+      ? employeeObj.full_name.trim()
+      : employeeObj && typeof employeeObj.username === "string" && employeeObj.username.trim()
+      ? employeeObj.username.trim()
+      : undefined;
+
+  return {
+    id: Number(raw.id),
+    employee_id: Number(raw.employee_id),
+    report_date: String(raw.report_date),
+    is_submitted: raw.status === "submitted" || !!raw.is_submitted,
+    status: String(raw.status || "draft"),
+    submitted_at: raw.submitted_at ? String(raw.submitted_at) : null,
+    created_at: String(raw.created_at || ""),
+    updated_at: String(raw.updated_at || ""),
+    employee_name: resolvedName,
+    notes: typeof raw.notes === "string" ? raw.notes : null,
+  };
+}
+
 export const api = {
   auth: {
     login: async (username: string, password: string): Promise<AuthTokenResponse> => {
@@ -202,45 +231,32 @@ export const api = {
         ? ((res as { items: Record<string, unknown>[] }).items)
         : [];
 
-      return rawItems.map((item) => ({
-        id: Number(item.id),
-        employee_id: Number(item.employee_id),
-        report_date: String(item.report_date),
-        is_submitted: item.status === "submitted" || !!item.is_submitted,
-        status: String(item.status || "draft"),
-        submitted_at: item.submitted_at ? String(item.submitted_at) : null,
-        created_at: String(item.created_at || ""),
-        updated_at: String(item.updated_at || ""),
-        employee_name:
-          (item.employee && typeof item.employee === "object" && "full_name" in item.employee)
-            ? String((item.employee as { full_name: string }).full_name)
-            : typeof item.employee_name === "string"
-            ? item.employee_name
-            : undefined,
-        notes: typeof item.notes === "string" ? item.notes : null,
-      }));
-
+      return rawItems.map((item) => normalizeReport(item));
     },
     getById: async (reportId: number): Promise<Report> => {
-      return request<Report>(`/reports/${reportId}`);
+      const raw = await request<Record<string, unknown>>(`/reports/${reportId}`);
+      return normalizeReport(raw);
     },
     getByDate: async (dateStr: string, employeeId?: number): Promise<Report> => {
       const q = employeeId ? `?employee_id=${employeeId}` : "";
-      return request<Report>(`/reports/by-date/${dateStr}${q}`);
+      const raw = await request<Record<string, unknown>>(`/reports/by-date/${dateStr}${q}`);
+      return normalizeReport(raw);
     },
     create: async (reportDate: string, employeeId?: number): Promise<Report> => {
-      return request<Report>("/reports", {
+      const raw = await request<Record<string, unknown>>("/reports", {
         method: "POST",
         body: JSON.stringify({
           report_date: reportDate,
           ...(employeeId ? { employee_id: employeeId } : {}),
         }),
       });
+      return normalizeReport(raw);
     },
     submit: async (reportId: number): Promise<Report> => {
-      return request<Report>(`/reports/${reportId}/submit`, {
+      const raw = await request<Record<string, unknown>>(`/reports/${reportId}/submit`, {
         method: "POST",
       });
+      return normalizeReport(raw);
     },
     getSummary: async (reportId: number): Promise<Record<string, unknown>> => {
       return request<Record<string, unknown>>(`/reports/${reportId}/summary`);

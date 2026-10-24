@@ -26,6 +26,7 @@ export interface Report {
   employee_id: number;
   report_date: string; // YYYY-MM-DD
   is_submitted: boolean;
+  status?: string;
   submitted_at: string | null;
   created_at: string;
   updated_at: string;

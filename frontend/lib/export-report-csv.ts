@@ -52,9 +52,14 @@ export function exportFullReportToCSV(data: FullReportExportData) {
   // ── Document Header ──────────────────────────────────────────────────────────
   lines.push(`"SUNSET GROUP REAL ESTATE - DAILY ACTIVITY & PERFORMANCE REPORT"`);
   lines.push(`"Report ID",${escapeCsv(`REP-${report.id.toString().padStart(5, "0")}`)}`);
-  lines.push(`"Reporting Date",${escapeCsv(report.report_date)}`);
-  lines.push(`"Staff Officer",${escapeCsv(report.employee_name || `Employee #${report.employee_id}`)}`);
-  lines.push(`"Employee ID",${escapeCsv(formatEmployeeId(report.employee_id))}`);
+  const empIdFormatted = formatEmployeeId(report.employee_id);
+  const officerName =
+    report.employee_name && report.employee_name.trim() && report.employee_name.trim() !== "Employee"
+      ? report.employee_name.trim()
+      : `Staff Officer (${empIdFormatted})`;
+
+  lines.push(`"Staff Officer",${escapeCsv(officerName)}`);
+  lines.push(`"Employee ID",${escapeCsv(empIdFormatted)}`);
   lines.push(
     `"Submission Status",${escapeCsv(
       report.is_submitted ? "Finalized / Submitted" : "Draft (Unsubmitted)"

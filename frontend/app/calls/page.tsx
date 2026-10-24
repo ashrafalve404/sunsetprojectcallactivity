@@ -959,7 +959,10 @@ function DailyCallActivityContent() {
                               : [];
 
                           exportFullReportToCSV({
-                            report,
+                            report: {
+                              ...report,
+                              employee_name: report.employee_name || user?.full_name,
+                            },
                             summary: summaryData,
                             callEntries: Object.values(entries),
                             clientContacts,
