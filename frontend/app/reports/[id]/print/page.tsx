@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, Suspense } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   Printer,
   ArrowLeft,
@@ -17,10 +17,12 @@ import {
   Receipt,
   Trash2,
   AlertCircle,
+  FileSpreadsheet,
 } from "lucide-react";
 import { Button, Badge, Modal, Alert } from "@/components/ui";
 import { useAuth } from "@/lib/auth-context";
 import { api, ApiError } from "@/lib/api";
+import { exportFullReportToCSV } from "@/lib/export-report-csv";
 import {
   Report,
   CallActivityEntry,
@@ -40,6 +42,7 @@ import {
 function PrintableReportContent() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const reportId = Number(params?.id);
   const { user: currentUser, isAdmin } = useAuth();
 
@@ -117,6 +120,25 @@ function PrintableReportContent() {
   const handleTriggerPrint = () => {
     window.print();
   };
+
+  const handleDownloadCSV = useCallback(() => {
+    if (!report) return;
+    exportFullReportToCSV({
+      report,
+      summary,
+      callEntries,
+      clientContacts,
+      meetingEntries,
+      salesEntries,
+    });
+  }, [report, summary, callEntries, clientContacts, meetingEntries, salesEntries]);
+
+  // If navigated with ?download=csv, automatically trigger CSV download once data is ready
+  useEffect(() => {
+    if (!loading && report && searchParams.get("download") === "csv") {
+      handleDownloadCSV();
+    }
+  }, [loading, report, searchParams, handleDownloadCSV]);
 
   const handleDeleteReport = async () => {
     if (!report) return;
@@ -237,6 +259,15 @@ function PrintableReportContent() {
               Delete Report
             </Button>
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadCSV}
+            title="Download full report data as Excel/CSV file"
+          >
+            <FileSpreadsheet className="w-4 h-4 mr-1.5 text-emerald-700" />
+            Download CSV
+          </Button>
           <Button
             variant="primary"
             size="sm"

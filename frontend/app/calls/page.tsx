@@ -28,6 +28,7 @@ import {
   CheckCircle2,
   Cloud,
   RefreshCw,
+  FileSpreadsheet,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import {
@@ -921,15 +922,26 @@ function DailyCallActivityContent() {
                   </div>
                 )}
                 {report && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.open(`/reports/${report.id}/print`, "_blank")}
-                    title="Print / Save PDF Report"
-                  >
-                    <Printer className="w-4 h-4 mr-1.5" />
-                    Print Report
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(`/reports/${report.id}/print`, "_blank")}
+                      title="Print / Save PDF Report"
+                    >
+                      <Printer className="w-4 h-4 mr-1.5" />
+                      Print PDF
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(`/reports/${report.id}/print?download=csv`, "_blank")}
+                      title="Download Complete Daily Report Data as Excel/CSV"
+                    >
+                      <FileSpreadsheet className="w-4 h-4 mr-1.5 text-emerald-700" />
+                      Download CSV
+                    </Button>
+                  </>
                 )}
                 {isAdmin && report && (
                   <Button

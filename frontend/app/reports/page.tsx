@@ -517,6 +517,14 @@ function ReportsContent() {
                           >
                             <Printer className="w-3.5 h-3.5" />
                           </Link>
+                          <Link
+                            href={`/reports/${report.id}/print?download=csv`}
+                            target="_blank"
+                            className="p-1 text-slate-500 hover:text-emerald-700 rounded transition-colors inline-flex items-center"
+                            title="Download Daily Report as CSV"
+                          >
+                            <FileSpreadsheet className="w-3.5 h-3.5" />
+                          </Link>
                           {isAdmin && (
                             <button
                               onClick={() => setDeleteReportId(report.id)}
