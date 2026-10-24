@@ -1118,7 +1118,7 @@ function SalesVsCollectionContent() {
                 ) : null}
               </div>
               <p className="text-[11px] text-amber-800">
-                Customer-er commit kora date boshale system automatic tracking ar reschedule audit log rakhbe.
+                Set customer&apos;s promised payment date for pipeline tracking and reschedule audit logging.
               </p>
               <input
                 type="date"
