@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo, Suspense } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   PhoneCall,
@@ -25,6 +25,9 @@ import {
   UserPlus,
   Phone,
   Edit2,
+  CheckCircle2,
+  Cloud,
+  RefreshCw,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import {
@@ -129,6 +132,7 @@ function DailyCallActivityContent() {
 
   // Report state
   const [report, setReport] = useState<Report | null>(null);
+  const isLocked = report?.is_submitted ?? false;
 
   const [entries, setEntries] = useState<Record<LeadCategory, CallActivityEntry>>(() => {
     const init: Record<string, CallActivityEntry> = {};
@@ -161,6 +165,13 @@ function DailyCallActivityContent() {
 
   const [adminDeleteModalOpen, setAdminDeleteModalOpen] = useState(false);
   const [deletingReport, setDeletingReport] = useState(false);
+
+  // Auto-Save State & Timers
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "unsaved" | "saving" | "saved" | "error">("idle");
+  const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
+  const isInitialMount = useRef(true);
+  const isDirtyRef = useRef(false);
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Mobile App View vs Spreadsheet Table: Default to "table" on PC, "cards" on mobile
   const [viewMode, setViewMode] = useState<"cards" | "table">("table");
@@ -242,10 +253,14 @@ function DailyCallActivityContent() {
     } else {
       setClientContacts((prev) => [...prev, newContact]);
     }
+    isDirtyRef.current = true;
+    setAutoSaveStatus("unsaved");
     setClientModalOpen(false);
   };
 
   const handleDeleteClientContact = (idx: number) => {
+    isDirtyRef.current = true;
+    setAutoSaveStatus("unsaved");
     setClientContacts((prev) => prev.filter((_, i) => i !== idx));
   };
 
@@ -270,6 +285,12 @@ function DailyCallActivityContent() {
   const loadReport = useCallback(async (dateStr: string, empId?: number) => {
     setLoading(true);
     setStatusMessage(null);
+    isInitialMount.current = true;
+    isDirtyRef.current = false;
+    setAutoSaveStatus("idle");
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
     try {
       let r: Report;
       try {
@@ -366,6 +387,9 @@ function DailyCallActivityContent() {
       }
     } finally {
       setLoading(false);
+      setTimeout(() => {
+        isInitialMount.current = false;
+      }, 600);
     }
   }, []);
 
@@ -379,6 +403,9 @@ function DailyCallActivityContent() {
     valStr: string
   ) => {
     if (report?.is_submitted) return;
+
+    isDirtyRef.current = true;
+    setAutoSaveStatus("unsaved");
 
     const trimmed = valStr.trim();
     const num = trimmed === "" ? null : Math.max(0, parseInt(trimmed, 10));
@@ -397,6 +424,8 @@ function DailyCallActivityContent() {
     delta: number
   ) => {
     if (report?.is_submitted) return;
+    isDirtyRef.current = true;
+    setAutoSaveStatus("unsaved");
     const current = entries[category]?.[field];
     const curNum = typeof current === "number" ? current : 0;
     const next = Math.max(0, curNum + delta);
@@ -559,10 +588,14 @@ function DailyCallActivityContent() {
     });
   };
 
-  // Save Draft
+  // Save Draft (Manual fallback)
   const handleSaveDraft = async () => {
     if (!report) return;
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
     setSaving(true);
+    setAutoSaveStatus("saving");
     setStatusMessage(null);
     try {
       const payload = buildPayload();
@@ -576,11 +609,19 @@ function DailyCallActivityContent() {
       const updatedRep = await api.reports.update(report.id, { notes: serializedNotes });
       setReport(updatedRep);
 
+      isDirtyRef.current = false;
+      setAutoSaveStatus("saved");
+      const now = new Date();
+      setLastSavedTime(
+        now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+      );
+
       setStatusMessage({
         type: "success",
         text: "Daily call activity and client directory draft saved successfully.",
       });
     } catch (err: unknown) {
+      setAutoSaveStatus("error");
       if (err instanceof ApiError) {
         setStatusMessage({ type: "error", text: err.message });
       } else {
@@ -594,9 +635,66 @@ function DailyCallActivityContent() {
     }
   };
 
+  // Debounced Auto-Save Effect (1.5 seconds)
+  useEffect(() => {
+    if (isInitialMount.current || loading || !report || isLocked) return;
+    if (!isDirtyRef.current) return;
+
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    autoSaveTimerRef.current = setTimeout(async () => {
+      try {
+        setAutoSaveStatus("saving");
+        const payload = buildPayload();
+        await api.calls.upsert(report.id, payload);
+
+        const serializedNotes = JSON.stringify({
+          client_contacts: clientContacts,
+          general_notes: rawReportNotes || null,
+        });
+        const updatedRep = await api.reports.update(report.id, { notes: serializedNotes });
+        setReport(updatedRep);
+
+        isDirtyRef.current = false;
+        setAutoSaveStatus("saved");
+        const now = new Date();
+        setLastSavedTime(
+          now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        );
+      } catch (err) {
+        console.error("Auto-save failed:", err);
+        setAutoSaveStatus("error");
+      }
+    }, 1500);
+
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [entries, clientContacts, rawReportNotes, report?.id, isLocked, loading]);
+
+  // Prevent accidental loss if user navigates away with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isDirtyRef.current && !isLocked) {
+        e.preventDefault();
+        e.returnValue = "You have unsaved changes in your report. Are you sure you want to leave?";
+        return e.returnValue;
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isLocked]);
+
   // Submit Final Report
   const handleSubmitReport = async () => {
     if (!report) return;
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
     setSubmitting(true);
     setStatusMessage(null);
     try {
@@ -614,6 +712,8 @@ function DailyCallActivityContent() {
       // Then submit report
       const updated = await api.reports.submit(report.id);
       setReport(updated);
+      isDirtyRef.current = false;
+      setAutoSaveStatus("saved");
       setSubmitModalOpen(false);
       setStatusMessage({
         type: "success",
@@ -658,8 +758,6 @@ function DailyCallActivityContent() {
       setDeletingReport(false);
     }
   };
-
-  const isLocked = report?.is_submitted ?? false;
 
   return (
     <DashboardLayout
@@ -760,13 +858,47 @@ function DailyCallActivityContent() {
                 <div className="h-4 w-px bg-slate-200 hidden sm:block" />
 
                 {!isLocked && (
-                  <div className="hidden sm:flex items-center gap-2">
+                  <div className="hidden sm:flex items-center gap-2.5">
+                    {/* Live Auto-Save Status Indicator */}
+                    <div className="flex items-center">
+                      {autoSaveStatus === "saving" && (
+                        <span className="flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 animate-pulse font-medium">
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-600" />
+                          Auto-saving...
+                        </span>
+                      )}
+                      {autoSaveStatus === "saved" && (
+                        <span className="flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 font-medium">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          Saved {lastSavedTime ? `at ${lastSavedTime}` : "automatically"}
+                        </span>
+                      )}
+                      {autoSaveStatus === "unsaved" && (
+                        <span className="flex items-center gap-1.5 text-xs text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200 font-medium">
+                          <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                          Unsaved changes
+                        </span>
+                      )}
+                      {autoSaveStatus === "error" && (
+                        <button
+                          type="button"
+                          onClick={handleSaveDraft}
+                          className="flex items-center gap-1.5 text-xs text-rose-700 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-200 font-medium hover:bg-rose-100"
+                          title="Click to retry saving"
+                        >
+                          <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
+                          Auto-save failed (Retry)
+                        </button>
+                      )}
+                    </div>
+
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={handleSaveDraft}
                       loading={saving}
                       disabled={loading}
+                      title="Manual draft save fallback"
                     >
                       <Save className="w-4 h-4 mr-1.5" />
                       Save Draft
@@ -1645,16 +1777,49 @@ function DailyCallActivityContent() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {!isLocked && (
               <>
+                {/* Mobile Auto-Save Status */}
+                <div className="mr-0.5">
+                  {autoSaveStatus === "saving" && (
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 animate-pulse">
+                      <RefreshCw className="w-2.5 h-2.5 animate-spin text-amber-600" />
+                      Saving
+                    </span>
+                  )}
+                  {autoSaveStatus === "saved" && (
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
+                      Saved
+                    </span>
+                  )}
+                  {autoSaveStatus === "unsaved" && (
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      Unsaved
+                    </span>
+                  )}
+                  {autoSaveStatus === "error" && (
+                    <button
+                      type="button"
+                      onClick={handleSaveDraft}
+                      className="flex items-center gap-1 text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200"
+                    >
+                      <AlertCircle className="w-2.5 h-2.5 text-rose-600" />
+                      Retry
+                    </button>
+                  )}
+                </div>
+
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleSaveDraft}
                   loading={saving}
                   disabled={loading}
-                  className="text-xs px-3 py-1.5 font-bold"
+                  className="text-xs px-2.5 py-1.5 font-bold"
+                  title="Manual Save"
                 >
                   <Save className="w-3.5 h-3.5 mr-1" />
                   Save
