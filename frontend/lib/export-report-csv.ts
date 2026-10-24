@@ -248,14 +248,16 @@ export function exportFullReportToCSV(data: FullReportExportData) {
     });
   }
 
-  // Prepend UTF-8 BOM so Excel opens special characters (like ৳ or non-ASCII) without garbled text
-  const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + lines.join("\r\n");
-  const encodedUri = encodeURI(csvContent);
+  // Prepend UTF-8 BOM (\uFEFF) so Excel opens UTF-8 correctly without garbled text or truncation
+  const blob = new Blob(["\uFEFF" + lines.join("\r\n")], {
+    type: "text/csv;charset=utf-8;",
+  });
+  const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   const safeEmp = (
     report.employee_name || `emp_${report.employee_id}`
   ).replace(/[^a-zA-Z0-9_-]/g, "_");
-  link.setAttribute("href", encodedUri);
+  link.setAttribute("href", url);
   link.setAttribute(
     "download",
     `sunset_report_${report.report_date}_${safeEmp}.csv`
@@ -263,4 +265,5 @@ export function exportFullReportToCSV(data: FullReportExportData) {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
