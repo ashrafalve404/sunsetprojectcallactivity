@@ -117,10 +117,14 @@ async def test_upsert_replaces_previous_entries(client: AsyncClient, employee_us
 
 
 @pytest.mark.asyncio
-async def test_carry_forward_multi_day_and_isolation(client: AsyncClient, employee_user, admin_user):
+async def test_manual_daily_entry_isolation(client: AsyncClient, employee_user, admin_user):
+    """
+    Verify that each day's report is completely independent and manual.
+    Values entered on Day 1 are NOT automatically carried forward or injected into Day 2.
+    """
     headers_emp = await emp_headers(client, employee_user)
 
-    # Day 1: Employee reports 2 HP and 3 P
+    # Day 1: Employee reports manually
     r1_id = await _make_report(client, headers_emp, "2026-03-10")
     await client.put(
         f"/api/v1/reports/{r1_id}/calls",
@@ -129,6 +133,10 @@ async def test_carry_forward_multi_day_and_isolation(client: AsyncClient, employ
                 {
                     "lead_category": "High Potential",
                     "till_today_status": 50,
+                    "slot_10am_1pm": 5,
+                    "slot_2pm_5pm": 5,
+                    "slot_5pm_6pm": 5,
+                    "total_connected": 8,
                     "lead_status_hp": 2,
                     "lead_status_p": 3,
                     "lead_status_fub": 1,
@@ -139,144 +147,54 @@ async def test_carry_forward_multi_day_and_isolation(client: AsyncClient, employ
         headers=headers_emp,
     )
 
-    # Day 2: Employee reports 4 more HP and 1 more P
+    # Day 2: Employee creates report on 2026-03-11.
+    # Entries should be empty and carry_forward categories should be empty (no auto-fill).
     r2_id = await _make_report(client, headers_emp, "2026-03-11")
+    resp = await client.get(f"/api/v1/reports/{r2_id}/calls", headers=headers_emp)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["entries"] == []
+    cf = data.get("carry_forward")
+    assert cf is not None
+    assert cf["categories"] == {}
+    assert cf["previous_report_date"] is None
+
+    # Employee manually enters independent Day 2 data
     await client.put(
         f"/api/v1/reports/{r2_id}/calls",
         json={
             "entries": [
                 {
                     "lead_category": "High Potential",
-                    "till_today_status": 50,
-                    "lead_status_hp": 4,
+                    "till_today_status": 10,
+                    "slot_10am_1pm": 2,
+                    "slot_2pm_5pm": 3,
+                    "slot_5pm_6pm": 1,
+                    "total_connected": 4,
+                    "lead_status_hp": 1,
                     "lead_status_p": 1,
-                    "lead_status_fub": 2,
-                    "lead_status_ni": 3,
+                    "lead_status_fub": 0,
+                    "lead_status_ni": 2,
                 }
             ]
         },
         headers=headers_emp,
     )
 
-    # Day 3: Employee creates report on 2026-03-12
-    r3_id = await _make_report(client, headers_emp, "2026-03-12")
-    resp = await client.get(f"/api/v1/reports/{r3_id}/calls", headers=headers_emp)
-    assert resp.status_code == 200
-    cf = resp.json().get("carry_forward")
-    assert cf is not None
-    assert cf["previous_report_date"] == "2026-03-11"
-    assert cf["employee_id"] == employee_user.id
+    # Verify Day 1 remains untouched
+    r1_resp = await client.get(f"/api/v1/reports/{r1_id}/calls", headers=headers_emp)
+    assert r1_resp.status_code == 200
+    r1_entry = r1_resp.json()["entries"][0]
+    assert r1_entry["till_today_status"] == 50
+    assert r1_entry["lead_status_hp"] == 2
+    assert r1_entry["total_connected"] == 8
 
-    hp_cf = cf["categories"]["High Potential"]
-    assert hp_cf["prev_till_today"] == 50
-    # Day 2 snapshot: HP=4, P=1, FUB=2, NI=3
-    assert hp_cf["prev_hp"] == 4
-    assert hp_cf["prev_p"] == 1
-    assert hp_cf["prev_fub"] == 2
-    assert hp_cf["prev_ni"] == 3
-
-    # Dedicated carry-forward endpoint check
-    cf_resp = await client.get(f"/api/v1/reports/{r3_id}/calls/carry-forward", headers=headers_emp)
-    assert cf_resp.status_code == 200
-    assert cf_resp.json()["categories"]["High Potential"]["prev_hp"] == 4
-
-
-@pytest.mark.asyncio
-async def test_carry_forward_no_previous_report(client: AsyncClient, employee_user):
-    """When an employee creates their first report, carry forward baseline should be empty / 0 without error."""
-    headers_emp = await emp_headers(client, employee_user)
-    r_id = await _make_report(client, headers_emp, "2026-04-01")
-    resp = await client.get(f"/api/v1/reports/{r_id}/calls", headers=headers_emp)
-    assert resp.status_code == 200
-    cf = resp.json().get("carry_forward")
-    assert cf is not None
-    assert cf["previous_report_date"] is None
-    assert cf["categories"] == {}
-
-
-@pytest.mark.asyncio
-async def test_lead_transfer_and_call_independence(client: AsyncClient, employee_user):
-    """
-    Verify:
-    1. Daily dials and connected calls are saved independently of lead stock.
-    2. When a lead changes status (e.g. FUB -> HP), total stock remains constant.
-    3. Next day accurately receives the updated totals without double-counting.
-    """
-    headers_emp = await emp_headers(client, employee_user)
-
-    # Day 1: Baseline established
-    # Facebook: 10 HP, 20 P, 30 FUB, 5 NI -> Total 65
-    # Calls: 15 dialed, 6 connected
-    r1_id = await _make_report(client, headers_emp, "2026-05-01")
-    await client.put(
-        f"/api/v1/reports/{r1_id}/calls",
-        json={
-            "entries": [
-                {
-                    "lead_category": "Facebook",
-                    "slot_10am_1pm": 5,
-                    "slot_2pm_5pm": 5,
-                    "slot_5pm_6pm": 5,
-                    "total_dialed": 15,
-                    "total_connected": 6,
-                    "lead_status_hp": 10,
-                    "lead_status_p": 20,
-                    "lead_status_fub": 30,
-                    "lead_status_ni": 5,
-                    "till_today_status": 65,
-                }
-            ]
-        },
-        headers=headers_emp,
-    )
-
-    # Day 2:
-    # 2 leads moved from FUB -> HP (+2 HP, -2 FUB)
-    # 1 lead moved from P -> NI (+1 NI, -1 P)
-    # Today's calls: 20 dialed, 8 connected
-    # Total stock must remain 65 (zero double counting)
-    r2_id = await _make_report(client, headers_emp, "2026-05-02")
-    cf_resp = await client.get(f"/api/v1/reports/{r2_id}/calls", headers=headers_emp)
-    assert cf_resp.status_code == 200
-    cf = cf_resp.json()["carry_forward"]
-    fb_prev = cf["categories"]["Facebook"]
-    assert fb_prev["prev_hp"] == 10
-    assert fb_prev["prev_p"] == 20
-    assert fb_prev["prev_fub"] == 30
-    assert fb_prev["prev_ni"] == 5
-    assert fb_prev["prev_till_today"] == 65
-
-    # Save Day 2 updated totals
-    await client.put(
-        f"/api/v1/reports/{r2_id}/calls",
-        json={
-            "entries": [
-                {
-                    "lead_category": "Facebook",
-                    "slot_10am_1pm": 8,
-                    "slot_2pm_5pm": 8,
-                    "slot_5pm_6pm": 4,
-                    "total_dialed": 20,
-                    "total_connected": 8,
-                    "lead_status_hp": 12,  # 10 + 2
-                    "lead_status_p": 19,   # 20 - 1
-                    "lead_status_fub": 28, # 30 - 2
-                    "lead_status_ni": 6,   # 5 + 1
-                    "till_today_status": 65, # Stock unchanged
-                }
-            ]
-        },
-        headers=headers_emp,
-    )
-
-    # Day 3: Verify Day 3 loads Day 2's updated totals cleanly
-    r3_id = await _make_report(client, headers_emp, "2026-05-03")
-    r3_resp = await client.get(f"/api/v1/reports/{r3_id}/calls", headers=headers_emp)
-    assert r3_resp.status_code == 200
-    fb_d3_prev = r3_resp.json()["carry_forward"]["categories"]["Facebook"]
-    assert fb_d3_prev["prev_hp"] == 12
-    assert fb_d3_prev["prev_p"] == 19
-    assert fb_d3_prev["prev_fub"] == 28
-    assert fb_d3_prev["prev_ni"] == 6
-    assert fb_d3_prev["prev_till_today"] == 65
+    # Verify Day 2 has its own manual numbers
+    r2_resp = await client.get(f"/api/v1/reports/{r2_id}/calls", headers=headers_emp)
+    assert r2_resp.status_code == 200
+    r2_entry = r2_resp.json()["entries"][0]
+    assert r2_entry["till_today_status"] == 10
+    assert r2_entry["lead_status_hp"] == 1
+    assert r2_entry["total_dialed"] == 6
+    assert r2_entry["total_connected"] == 4
 

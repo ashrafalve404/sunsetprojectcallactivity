@@ -16,9 +16,7 @@ from __future__ import annotations
 from typing import Optional, Sequence
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.models.call_activity import CallActivityEntry
 from app.models.report import DailyActivityReport, ReportStatus
@@ -29,7 +27,6 @@ from app.schemas.call_activity import (
     CallEntryBase,
     CallEntriesUpsert,
     CarryForwardInfo,
-    CategoryCarryForward,
 )
 
 
@@ -49,75 +46,11 @@ class CallService:
         self, report_id: int, current_user: User
     ) -> CarryForwardInfo:
         report = await self._load_and_check_report(report_id, current_user)
-
-        stmt = (
-            select(DailyActivityReport)
-            .where(
-                DailyActivityReport.employee_id == report.employee_id,
-                DailyActivityReport.report_date < report.report_date,
-            )
-            .options(selectinload(DailyActivityReport.call_entries))
-            .order_by(DailyActivityReport.report_date.asc())
-        )
-        result = await self.db.execute(stmt)
-        prev_reports = list(result.scalars().all())
-
-        if not prev_reports:
-            return CarryForwardInfo(
-                employee_id=report.employee_id,
-                employee_name=report.employee.full_name if report.employee else None,
-                previous_report_date=None,
-                categories={},
-            )
-
-        latest_prev_report = prev_reports[-1]
-        previous_report_date = latest_prev_report.report_date
-
-        categories_dict: dict[str, CategoryCarryForward] = {}
-
-        all_categories: set[str] = set()
-        for r in prev_reports:
-            for e in r.call_entries:
-                if e.lead_category:
-                    all_categories.add(e.lead_category)
-
-        for cat in all_categories:
-            prev_hp = 0
-            prev_p = 0
-            prev_fub = 0
-            prev_ni = 0
-            prev_till_today = 0
-
-            # Load the exact totals from the most recent previous report containing this category
-            for r in reversed(prev_reports):
-                matching = [e for e in r.call_entries if e.lead_category == cat]
-                if matching:
-                    e = matching[0]
-                    prev_hp = e.lead_status_hp or 0
-                    prev_p = e.lead_status_p or 0
-                    prev_fub = e.lead_status_fub or 0
-                    prev_ni = e.lead_status_ni or 0
-                    prev_till_today = (
-                        e.till_today_status
-                        if e.till_today_status is not None
-                        else (prev_hp + prev_p + prev_fub + prev_ni)
-                    )
-                    break
-
-            categories_dict[cat] = CategoryCarryForward(
-                lead_category=cat,
-                prev_till_today=prev_till_today,
-                prev_hp=prev_hp,
-                prev_p=prev_p,
-                prev_fub=prev_fub,
-                prev_ni=prev_ni,
-            )
-
         return CarryForwardInfo(
             employee_id=report.employee_id,
             employee_name=report.employee.full_name if report.employee else None,
-            previous_report_date=previous_report_date,
-            categories=categories_dict,
+            previous_report_date=None,
+            categories={},
         )
 
     async def upsert_entries(
