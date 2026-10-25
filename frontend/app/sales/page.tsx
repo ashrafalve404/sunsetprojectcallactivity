@@ -131,7 +131,8 @@ function SalesVsCollectionContent() {
   // Future Commitments Pipeline State
   const [pipelineData, setPipelineData] = useState<CommitmentPipelineResponse | null>(null);
   const [pipelineLoading, setPipelineLoading] = useState(false);
-  const [pipelineFilter, setPipelineFilter] = useState<"all" | "due_today" | "upcoming" | "overdue" | "rescheduled">("all");
+  const initialFilter = (searchParams.get("filter") as "all" | "due_today" | "upcoming" | "overdue" | "rescheduled") || "all";
+  const [pipelineFilter, setPipelineFilter] = useState<"all" | "due_today" | "upcoming" | "overdue" | "rescheduled">(initialFilter);
   const [pipelineSearch, setPipelineSearch] = useState(initialSearch);
   const [autoOpenedEditId, setAutoOpenedEditId] = useState<string | null>(initialEditId);
 
