@@ -106,14 +106,25 @@ function SettingsContent() {
     const today = getDhakaToday();
     setEditingTarget(t);
     setTargetEmployeeId(t.employee_id ? t.employee_id : "global");
-    setTargetDate(t.target_date || today);
+    setTargetDate(t.target_date || t.effective_from || today);
     setDialedTarget(t.dialed_calls_target ? String(t.dialed_calls_target) : "");
     setConnectedTarget(t.connected_calls_target ? String(t.connected_calls_target) : "");
     setCallDurationTarget(t.call_duration_minutes_target ? String(t.call_duration_minutes_target) : "");
-    setOutdoorTarget(t.outdoor_visits_target ? String(t.outdoor_visits_target) : "");
-    setMeetingTarget(t.meeting_minutes_target ? String(t.meeting_minutes_target) : "");
-    setSalesTarget(t.sales_amount_target ? String(t.sales_amount_target) : "");
-    setCollectionTarget(t.collection_amount_target ? String(t.collection_amount_target) : "");
+    
+    const outdoorVal = t.outdoor_visits_target ?? t.outdoor_visit_target;
+    setOutdoorTarget(outdoorVal ? String(outdoorVal) : "");
+    
+    let meetingVal = t.meeting_minutes_target;
+    if (meetingVal == null && t.meeting_hours_target != null) {
+      meetingVal = Math.round(Number(t.meeting_hours_target) * 60);
+    }
+    setMeetingTarget(meetingVal ? String(meetingVal) : "");
+
+    const salesVal = t.sales_amount_target ?? t.sales_target;
+    setSalesTarget(salesVal ? String(salesVal) : "");
+
+    const collVal = t.collection_amount_target ?? t.tb_target;
+    setCollectionTarget(collVal ? String(collVal) : "");
     setFormError(null);
     setIsTargetModalOpen(true);
   };
@@ -123,15 +134,21 @@ function SettingsContent() {
     setFormSubmitting(true);
     setFormError(null);
 
+    const effDate = targetDate || getDhakaToday();
     const payload: Partial<DailyTarget> = {
       employee_id: targetEmployeeId === "global" ? null : Number(targetEmployeeId),
-      target_date: targetDate || null,
+      effective_from: effDate,
+      target_date: effDate,
       dialed_calls_target: dialedTarget ? parseInt(dialedTarget, 10) : null,
       connected_calls_target: connectedTarget ? parseInt(connectedTarget, 10) : null,
       call_duration_minutes_target: callDurationTarget ? parseInt(callDurationTarget, 10) : null,
+      outdoor_visit_target: outdoorTarget ? parseInt(outdoorTarget, 10) : null,
       outdoor_visits_target: outdoorTarget ? parseInt(outdoorTarget, 10) : null,
+      meeting_hours_target: meetingTarget ? parseFloat((parseInt(meetingTarget, 10) / 60).toFixed(2)) : null,
       meeting_minutes_target: meetingTarget ? parseInt(meetingTarget, 10) : null,
+      sales_target: salesTarget ? parseFloat(salesTarget) : null,
       sales_amount_target: salesTarget ? parseFloat(salesTarget) : null,
+      tb_target: collectionTarget ? parseFloat(collectionTarget) : null,
       collection_amount_target: collectionTarget ? parseFloat(collectionTarget) : null,
     };
 
@@ -325,7 +342,9 @@ function SettingsContent() {
                           )}
                         </td>
                         <td className="py-3 px-3 text-slate-600">
-                          {t.target_date ? formatReadableDate(t.target_date) : "All Dates"}
+                          {t.target_date || t.effective_from
+                            ? formatReadableDate(t.target_date || t.effective_from || "")
+                            : "All Dates"}
                         </td>
                         <td className="py-3 px-3 text-right font-medium text-slate-900">
                           {t.dialed_calls_target ?? "—"}
@@ -334,16 +353,24 @@ function SettingsContent() {
                           {t.connected_calls_target ?? "—"}
                         </td>
                         <td className="py-3 px-3 text-right text-slate-700">
-                          {t.outdoor_visits_target ?? "—"}
+                          {t.outdoor_visits_target ?? t.outdoor_visit_target ?? "—"}
                         </td>
                         <td className="py-3 px-3 text-right text-slate-700">
-                          {t.meeting_minutes_target ? `${t.meeting_minutes_target}m` : "—"}
+                          {t.meeting_minutes_target
+                            ? `${t.meeting_minutes_target}m`
+                            : t.meeting_hours_target
+                            ? `${Math.round(Number(t.meeting_hours_target) * 60)}m`
+                            : "—"}
                         </td>
                         <td className="py-3 px-3 text-right font-semibold text-slate-900">
-                          {t.sales_amount_target ? formatBDT(t.sales_amount_target) : "—"}
+                          {(t.sales_amount_target ?? t.sales_target) != null
+                            ? formatBDT(t.sales_amount_target ?? t.sales_target!)
+                            : "—"}
                         </td>
                         <td className="py-3 px-3 text-right font-semibold text-emerald-800">
-                          {t.collection_amount_target ? formatBDT(t.collection_amount_target) : "—"}
+                          {(t.collection_amount_target ?? t.tb_target) != null
+                            ? formatBDT(t.collection_amount_target ?? t.tb_target!)
+                            : "—"}
                         </td>
                         <td className="py-3 px-3 text-right">
                           <div className="flex items-center justify-end gap-1">

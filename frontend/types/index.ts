@@ -305,14 +305,19 @@ export interface DashboardSummary {
 export interface DailyTarget {
   id: number;
   employee_id: number | null;
+  effective_from?: string | null;
   target_date: string | null;
   dialed_calls_target: number | null;
   connected_calls_target: number | null;
-  call_duration_minutes_target: number | null;
+  call_duration_minutes_target?: number | null;
   outdoor_visits_target: number | null;
+  outdoor_visit_target?: number | null;
   meeting_minutes_target: number | null;
+  meeting_hours_target?: number | null;
   sales_amount_target: number | null;
+  sales_target?: number | null;
   collection_amount_target: number | null;
+  tb_target?: number | null;
   created_at: string;
   updated_at: string;
 }
