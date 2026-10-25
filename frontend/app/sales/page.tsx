@@ -20,6 +20,7 @@ import {
   AlertCircle,
   Users,
   Phone,
+  Bell,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import {
@@ -466,13 +467,17 @@ function SalesVsCollectionContent() {
       <div className="space-y-6">
         {/* ── Header Controls Card ────────────────────────────────────────── */}
         <Card>
-          <CardContent className="p-4 sm:p-5">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-green-700" />
-                  <span className="text-xs font-semibold text-slate-700 uppercase">Date:</span>
+          <CardContent className="p-3.5 sm:p-5">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
+              {/* Date & Employee info */}
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <div className="flex items-center gap-1.5 text-sm">
+                  <Calendar className="w-4 h-4 text-green-700 shrink-0" />
+                  <label htmlFor="report-date" className="text-xs font-bold text-slate-700 shrink-0">
+                    Date:
+                  </label>
                   <input
+                    id="report-date"
                     type="date"
                     value={reportDate}
                     onChange={(e) => {
@@ -482,6 +487,19 @@ function SalesVsCollectionContent() {
                     }}
                     className="border border-slate-300 rounded px-2.5 py-1 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-green-600 bg-white"
                   />
+                  {reportDate !== today && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReportDate(today);
+                        const empQuery = targetEmployeeId ? `&employee_id=${targetEmployeeId}` : "";
+                        router.replace(`/sales?date=${today}${empQuery}`);
+                      }}
+                      className="px-2 py-1 text-[11px] font-semibold text-green-800 bg-green-50 hover:bg-green-100 rounded border border-green-200 transition-colors"
+                    >
+                      Today
+                    </button>
+                  )}
                 </div>
 
                 <div className="h-4 w-px bg-slate-200 hidden sm:block" />
@@ -494,18 +512,19 @@ function SalesVsCollectionContent() {
                   </span>
                 </div>
 
-                <Badge variant={isLocked ? "success" : "warning"}>
+                <Badge variant={isLocked ? "success" : "warning"} className="text-[10px]">
                   {isLocked ? "Finalized / Submitted" : "Draft (Editable)"}
                 </Badge>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                {/* View Tabs Toggle */}
-                <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+              {/* View Tabs Toggle & Action */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                {/* View Tabs Toggle (Segmented control) */}
+                <div className="grid grid-cols-2 sm:flex sm:items-center bg-slate-100 p-1 rounded-lg border border-slate-200 w-full sm:w-auto">
                   <button
                     type="button"
                     onClick={() => setActiveTab("daily")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                    className={`flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
                       activeTab === "daily"
                         ? "bg-white text-green-800 shadow-2xs font-bold"
                         : "text-slate-600 hover:text-slate-900"
@@ -517,7 +536,7 @@ function SalesVsCollectionContent() {
                   <button
                     type="button"
                     onClick={() => setActiveTab("pipeline")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                    className={`flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
                       activeTab === "pipeline"
                         ? "bg-white text-green-800 shadow-2xs font-bold"
                         : "text-slate-600 hover:text-slate-900"
@@ -533,29 +552,28 @@ function SalesVsCollectionContent() {
                   </button>
                 </div>
 
-                <div className="h-4 w-px bg-slate-200 hidden sm:block" />
-
                 {(!isLocked || isAdmin) && (
                   <Button
                     variant="primary"
                     size="sm"
                     onClick={openAddModal}
                     disabled={loading}
+                    className="w-full sm:w-auto font-bold py-2 sm:py-1.5 shadow-xs"
                   >
                     <Plus className="w-4 h-4 mr-1.5" />
                     Record Transaction
                   </Button>
                 )}
                 {isLocked && !isAdmin && (
-                  <div className="flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded border border-emerald-200 font-medium">
+                  <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded border border-emerald-200 font-medium w-full sm:w-auto">
                     <Lock className="w-3.5 h-3.5" />
                     Locked for Edits
                   </div>
                 )}
                 {isLocked && isAdmin && (
-                  <div className="flex items-center gap-1.5 text-xs text-amber-800 bg-amber-50 px-3 py-1.5 rounded border border-amber-300 font-medium">
+                  <div className="flex items-center justify-center gap-1.5 text-xs text-amber-800 bg-amber-50 px-3 py-1.5 rounded border border-amber-300 font-medium w-full sm:w-auto">
                     <Lock className="w-3.5 h-3.5" />
-                    Finalized (Admin Override Enabled)
+                    Finalized (Admin Override)
                   </div>
                 )}
               </div>
@@ -588,77 +606,77 @@ function SalesVsCollectionContent() {
         {activeTab === "daily" && (
           <>
             {/* Financial Split Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
               {/* Actual Cash Collected */}
-              <Card className="p-4 bg-emerald-50/40 border-emerald-200">
+              <Card className="p-3 sm:p-4 bg-emerald-50/40 border-emerald-200">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">
-                    Total Actual Collection
+                  <span className="text-[10px] sm:text-[11px] font-bold text-emerald-800 uppercase tracking-wider">
+                    Actual Collection
                   </span>
-                  <Badge variant="success">Actual Cash</Badge>
+                  <Badge variant="success" className="text-[9px] sm:text-xs">Actual</Badge>
                 </div>
-                <div className="text-2xl font-extrabold text-emerald-800 mt-2">
+                <div className="text-lg sm:text-2xl font-extrabold text-emerald-800 mt-1 sm:mt-2">
                   {formatBDT(calculations.grandTotalActual)}
                 </div>
-                <p className="text-[11px] text-emerald-700 mt-1">
-                  Sales ({formatBDT(calculations.actualNewSalesCollection)}) + TB ({formatBDT(calculations.tbCollection)}) + EMI ({formatBDT(calculations.emiCollection)})
+                <p className="text-[10px] sm:text-[11px] text-emerald-700 mt-0.5 sm:mt-1 truncate">
+                  Sales {formatBDT(calculations.actualNewSalesCollection)} • TB {formatBDT(calculations.tbCollection)}
                 </p>
               </Card>
 
               {/* Payment Commitments */}
-              <Card className="p-4 bg-amber-50/40 border-amber-200">
+              <Card className="p-3 sm:p-4 bg-amber-50/40 border-amber-200">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider">
-                    Total Commitments
+                  <span className="text-[10px] sm:text-[11px] font-bold text-amber-800 uppercase tracking-wider">
+                    Commitments
                   </span>
-                  <Badge variant="warning">Upcoming</Badge>
+                  <Badge variant="warning" className="text-[9px] sm:text-xs">Upcoming</Badge>
                 </div>
-                <div className="text-2xl font-extrabold text-amber-800 mt-2">
+                <div className="text-lg sm:text-2xl font-extrabold text-amber-800 mt-1 sm:mt-2">
                   {formatBDT(calculations.grandTotalCommitments)}
                 </div>
-                <p className="text-[11px] text-amber-700 mt-1">
-                  Sales ({formatBDT(calculations.salesCommitments)}) + TB ({formatBDT(calculations.tbCommitments)})
+                <p className="text-[10px] sm:text-[11px] text-amber-700 mt-0.5 sm:mt-1 truncate">
+                  Sales {formatBDT(calculations.salesCommitments)} • TB {formatBDT(calculations.tbCommitments)}
                 </p>
               </Card>
 
               {/* Token to Booking (TB) Total */}
-              <Card className="p-4">
+              <Card className="p-3 sm:p-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                    TB (Token to Booking)
+                  <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                    TB Total
                   </span>
-                  <Receipt className="w-4 h-4 text-slate-600" />
+                  <Receipt className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-600" />
                 </div>
-                <div className="text-xl font-bold text-slate-900 mt-2">
+                <div className="text-base sm:text-xl font-bold text-slate-900 mt-1 sm:mt-2">
                   {formatBDT(calculations.tbCollection)}
                 </div>
-                <p className="text-[11px] text-slate-600 font-medium mt-1">
-                  Commitment: {formatBDT(calculations.tbCommitments)}
+                <p className="text-[10px] sm:text-[11px] text-slate-600 font-medium mt-0.5 sm:mt-1 truncate">
+                  Commit: {formatBDT(calculations.tbCommitments)}
                 </p>
               </Card>
 
               {/* EMI Collection */}
-              <Card className="p-4">
+              <Card className="p-3 sm:p-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                    EMI Installments
+                  <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                    EMI Collection
                   </span>
-                  <Banknote className="w-4 h-4 text-slate-600" />
+                  <Banknote className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-600" />
                 </div>
-                <div className="text-xl font-bold text-slate-900 mt-2">
+                <div className="text-base sm:text-xl font-bold text-slate-900 mt-1 sm:mt-2">
                   {formatBDT(calculations.emiCollection)}
                 </div>
-                <p className="text-[11px] text-slate-600 font-medium mt-1">
-                  Strictly counted towards collection
+                <p className="text-[10px] sm:text-[11px] text-slate-600 font-medium mt-0.5 sm:mt-1 truncate">
+                  Monthly installments
                 </p>
               </Card>
             </div>
 
             {/* Transactions Table */}
             <Card>
-              <CardHeader>
+              <CardHeader className="p-3.5 sm:p-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
                     <Receipt className="w-4 h-4 text-green-700" />
                     Recorded Financial Transactions
                   </CardTitle>
@@ -667,7 +685,137 @@ function SalesVsCollectionContent() {
                   </span>
                 </div>
               </CardHeader>
-              <div className="overflow-x-auto">
+
+              {/* Mobile View: Native App-Like Cards */}
+              <div className="block md:hidden p-3 space-y-3 bg-slate-50/50">
+                {entries.length === 0 ? (
+                  <div className="py-8 text-center text-slate-400 bg-white rounded-xl border border-dashed border-slate-200 p-4">
+                    <p className="text-xs font-medium text-slate-500">No financial transactions recorded for this day yet.</p>
+                    {(!isLocked || isAdmin) && (
+                      <div className="mt-3">
+                        <Button size="sm" variant="outline" onClick={openAddModal} className="text-xs">
+                          <Plus className="w-3.5 h-3.5 mr-1" />
+                          Record First Transaction
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  entries.map((entry) => {
+                    const catDef = SALES_CATEGORIES.find((c) => c.key === entry.category);
+                    return (
+                      <div
+                        key={entry.id}
+                        className="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-3.5 space-y-2.5 transition-all"
+                      >
+                        {/* Top: Category & Amount */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="space-y-1">
+                            <span className="text-xs font-bold text-slate-900 block leading-tight">
+                              {catDef?.label || entry.category}
+                            </span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <Badge variant={entry.is_collection ? "success" : "warning"} className="text-[10px]">
+                                {entry.is_collection ? "Actual Collection" : "Commitment"}
+                              </Badge>
+                              {getPaymentMethodBadge(entry.payment_method)}
+                              {entry.payment_sequence && (
+                                <span className="text-[10px] font-mono font-bold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">
+                                  Seq #{entry.payment_sequence}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className="text-base font-extrabold text-slate-900 font-mono block">
+                              {formatBDT(entry.amount)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Customer Info Box */}
+                        <div className="bg-slate-50/80 rounded-lg p-2.5 border border-slate-100 space-y-1.5 text-xs">
+                          <div className="flex items-center gap-1.5 text-slate-700">
+                            <Users className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                            <span className="font-semibold text-slate-900 truncate">
+                              {entry.customer_name || "Customer not specified"}
+                            </span>
+                          </div>
+
+                          {entry.customer_phone && (
+                            <a
+                              href={`tel:${entry.customer_phone}`}
+                              className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 px-2.5 py-1 rounded-md border border-emerald-200 transition-colors w-fit"
+                            >
+                              <Phone className="w-3 h-3 text-emerald-600" />
+                              <span>{entry.customer_phone}</span>
+                              <span className="text-[10px] text-emerald-700 font-normal ml-0.5">(Tap to Call)</span>
+                            </a>
+                          )}
+
+                          {entry.expected_payment_date && (
+                            <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 text-[11px]">
+                              <span className="text-slate-500 flex items-center gap-1">
+                                <Calendar className="w-3 h-3 text-amber-600" />
+                                Promised Date:
+                              </span>
+                              <span className="font-mono font-bold text-amber-900">
+                                {formatReadableDate(entry.expected_payment_date)}
+                              </span>
+                            </div>
+                          )}
+
+                          {entry.reschedule_count && entry.reschedule_count > 0 ? (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedHistoryEntry(entry)}
+                              className="w-full text-left inline-flex items-center justify-between px-2 py-1 rounded bg-amber-50 hover:bg-amber-100 border border-amber-200 text-[11px] font-bold text-amber-900 transition-colors"
+                            >
+                              <span className="flex items-center gap-1">
+                                <History className="w-3 h-3 text-amber-700" />
+                                Shifted {entry.reschedule_count}x
+                              </span>
+                              <span className="text-[10px] text-amber-700 underline">View Log →</span>
+                            </button>
+                          ) : null}
+
+                          {(entry.reference || entry.notes) && (
+                            <p className="text-[11px] text-slate-500 italic pt-1 border-t border-slate-200/60 truncate">
+                              Ref: {entry.reference || entry.notes}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Action Buttons */}
+                        {(!isLocked || isAdmin) && (
+                          <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs py-1 px-3 h-8 flex-1 sm:flex-initial"
+                              onClick={() => openEditModal(entry)}
+                            >
+                              <Edit2 className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                              Edit
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs py-1 px-2.5 h-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200"
+                              onClick={() => setDeleteConfirmId(entry.id)}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="bg-slate-100/70 border-b border-slate-200 text-slate-700 text-[11px] font-semibold">
@@ -826,64 +974,64 @@ function SalesVsCollectionContent() {
         {activeTab === "pipeline" && (
           <div className="space-y-6">
             {/* Pipeline KPI Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card className="p-4 bg-gradient-to-br from-amber-50/70 to-white border-amber-200">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+              <Card className="p-3 sm:p-4 bg-gradient-to-br from-amber-50/70 to-white border-amber-200">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider">
-                    Total Promised Pipeline
+                  <span className="text-[10px] sm:text-[11px] font-bold text-amber-900 uppercase tracking-wider">
+                    Promised Pipeline
                   </span>
-                  <Calendar className="w-4 h-4 text-amber-700" />
+                  <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-700" />
                 </div>
-                <div className="text-2xl font-extrabold text-amber-900 mt-2">
+                <div className="text-lg sm:text-2xl font-extrabold text-amber-900 mt-1 sm:mt-2">
                   {formatBDT(pipelineData?.total_promised_amount || 0)}
                 </div>
-                <p className="text-[11px] text-amber-800 mt-1 font-medium">
-                  Future expected collection from clients
+                <p className="text-[10px] sm:text-[11px] text-amber-800 mt-0.5 sm:mt-1 font-medium truncate">
+                  Future expected cash
                 </p>
               </Card>
 
-              <Card className="p-4">
+              <Card className="p-3 sm:p-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                    Total Commitments
+                  <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                    Commitments
                   </span>
-                  <Users className="w-4 h-4 text-green-700" />
+                  <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-700" />
                 </div>
-                <div className="text-2xl font-extrabold text-slate-900 mt-2">
+                <div className="text-lg sm:text-2xl font-extrabold text-slate-900 mt-1 sm:mt-2">
                   {pipelineData?.total_commitments || 0}
                 </div>
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Active customer commitments on file
+                <p className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5 sm:mt-1 truncate">
+                  Active customer records
                 </p>
               </Card>
 
-              <Card className="p-4 bg-slate-50 border-slate-200">
+              <Card className="p-3 sm:p-4 bg-slate-50 border-slate-200">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                    Rescheduled Commitments
+                  <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                    Rescheduled
                   </span>
-                  <History className="w-4 h-4 text-slate-600" />
+                  <History className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-600" />
                 </div>
-                <div className="text-2xl font-extrabold text-slate-900 mt-2">
+                <div className="text-lg sm:text-2xl font-extrabold text-slate-900 mt-1 sm:mt-2">
                   {pipelineData?.rescheduled_count || 0}
                 </div>
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Clients who postponed payment date
+                <p className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5 sm:mt-1 truncate">
+                  Clients postponed date
                 </p>
               </Card>
 
-              <Card className="p-4 bg-rose-50/50 border-rose-200">
+              <Card className="p-3 sm:p-4 bg-rose-50/50 border-rose-200">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-rose-800 uppercase tracking-wider">
-                    High-Risk Clients (Shifted 2+x)
+                  <span className="text-[10px] sm:text-[11px] font-bold text-rose-800 uppercase tracking-wider">
+                    High-Risk (2+x)
                   </span>
-                  <AlertTriangle className="w-4 h-4 text-rose-600" />
+                  <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-600" />
                 </div>
-                <div className="text-2xl font-extrabold text-rose-900 mt-2">
+                <div className="text-lg sm:text-2xl font-extrabold text-rose-900 mt-1 sm:mt-2">
                   {highRiskCount}
                 </div>
-                <p className="text-[11px] text-rose-700 mt-1 font-medium">
-                  {highRiskCount > 0 ? "Multiple delays — low buying intent" : "All clients on schedule"}
+                <p className="text-[10px] sm:text-[11px] text-rose-700 mt-0.5 sm:mt-1 font-medium truncate">
+                  {highRiskCount > 0 ? "Multiple delays" : "On schedule"}
                 </p>
               </Card>
             </div>
@@ -929,18 +1077,163 @@ function SalesVsCollectionContent() {
               </CardContent>
             </Card>
 
-            {/* Pipeline Table */}
+            {/* Pipeline Section: Desktop Table & Mobile Cards */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-amber-600" />
-                  <span>Customer Commitment Pipeline</span>
-                </CardTitle>
-                <span className="text-xs text-slate-500">
-                  {filteredPipelineItems.length} {filteredPipelineItems.length === 1 ? "record" : "records"}
-                </span>
+              <CardHeader className="p-3.5 sm:p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                    <Calendar className="w-4 h-4 text-amber-600" />
+                    <span>Customer Commitment Pipeline</span>
+                  </CardTitle>
+                  <span className="text-xs text-slate-500">
+                    {filteredPipelineItems.length} {filteredPipelineItems.length === 1 ? "record" : "records"}
+                  </span>
+                </div>
               </CardHeader>
-              <div className="overflow-x-auto">
+
+              {/* Mobile View: Native App-Like Cards */}
+              <div className="block md:hidden p-3 space-y-3 bg-slate-50/50">
+                {pipelineLoading ? (
+                  <div className="py-10 text-center text-slate-400 bg-white rounded-xl border border-slate-200 p-4">
+                    Loading commitment pipeline...
+                  </div>
+                ) : filteredPipelineItems.length === 0 ? (
+                  <div className="py-10 text-center text-slate-400 bg-white rounded-xl border border-dashed border-slate-200 p-4">
+                    <p className="text-xs font-medium text-slate-500">No customer commitments match this filter.</p>
+                  </div>
+                ) : (
+                  filteredPipelineItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="bg-white rounded-xl border border-slate-200/90 shadow-2xs p-3.5 space-y-2.5 transition-all"
+                    >
+                      {/* Top: Customer & Status */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="space-y-0.5">
+                          <span className="text-xs font-bold text-slate-900 block leading-tight">
+                            {item.customer_name || "Unknown Customer"}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono block">
+                            Ref #{item.id} • {item.category}
+                          </span>
+                        </div>
+                        {/* Status Badge with Lucide Icon */}
+                        <span
+                          className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                            item.status === "due_today"
+                              ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                              : item.status === "overdue"
+                              ? "bg-rose-100 text-rose-800 border border-rose-300"
+                              : item.status === "upcoming"
+                              ? "bg-blue-50 text-blue-800 border border-blue-200"
+                              : "bg-slate-100 text-slate-600"
+                          }`}
+                        >
+                          {item.status === "due_today" ? (
+                            <>
+                              <Bell className="w-2.5 h-2.5 text-emerald-700" />
+                              <span>Due Today</span>
+                            </>
+                          ) : item.status === "overdue" ? (
+                            <>
+                              <AlertTriangle className="w-2.5 h-2.5 text-rose-600" />
+                              <span>Overdue</span>
+                            </>
+                          ) : item.status === "upcoming" ? (
+                            <>
+                              <Calendar className="w-2.5 h-2.5 text-blue-600" />
+                              <span>Upcoming</span>
+                            </>
+                          ) : (
+                            <span>No Date</span>
+                          )}
+                        </span>
+                      </div>
+
+                      {/* Amount & Due Date Box */}
+                      <div className="flex items-center justify-between p-2.5 bg-amber-50/50 rounded-lg border border-amber-200/70">
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-amber-800 block">Promised Amount</span>
+                          <span className="text-base font-extrabold text-amber-950 font-mono">
+                            {formatBDT(item.amount)}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[10px] uppercase font-bold text-amber-800 block">Promised Date</span>
+                          <span className="text-xs font-bold text-amber-900 font-mono">
+                            {item.expected_payment_date ? formatReadableDate(item.expected_payment_date) : "—"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Customer Phone & Employee info */}
+                      <div className="space-y-1.5 text-xs">
+                        {item.customer_phone && (
+                          <a
+                            href={`tel:${item.customer_phone}`}
+                            className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 px-2.5 py-1 rounded-md border border-emerald-200 transition-colors w-fit"
+                          >
+                            <Phone className="w-3 h-3 text-emerald-600" />
+                            <span>{item.customer_phone}</span>
+                            <span className="text-[10px] text-emerald-700 font-normal ml-0.5">(Tap to Call)</span>
+                          </a>
+                        )}
+                        <div className="flex items-center justify-between text-[11px] text-slate-600 pt-1 border-t border-slate-100">
+                          <span className="text-slate-500">Employee:</span>
+                          <span className="font-semibold text-slate-800">
+                            {item.employee_name || "Employee"} ({formatEmployeeId(item.employee_id)})
+                          </span>
+                        </div>
+                        {item.reference && (
+                          <p className="text-[11px] text-slate-500 italic truncate">
+                            Ref: {item.reference}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Reschedule shift info & View Log button */}
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                        {item.reschedule_count > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedHistoryEntry(item as any)}
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border transition-colors ${
+                              item.reschedule_count >= 2
+                                ? "bg-rose-100 text-rose-900 border-rose-300"
+                                : "bg-amber-100 text-amber-900 border-amber-300"
+                            }`}
+                          >
+                            <History className="w-3 h-3" />
+                            <span>Shifted {item.reschedule_count}x</span>
+                            {item.reschedule_count >= 2 && (
+                              <span className="text-[9px] bg-rose-700 text-white px-1 rounded ml-1">
+                                High Risk
+                              </span>
+                            )}
+                          </button>
+                        ) : (
+                          <span className="text-emerald-700 text-[10px] font-semibold flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            On Schedule
+                          </span>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs py-1 h-7 text-slate-700"
+                          onClick={() => setSelectedHistoryEntry(item as any)}
+                        >
+                          <History className="w-3 h-3 mr-1" />
+                          View Log
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="bg-slate-100/70 border-b border-slate-200 text-slate-700 text-[11px] font-semibold">
@@ -1016,13 +1309,24 @@ function SalesVsCollectionContent() {
                                   : "bg-slate-100 text-slate-600"
                               }`}
                             >
-                              {item.status === "due_today"
-                                ? "🔔 Due Today"
-                                : item.status === "overdue"
-                                ? "⚠️ Overdue"
-                                : item.status === "upcoming"
-                                ? "Upcoming"
-                                : "No Date"}
+                              {item.status === "due_today" ? (
+                                <>
+                                  <Bell className="w-2.5 h-2.5 text-emerald-700" />
+                                  <span>Due Today</span>
+                                </>
+                              ) : item.status === "overdue" ? (
+                                <>
+                                  <AlertTriangle className="w-2.5 h-2.5 text-rose-600" />
+                                  <span>Overdue</span>
+                                </>
+                              ) : item.status === "upcoming" ? (
+                                <>
+                                  <Calendar className="w-2.5 h-2.5 text-blue-600" />
+                                  <span>Upcoming</span>
+                                </>
+                              ) : (
+                                <span>No Date</span>
+                              )}
                             </span>
                           </td>
 
@@ -1140,8 +1444,9 @@ function SalesVsCollectionContent() {
                   Next Promised Payment Date (Commitment Date)
                 </label>
                 {editingEntry?.reschedule_count && editingEntry.reschedule_count > 0 ? (
-                  <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
-                    ⚠️ Shifted {editingEntry.reschedule_count} {editingEntry.reschedule_count === 1 ? "time" : "times"}
+                  <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 inline-flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3 text-rose-600" />
+                    <span>Shifted {editingEntry.reschedule_count} {editingEntry.reschedule_count === 1 ? "time" : "times"}</span>
                   </span>
                 ) : null}
               </div>
