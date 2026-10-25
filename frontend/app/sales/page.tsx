@@ -112,13 +112,16 @@ function SalesVsCollectionContent() {
 
   const today = getDhakaToday();
   const initialDate = searchParams.get("date") || today;
+  const initialTab = searchParams.get("tab") === "pipeline" ? "pipeline" : "daily";
+  const initialSearch = searchParams.get("search") || "";
+  const initialEditId = searchParams.get("edit_id");
   const targetEmployeeId = searchParams.get("employee_id")
     ? parseInt(searchParams.get("employee_id")!, 10)
     : undefined;
   const [reportDate, setReportDate] = useState<string>(initialDate);
 
   // Tab: Daily Transactions vs Future Commitments Pipeline
-  const [activeTab, setActiveTab] = useState<"daily" | "pipeline">("daily");
+  const [activeTab, setActiveTab] = useState<"daily" | "pipeline">(initialTab);
 
   // Report & entries state
   const [report, setReport] = useState<Report | null>(null);
@@ -129,7 +132,8 @@ function SalesVsCollectionContent() {
   const [pipelineData, setPipelineData] = useState<CommitmentPipelineResponse | null>(null);
   const [pipelineLoading, setPipelineLoading] = useState(false);
   const [pipelineFilter, setPipelineFilter] = useState<"all" | "due_today" | "upcoming" | "overdue" | "rescheduled">("all");
-  const [pipelineSearch, setPipelineSearch] = useState("");
+  const [pipelineSearch, setPipelineSearch] = useState(initialSearch);
+  const [autoOpenedEditId, setAutoOpenedEditId] = useState<string | null>(initialEditId);
 
   // Add/Edit modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -303,7 +307,7 @@ function SalesVsCollectionContent() {
 
   const openEditModal = (entry: SalesCollectionEntry) => {
     setEditingEntry(entry);
-    setFormCategory(entry.category);
+    setFormCategory(entry.category as SalesCollectionCategory);
     setFormAmount(String(entry.amount));
     if (entry.customer_name) {
       const parts = entry.customer_name
@@ -325,9 +329,29 @@ function SalesVsCollectionContent() {
     setIsModalOpen(true);
   };
 
+  // Auto-open modal if edit_id is in query parameters
+  useEffect(() => {
+    if (!autoOpenedEditId) return;
+
+    if (activeTab === "pipeline" && pipelineData?.items) {
+      const match = pipelineData.items.find((i) => String(i.id) === autoOpenedEditId);
+      if (match) {
+        openEditModal(match as any);
+        setAutoOpenedEditId(null);
+      }
+    } else if (entries.length > 0) {
+      const match = entries.find((e) => String(e.id) === autoOpenedEditId);
+      if (match) {
+        openEditModal(match);
+        setAutoOpenedEditId(null);
+      }
+    }
+  }, [autoOpenedEditId, activeTab, pipelineData, entries]);
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!report) return;
+    const rId = editingEntry?.report_id || report?.id;
+    if (!rId) return;
 
     const amt = parseFloat(formAmount);
     if (isNaN(amt) || amt <= 0) {
@@ -365,7 +389,7 @@ function SalesVsCollectionContent() {
 
     try {
       if (editingEntry) {
-        const updated = await api.sales.update(report.id, editingEntry.id, payload);
+        const updated = await api.sales.update(rId, editingEntry.id, payload);
         setEntries((prev) =>
           prev.map((item) => (item.id === updated.id ? updated : item))
         );
@@ -374,7 +398,7 @@ function SalesVsCollectionContent() {
           text: "Entry updated successfully.",
         });
       } else {
-        const created = await api.sales.create(report.id, payload as any);
+        const created = await api.sales.create(rId, payload as any);
         setEntries((prev) => [created, ...prev]);
         setStatusMessage({
           type: "success",
@@ -1217,15 +1241,28 @@ function SalesVsCollectionContent() {
                             On Schedule
                           </span>
                         )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-xs py-1 h-7 text-slate-700"
-                          onClick={() => setSelectedHistoryEntry(item as any)}
-                        >
-                          <History className="w-3 h-3 mr-1" />
-                          View Log
-                        </Button>
+                        <div className="flex items-center gap-1.5">
+                          {(!isLocked || isAdmin) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs py-1 h-7 text-emerald-800 border-emerald-300 bg-emerald-50/60 hover:bg-emerald-100"
+                              onClick={() => openEditModal(item as any)}
+                            >
+                              <Edit2 className="w-3 h-3 mr-1" />
+                              {item.expected_payment_date ? "Reschedule" : "Set Date"}
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs py-1 h-7 text-slate-700"
+                            onClick={() => setSelectedHistoryEntry(item as any)}
+                          >
+                            <History className="w-3 h-3 mr-1" />
+                            Log
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))
@@ -1244,7 +1281,7 @@ function SalesVsCollectionContent() {
                       <th className="py-2.5 px-3">Reschedule Shift Log</th>
                       <th className="py-2.5 px-3">Employee</th>
                       <th className="py-2.5 px-3">Reference / Notes</th>
-                      <th className="py-2.5 px-3 text-right">Audit</th>
+                      <th className="py-2.5 px-3 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -1372,15 +1409,28 @@ function SalesVsCollectionContent() {
                           </td>
 
                           <td className="py-3 px-3 text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-xs py-1"
-                              onClick={() => setSelectedHistoryEntry(item as any)}
-                            >
-                              <History className="w-3 h-3 mr-1" />
-                              View Log
-                            </Button>
+                            <div className="flex items-center justify-end gap-1.5">
+                              {(!isLocked || isAdmin) && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-xs py-1 h-7 text-emerald-800 border-emerald-300 bg-emerald-50/60 hover:bg-emerald-100"
+                                  onClick={() => openEditModal(item as any)}
+                                >
+                                  <Edit2 className="w-3 h-3 mr-1" />
+                                  {item.expected_payment_date ? "Reschedule" : "Set Date"}
+                                </Button>
+                              )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-xs py-1 h-7 text-slate-700"
+                                onClick={() => setSelectedHistoryEntry(item as any)}
+                              >
+                                <History className="w-3 h-3 mr-1" />
+                                Log
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))

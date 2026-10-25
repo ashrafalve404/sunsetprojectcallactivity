@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
+from urllib.parse import quote_plus
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -188,7 +189,7 @@ class ReminderService:
                         client_name=entry.customer_name,
                         category=cat_label,
                         date=exp_date_str,
-                        link="/sales",
+                        link=f"/sales?tab=pipeline&search={quote_plus(entry.customer_name)}&edit_id={entry.id}",
                         action_label="Collect / Reschedule",
                     )
                 )
@@ -205,7 +206,7 @@ class ReminderService:
                         client_name=entry.customer_name,
                         category=cat_label,
                         date=exp_date_str,
-                        link="/sales",
+                        link=f"/sales?tab=pipeline&search={quote_plus(entry.customer_name)}&edit_id={entry.id}",
                         action_label="Review in Pipeline",
                     )
                 )
@@ -220,7 +221,7 @@ class ReminderService:
                         client_name=entry.customer_name,
                         category=cat_label,
                         date=exp_date_str,
-                        link="/sales",
+                        link=f"/sales?tab=pipeline&search={quote_plus(entry.customer_name)}&edit_id={entry.id}",
                         action_label="View in Sales",
                     )
                 )
@@ -255,7 +256,7 @@ class ReminderService:
                         message=f"{cat_label} of ৳{comm.amount:,.0f} recorded. Set promised date in Sales.",
                         client_name=comm.customer_name,
                         category=cat_label,
-                        link="/sales",
+                        link=f"/sales?tab=pipeline&search={quote_plus(comm.customer_name)}&edit_id={comm.id}",
                         action_label="Set Date",
                     )
                 )
