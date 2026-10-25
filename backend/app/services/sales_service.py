@@ -43,16 +43,21 @@ ACTUAL_COLLECTION_CATEGORIES = {
     "new_sales_collection",
     "tb_collection",
     "emi_collection",
+    "other_collection",
 }
 COMMITMENT_CATEGORIES = {
     "new_sales_commit_payment",
+    "new_sales_commit_payment_1",
     "new_sales_commit_payment_2",
     "new_sales_commit_payment_3",
     "total_token_to_booking_commit",
     "total_token_to_booking_commit_2",
     "total_token_to_booking_commit_3",
+    "tb_commit_payment_1",
+    "tb_commit_payment_2",
+    "tb_commit_payment_3",
 }
-SALES_CATEGORIES = {"total_sales", "new_sales"}
+SALES_CATEGORIES = {"total_sales", "new_sales", "new_sales_collection"}
 TB_COLLECTION_CATEGORIES = {"tb_collection"}
 
 

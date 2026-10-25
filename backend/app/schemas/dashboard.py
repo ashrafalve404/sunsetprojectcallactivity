@@ -147,6 +147,8 @@ class DashboardSummary(BaseModel):
     tb_collection_bdt: Decimal = Decimal("0")
     tb_commitments_bdt: Decimal = Decimal("0")
     emi_collection_bdt: Decimal = Decimal("0")
+    new_sales_collection_bdt: Decimal = Decimal("0")
+    sales_commitments_bdt: Decimal = Decimal("0")
 
     total_dialed: int = 0
     total_connected: int = 0

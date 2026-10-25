@@ -35,9 +35,11 @@ import { useAuth } from "@/lib/auth-context";
 import { api, ApiError } from "@/lib/api";
 import { DashboardSummary, User, Report, ReminderItem, ReminderSummary } from "@/types";
 import {
+  cn,
   formatBDT,
   formatMinutes,
   getDhakaToday,
+  getDhakaDateOffset,
   formatReadableDate,
   formatEmployeeId,
 } from "@/lib/utils";
@@ -126,6 +128,23 @@ function DashboardContent() {
     setSelectedEmployeeId("all");
   };
 
+  const handlePresetDate = (preset: "today" | "week" | "month" | "30days") => {
+    const today = getDhakaToday();
+    if (preset === "today") {
+      setStartDate(today);
+      setEndDate(today);
+    } else if (preset === "week") {
+      setStartDate(getDhakaDateOffset(-7));
+      setEndDate(today);
+    } else if (preset === "month") {
+      setStartDate(`${today.slice(0, 7)}-01`);
+      setEndDate(today);
+    } else if (preset === "30days") {
+      setStartDate(getDhakaDateOffset(-30));
+      setEndDate(today);
+    }
+  };
+
   return (
     <DashboardLayout
       title="Dashboard"
@@ -182,31 +201,63 @@ function DashboardContent() {
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
-                {/* Date range pickers */}
-                <div className="flex items-center gap-2 text-sm">
-                  <label htmlFor="start_date" className="text-xs text-slate-700 font-semibold">
-                    From:
-                  </label>
-                  <input
-                    id="start_date"
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="border border-slate-300 rounded px-2.5 py-1 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
-                  />
-                </div>
+                {/* Date range pickers & quick presets */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-1.5 text-sm">
+                    <label htmlFor="start_date" className="text-xs text-slate-700 font-semibold">
+                      From:
+                    </label>
+                    <input
+                      id="start_date"
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="border border-slate-300 rounded px-2.5 py-1 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
+                    />
+                  </div>
 
-                <div className="flex items-center gap-2 text-sm">
-                  <label htmlFor="end_date" className="text-xs text-slate-700 font-semibold">
-                    To:
-                  </label>
-                  <input
-                    id="end_date"
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="border border-slate-300 rounded px-2.5 py-1 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
-                  />
+                  <div className="flex items-center gap-1.5 text-sm">
+                    <label htmlFor="end_date" className="text-xs text-slate-700 font-semibold">
+                      To:
+                    </label>
+                    <input
+                      id="end_date"
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="border border-slate-300 rounded px-2.5 py-1 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
+                    />
+                  </div>
+
+                  {/* Preset Pills */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handlePresetDate("today")}
+                      className={cn(
+                        "px-2 py-1 text-[11px] font-semibold rounded border transition-colors",
+                        startDate === getDhakaToday() && endDate === getDhakaToday()
+                          ? "bg-green-700 text-white border-green-700"
+                          : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                      )}
+                    >
+                      Today
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePresetDate("month")}
+                      className="px-2 py-1 text-[11px] font-semibold rounded border bg-white text-slate-700 border-slate-200 hover:bg-slate-50 transition-colors"
+                    >
+                      This Month
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePresetDate("30days")}
+                      className="px-2 py-1 text-[11px] font-semibold rounded border bg-white text-slate-700 border-slate-200 hover:bg-slate-50 transition-colors"
+                    >
+                      30 Days
+                    </button>
+                  </div>
                 </div>
 
                 {/* Employee Selector (Admin only) */}
@@ -383,7 +434,7 @@ function DashboardContent() {
                       <p className="text-[11px] text-slate-500">Immediate down-payment receipts</p>
                     </div>
                     <span className="text-sm font-bold text-emerald-700">
-                      {formatBDT(summary?.actual_collection_bdt)}
+                      {formatBDT(summary?.new_sales_collection_bdt ?? summary?.total_new_sales ?? 0)}
                     </span>
                   </div>
 
@@ -393,7 +444,7 @@ function DashboardContent() {
                       <p className="text-[11px] text-slate-500">Booking confirmation payments</p>
                     </div>
                     <span className="text-sm font-bold text-emerald-700">
-                      {formatBDT(summary?.tb_collection_bdt)}
+                      {formatBDT(summary?.tb_collection_bdt ?? 0)}
                     </span>
                   </div>
 
@@ -403,21 +454,17 @@ function DashboardContent() {
                       <p className="text-[11px] text-slate-500">Recurring customer installments</p>
                     </div>
                     <span className="text-sm font-bold text-emerald-700">
-                      {formatBDT(summary?.emi_collection_bdt)}
+                      {formatBDT(summary?.emi_collection_bdt ?? 0)}
                     </span>
                   </div>
 
-                  <div className="py-2.5 flex items-center justify-between bg-slate-50 px-2 rounded">
+                  <div className="py-2.5 flex items-center justify-between bg-emerald-50/70 px-2 rounded">
                     <div>
                       <p className="text-xs font-bold text-slate-900">Total Money Collected</p>
                       <p className="text-[10px] text-slate-500">Sum of all actual receipts</p>
                     </div>
                     <span className="text-base font-extrabold text-emerald-700">
-                      {formatBDT(
-                        (summary?.actual_collection_bdt ?? 0) +
-                          (summary?.tb_collection_bdt ?? 0) +
-                          (summary?.emi_collection_bdt ?? 0)
-                      )}
+                      {formatBDT(summary?.actual_collection_bdt ?? 0)}
                     </span>
                   </div>
 
@@ -427,7 +474,7 @@ function DashboardContent() {
                       <p className="text-[11px] text-slate-500">Promise to pay within next days</p>
                     </div>
                     <span className="text-sm font-bold text-green-800">
-                      {formatBDT(summary?.commitments_bdt)}
+                      {formatBDT(summary?.sales_commitments_bdt ?? Math.max(0, (summary?.commitments_bdt ?? 0) - (summary?.tb_commitments_bdt ?? 0)))}
                     </span>
                   </div>
 
@@ -437,7 +484,17 @@ function DashboardContent() {
                       <p className="text-[11px] text-slate-500">Token-to-Booking upcoming commitments</p>
                     </div>
                     <span className="text-sm font-bold text-green-800">
-                      {formatBDT(summary?.tb_commitments_bdt)}
+                      {formatBDT(summary?.tb_commitments_bdt ?? 0)}
+                    </span>
+                  </div>
+
+                  <div className="py-2.5 flex items-center justify-between bg-slate-50 px-2 rounded">
+                    <div>
+                      <p className="text-xs font-bold text-slate-900">Total Commitments</p>
+                      <p className="text-[10px] text-slate-500">Total upcoming promised payments</p>
+                    </div>
+                    <span className="text-base font-extrabold text-green-900">
+                      {formatBDT(summary?.commitments_bdt ?? 0)}
                     </span>
                   </div>
                 </div>

@@ -298,6 +298,9 @@ export interface DashboardSummary {
   tb_collection_bdt: number;
   tb_commitments_bdt: number;
   emi_collection_bdt: number;
+  new_sales_collection_bdt?: number;
+  sales_commitments_bdt?: number;
+  total_new_sales?: number;
   by_category: Record<string, { dialed: number; connected: number; duration_min: number }>;
   by_slot: Record<string, { dialed: number }>;
 }
