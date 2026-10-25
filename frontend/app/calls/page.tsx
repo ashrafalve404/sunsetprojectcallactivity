@@ -1816,8 +1816,8 @@ function DailyCallActivityContent() {
           </Card>
         </div>
 
-        {/* ── Fixed Mobile App Sticky Bottom Bar (Mobile Only) ──────────────── */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-2.5 shadow-lg flex items-center justify-between gap-3">
+        {/* ── Fixed Mobile App Sticky Bottom Bar (Mobile Only - sits above bottom nav) ──────────────── */}
+        <div className="md:hidden fixed bottom-14 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-2.5 shadow-lg flex items-center justify-between gap-3">
           <div className="flex flex-col text-xs leading-tight">
             <div className="font-bold text-slate-900 flex items-center gap-1.5">
               <span>Dialed: <strong className="text-green-800">{totals.totalDialed}</strong></span>

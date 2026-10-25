@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
+import { BottomNav } from "./bottom-nav";
 import { Loader2, ShieldAlert } from "lucide-react";
 
 interface DashboardLayoutProps {
@@ -78,7 +79,7 @@ export function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
-      {/* Sidebar Navigation */}
+      {/* Sidebar Navigation (Desktop & Mobile Drawer) */}
       <Sidebar isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
 
       {/* Main Content Area */}
@@ -88,10 +89,13 @@ export function DashboardLayout({
           subtitle={subtitle}
           onOpenMobileMenu={() => setMobileMenuOpen(true)}
         />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-20 md:pb-8">
           {children}
         </main>
       </div>
+
+      {/* Fixed Mobile Bottom Navigation Bar */}
+      <BottomNav />
     </div>
   );
 }

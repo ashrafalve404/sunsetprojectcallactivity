@@ -1206,9 +1206,9 @@ function MeetingTimeDailyContent() {
           </div>
         </Modal>
 
-        {/* ── Mobile Sticky Bottom Action Bar ──────────────────────────────── */}
+        {/* ── Mobile Sticky Bottom Action Bar (Sits above bottom nav) ──────────────── */}
         {!isLocked && (
-          <div className="sm:hidden fixed bottom-0 left-0 right-0 p-3 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-lg z-30 flex items-center justify-between gap-2">
+          <div className="sm:hidden fixed bottom-14 left-0 right-0 p-3 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-lg z-30 flex items-center justify-between gap-2">
             {/* Mobile Auto-Save Status */}
             <div className="shrink-0">
               {autoSaveStatus === "saving" && (
