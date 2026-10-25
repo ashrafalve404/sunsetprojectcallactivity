@@ -51,6 +51,7 @@ function DashboardContent() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | "all">("all");
+  const [datePreset, setDatePreset] = useState<"today" | "month" | "30days" | "custom">("today");
 
   useEffect(() => {
     const today = getDhakaToday();
@@ -126,15 +127,14 @@ function DashboardContent() {
     setStartDate(today);
     setEndDate(today);
     setSelectedEmployeeId("all");
+    setDatePreset("today");
   };
 
-  const handlePresetDate = (preset: "today" | "week" | "month" | "30days") => {
+  const handlePresetDate = (preset: "today" | "month" | "30days") => {
+    setDatePreset(preset);
     const today = getDhakaToday();
     if (preset === "today") {
       setStartDate(today);
-      setEndDate(today);
-    } else if (preset === "week") {
-      setStartDate(getDhakaDateOffset(-7));
       setEndDate(today);
     } else if (preset === "month") {
       setStartDate(`${today.slice(0, 7)}-01`);
@@ -211,7 +211,10 @@ function DashboardContent() {
                       id="start_date"
                       type="date"
                       value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
+                      onChange={(e) => {
+                        setStartDate(e.target.value);
+                        setDatePreset("custom");
+                      }}
                       className="border border-slate-300 rounded px-2.5 py-1 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
                     />
                   </div>
@@ -224,39 +227,38 @@ function DashboardContent() {
                       id="end_date"
                       type="date"
                       value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
+                      onChange={(e) => {
+                        setEndDate(e.target.value);
+                        setDatePreset("custom");
+                      }}
                       className="border border-slate-300 rounded px-2.5 py-1 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
                     />
                   </div>
 
                   {/* Preset Pills */}
                   <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => handlePresetDate("today")}
-                      className={cn(
-                        "px-2 py-1 text-[11px] font-semibold rounded border transition-colors",
-                        startDate === getDhakaToday() && endDate === getDhakaToday()
-                          ? "bg-green-700 text-white border-green-700"
-                          : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-                      )}
-                    >
-                      Today
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handlePresetDate("month")}
-                      className="px-2 py-1 text-[11px] font-semibold rounded border bg-white text-slate-700 border-slate-200 hover:bg-slate-50 transition-colors"
-                    >
-                      This Month
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handlePresetDate("30days")}
-                      className="px-2 py-1 text-[11px] font-semibold rounded border bg-white text-slate-700 border-slate-200 hover:bg-slate-50 transition-colors"
-                    >
-                      30 Days
-                    </button>
+                    {[
+                      { id: "today", label: "Today" },
+                      { id: "month", label: "This Month" },
+                      { id: "30days", label: "30 Days" },
+                    ].map((p) => {
+                      const active = datePreset === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => handlePresetDate(p.id as "today" | "month" | "30days")}
+                          className={cn(
+                            "px-2.5 py-1 text-[11px] font-semibold rounded border transition-colors shadow-2xs cursor-pointer",
+                            active
+                              ? "bg-green-700 text-white border-green-700 font-bold"
+                              : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+                          )}
+                        >
+                          {p.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
