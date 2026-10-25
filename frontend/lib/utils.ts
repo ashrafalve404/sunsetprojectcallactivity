@@ -13,11 +13,12 @@ export function formatBDT(amount: number | null | undefined): string {
   if (amount === null || amount === undefined || isNaN(amount)) {
     return "৳ 0";
   }
+  const hasDecimals = Math.abs(amount) < 100 && amount % 1 !== 0;
   return new Intl.NumberFormat("en-BD", {
     style: "currency",
     currency: "BDT",
     minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: hasDecimals ? 2 : 0,
   })
     .format(amount)
     .replace("BDT", "৳");
