@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   FileSpreadsheet,
   Download,
@@ -91,15 +92,74 @@ function getDatePresetRange(preset: Exclude<DatePreset, "custom">) {
 
 function ReportsContent() {
   const { isAdmin } = useAuth();
+  const searchParams = useSearchParams();
+
+  // Read URL query params
+  const paramEmpId = searchParams.get("employee_id");
+  const paramStartDate = searchParams.get("start_date");
+  const paramEndDate = searchParams.get("end_date");
+  const paramStatus = searchParams.get("status");
+
+  // Determine initial date preset and range based on URL params
+  const initialPreset: DatePreset = useMemo(() => {
+    if (paramStartDate && paramEndDate) {
+      const today = getDhakaToday();
+      if (paramStartDate === today && paramEndDate === today) return "today";
+      if (paramStartDate === getDatePresetRange("30days").start && paramEndDate === today) return "30days";
+      return "custom";
+    }
+    return "30days";
+  }, [paramStartDate, paramEndDate]);
 
   // Filters
-  const [datePreset, setDatePreset] = useState<DatePreset>("30days");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "submitted" | "draft">("all");
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | "all">("all");
+  const [datePreset, setDatePreset] = useState<DatePreset>(initialPreset);
+  const [startDate, setStartDate] = useState<string>(() => {
+    if (paramStartDate) return paramStartDate;
+    return getDatePresetRange("30days").start;
+  });
+  const [endDate, setEndDate] = useState<string>(() => {
+    if (paramEndDate) return paramEndDate;
+    return getDatePresetRange("30days").end;
+  });
+  const [statusFilter, setStatusFilter] = useState<"all" | "submitted" | "draft">(() => {
+    if (paramStatus === "submitted" || paramStatus === "draft") return paramStatus;
+    return "all";
+  });
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | "all">(() => {
+    if (paramEmpId && !isNaN(Number(paramEmpId))) {
+      return Number(paramEmpId);
+    }
+    return "all";
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [downloadingReportId, setDownloadingReportId] = useState<number | null>(null);
+
+  // Sync state if URL search parameters change while on the page
+  useEffect(() => {
+    const urlEmpId = searchParams.get("employee_id");
+    const urlStart = searchParams.get("start_date");
+    const urlEnd = searchParams.get("end_date");
+    const urlStatus = searchParams.get("status");
+
+    if (urlEmpId) {
+      setSelectedEmployeeId(urlEmpId === "all" ? "all" : Number(urlEmpId));
+    }
+    if (urlStart && urlEnd) {
+      setStartDate(urlStart);
+      setEndDate(urlEnd);
+      const today = getDhakaToday();
+      if (urlStart === today && urlEnd === today) {
+        setDatePreset("today");
+      } else if (urlStart === getDatePresetRange("30days").start && urlEnd === today) {
+        setDatePreset("30days");
+      } else {
+        setDatePreset("custom");
+      }
+    }
+    if (urlStatus === "submitted" || urlStatus === "draft" || urlStatus === "all") {
+      setStatusFilter(urlStatus);
+    }
+  }, [searchParams]);
 
   const applyDatePreset = (preset: Exclude<DatePreset, "custom">) => {
     setDatePreset(preset);
@@ -157,12 +217,6 @@ function ReportsContent() {
       setDownloadingReportId(null);
     }
   };
-
-  useEffect(() => {
-    const { start, end } = getDatePresetRange("30days");
-    setStartDate(start);
-    setEndDate(end);
-  }, []);
 
   // State
   const [reports, setReports] = useState<DetailedReportRow[]>([]);
@@ -551,6 +605,12 @@ function ReportsContent() {
                       className="border border-slate-300 rounded px-2.5 py-1 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white max-w-[260px] truncate"
                     >
                       <option value="all">All Employees</option>
+                      {selectedEmployeeId !== "all" &&
+                        !employees.some((e) => e.id === Number(selectedEmployeeId)) && (
+                          <option value={selectedEmployeeId}>
+                            [{formatEmployeeId(selectedEmployeeId)}] (Loading...)
+                          </option>
+                        )}
                       {employees.map((emp) => (
                         <option key={emp.id} value={emp.id}>
                           [{formatEmployeeId(emp.id)}] {emp.full_name} (@{emp.username})
