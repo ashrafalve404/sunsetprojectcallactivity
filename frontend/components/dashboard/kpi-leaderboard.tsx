@@ -485,8 +485,8 @@ export function KPILeaderboard({
           </div>
         </div>
 
-        {/* ── Detailed Target vs Actual Leaderboard Table ─────────────── */}
-        <div className="overflow-x-auto border border-slate-200 rounded-lg">
+        {/* ── Detailed Target vs Actual Leaderboard Table (Desktop) ──── */}
+        <div className="hidden md:block overflow-x-auto border border-slate-200 rounded-lg">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-slate-700 text-[11px] font-bold select-none">
@@ -710,6 +710,192 @@ export function KPILeaderboard({
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* ── Mobile Native App Ranking Cards (Mobile Screens) ──────── */}
+        <div className="block md:hidden space-y-3">
+          {loading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="p-3.5 bg-white border border-slate-200 rounded-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-7 w-7 rounded-full" />
+                    <div>
+                      <Skeleton className="h-4 w-28 mb-1" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-5 w-24 rounded-full" />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Skeleton className="h-16 rounded-lg" />
+                  <Skeleton className="h-16 rounded-lg" />
+                  <Skeleton className="h-16 rounded-lg" />
+                  <Skeleton className="h-16 rounded-lg" />
+                </div>
+                <Skeleton className="h-8 w-full rounded-lg" />
+              </div>
+            ))
+          ) : error ? (
+            <div className="p-4 rounded-xl border border-rose-200 bg-rose-50 text-center text-xs text-rose-600 font-medium">
+              {error}
+            </div>
+          ) : sortedRankings.length === 0 ? (
+            <div className="p-8 text-center text-xs text-slate-400 bg-slate-50 border border-slate-200 rounded-xl">
+              No employee performance data found for this period.
+            </div>
+          ) : (
+            sortedRankings.map((emp, index) => (
+              <div
+                key={emp.employee_id}
+                className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-2xs space-y-3 hover:border-slate-300 transition-colors"
+              >
+                {/* Header: Rank, Employee Name, Pace Badge */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="shrink-0">{getRankBadge(index + 1)}</div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-sm font-bold text-slate-900 truncate">
+                          {emp.employee_name}
+                        </span>
+                        <span className="font-mono text-[9px] font-bold bg-slate-100 text-slate-700 border border-slate-200 px-1.5 py-0.5 rounded shadow-2xs">
+                          {formatEmployeeId(emp.employee_id)}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 font-mono">@{emp.username}</p>
+                    </div>
+                  </div>
+
+                  <div className="shrink-0">
+                    {getStatusBadge(emp.status, emp.overall_score_pct)}
+                  </div>
+                </div>
+
+                {/* 2x2 Metric Grid */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {/* Dialed */}
+                  <div className="p-2.5 rounded-lg bg-blue-50/50 border border-blue-100 flex flex-col justify-between">
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                      <span className="text-[10px] font-bold text-blue-900 flex items-center gap-1">
+                        <PhoneCall className="w-3 h-3 text-blue-600 shrink-0" />
+                        Dialed
+                      </span>
+                      <span className="text-[10px] font-extrabold text-blue-700 bg-blue-100/70 px-1.5 py-0.2 rounded-full">
+                        {emp.dialed_pct}%
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900">
+                        {emp.dialed_calls}{" "}
+                        <span className="text-[10px] text-slate-400 font-normal">/ {emp.dialed_target}</span>
+                      </div>
+                      {renderProgressBar(emp.dialed_pct)}
+                    </div>
+                  </div>
+
+                  {/* Connected */}
+                  <div className="p-2.5 rounded-lg bg-emerald-50/50 border border-emerald-100 flex flex-col justify-between">
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                      <span className="text-[10px] font-bold text-emerald-900 flex items-center gap-1">
+                        <PhoneForwarded className="w-3 h-3 text-emerald-600 shrink-0" />
+                        Connected
+                      </span>
+                      <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.2 rounded-full">
+                        {emp.connected_pct}%
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900">
+                        {emp.connected_calls}{" "}
+                        <span className="text-[10px] text-slate-400 font-normal">/ {emp.connected_target}</span>
+                      </div>
+                      {renderProgressBar(emp.connected_pct)}
+                    </div>
+                  </div>
+
+                  {/* Visits */}
+                  <div className="p-2.5 rounded-lg bg-purple-50/50 border border-purple-100 flex flex-col justify-between">
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                      <span className="text-[10px] font-bold text-purple-900 flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-purple-600 shrink-0" />
+                        Visits
+                      </span>
+                      <span className="text-[10px] font-extrabold text-purple-700 bg-purple-100/70 px-1.5 py-0.2 rounded-full">
+                        {emp.outdoor_pct}%
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900">
+                        {emp.outdoor_visits}{" "}
+                        <span className="text-[10px] text-slate-400 font-normal">/ {emp.outdoor_target}</span>
+                      </div>
+                      {renderProgressBar(emp.outdoor_pct)}
+                    </div>
+                  </div>
+
+                  {/* Collections */}
+                  <div className="p-2.5 rounded-lg bg-amber-50/50 border border-amber-100 flex flex-col justify-between">
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                      <span className="text-[10px] font-bold text-amber-900 flex items-center gap-1">
+                        <Banknote className="w-3 h-3 text-amber-600 shrink-0" />
+                        Collections
+                      </span>
+                      <span className="text-[10px] font-extrabold text-amber-700 bg-amber-100/70 px-1.5 py-0.2 rounded-full">
+                        {emp.collection_pct}%
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 truncate">
+                        {formatBDT(emp.actual_collections)}
+                      </div>
+                      {renderProgressBar(emp.collection_pct)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Target Breakdown & Carry-Forward Deficit */}
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80 text-[11px] space-y-1">
+                  <div className="flex items-center justify-between flex-wrap gap-1">
+                    <span className="text-slate-500 font-medium">Period Target:</span>
+                    <span className="font-bold text-slate-800">
+                      {formatBDT(emp.collection_target)}
+                    </span>
+                  </div>
+
+                  {emp.carry_forward_deficit != null && emp.carry_forward_deficit > 0 && (
+                    <div className="flex items-center justify-between flex-wrap gap-1 text-[10px]">
+                      <span className="text-amber-800 font-medium">Unmet Shortfall:</span>
+                      <span
+                        className="bg-amber-100 text-amber-900 font-bold px-1.5 py-0.5 rounded border border-amber-300"
+                        title={`Base quota: ${formatBDT(emp.base_collection_target || 0)} + Shortfall: ${formatBDT(emp.carry_forward_deficit)}`}
+                      >
+                        +{formatBDT(emp.carry_forward_deficit)} Carry-Forward
+                      </span>
+                    </div>
+                  )}
+
+                  {emp.monthly_collection_target != null && emp.monthly_collection_target > 0 && (
+                    <div className="flex items-center justify-between flex-wrap gap-1 text-slate-500 pt-0.5 border-t border-slate-200/60 text-[10px]">
+                      <span>Monthly Target:</span>
+                      <span className="font-semibold text-slate-700">
+                        {formatBDT(emp.monthly_collection_target)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Link to Reports */}
+                <Link
+                  href={`/reports?employee_id=${emp.employee_id}&start_date=${startDate}&end_date=${endDate}`}
+                  className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 font-bold text-xs border border-slate-200 transition-colors"
+                >
+                  <span>View Reports</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            ))
+          )}
         </div>
       </CardContent>
     </Card>
