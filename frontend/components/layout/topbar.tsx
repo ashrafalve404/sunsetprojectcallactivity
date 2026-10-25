@@ -34,7 +34,7 @@ export function Topbar({ title, subtitle, onOpenMobileMenu }: TopbarProps) {
           </button>
         )}
         <div>
-          <h1 className="text-lg font-bold text-slate-900 tracking-tight leading-tight">
+          <h1 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-tight">
             {title}
           </h1>
           {subtitle && (

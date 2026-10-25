@@ -120,7 +120,7 @@ export function CardTitle({
 }: React.HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h3
-      className={cn("text-base font-semibold text-slate-900 tracking-tight", className)}
+      className={cn("text-sm sm:text-base font-semibold text-slate-900 tracking-tight", className)}
       {...props}
     >
       {children}
