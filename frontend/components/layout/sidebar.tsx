@@ -134,7 +134,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
 
       {/* User Footer Summary */}
       {user && (
-        <div className="p-3 border-t border-slate-200 bg-slate-50">
+        <div className="p-3 border-t border-slate-200 bg-slate-50 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <div className="flex items-center gap-2.5 px-2 py-1.5">
             <div className="w-8 h-8 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center text-slate-700 font-bold text-xs uppercase shrink-0">
               {user.username.slice(0, 2)}
@@ -167,12 +167,12 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
 
       {/* Mobile Modal Drawer */}
       {isOpen && (
-        <div className="fixed inset-0 z-40 md:hidden">
+        <div className="fixed inset-0 z-50 md:hidden">
           <div
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs"
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs"
             onClick={onClose}
           />
-          <div className="fixed inset-y-0 left-0 w-72 z-50 animate-in slide-in-from-left duration-200">
+          <div className="fixed inset-y-0 left-0 w-72 z-50 animate-in slide-in-from-left duration-200 shadow-2xl">
             {sidebarContent}
           </div>
         </div>
