@@ -12,9 +12,10 @@ FORMULAS:
 """
 from __future__ import annotations
 
-from datetime import date
+import calendar
+from datetime import date, timedelta
 from decimal import Decimal, ROUND_HALF_UP
-from typing import Optional
+from typing import Optional, Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,6 +38,8 @@ from app.schemas.dashboard import (
     EmployeeLeaderboardItem,
     KPIChampion,
     PerformanceLeaderboardResponse,
+    DailyTrendPoint,
+    FinancialTrendResponse,
 )
 from app.services.sales_service import SalesService
 
@@ -591,6 +594,189 @@ class DashboardService:
             team_overall_score_pct=avg_team_score,
             champions=champions,
             rankings=rankings,
+        )
+
+    async def get_financial_trend(
+        self,
+        date_from: date,
+        date_to: date,
+        employee_id: Optional[int] = None,
+    ) -> FinancialTrendResponse:
+        from app.models.user import User, UserRole
+        from sqlalchemy.orm import selectinload
+
+        # 1. Monthly target & month-to-date calculation
+        month_start = date(date_to.year, date_to.month, 1)
+        _, days_in_month = calendar.monthrange(date_to.year, date_to.month)
+        days_elapsed = max(1, date_to.day)
+        days_remaining = max(0, days_in_month - days_elapsed)
+
+        # Calculate monthly target
+        if employee_id is not None:
+            t_info = await self.get_target_with_carry_forward(date_to, employee_id)
+            monthly_target = float(
+                t_info.get("monthly_sales_target")
+                or t_info.get("monthly_tb_target")
+                or (float(t_info.get("sales_base") or t_info.get("tb_base") or 500000) * 30)
+            )
+        else:
+            emp_stmt = select(User).where(User.is_active.is_(True), User.role == UserRole.EMPLOYEE)
+            emp_res = await self.db.execute(emp_stmt)
+            active_emps = emp_res.scalars().all()
+            monthly_target = 0.0
+            for emp in active_emps:
+                t_info = await self.get_target_with_carry_forward(date_to, emp.id)
+                emp_mo = float(
+                    t_info.get("monthly_sales_target")
+                    or t_info.get("monthly_tb_target")
+                    or (float(t_info.get("sales_base") or t_info.get("tb_base") or 500000) * 30)
+                )
+                monthly_target += emp_mo
+            if monthly_target <= 0:
+                monthly_target = 15000000.0 * max(1, len(active_emps))
+
+        # 2. Month-to-date collected
+        mtd_stmt = (
+            select(DailyActivityReport)
+            .options(selectinload(DailyActivityReport.sales_collection_entries))
+            .where(
+                DailyActivityReport.report_date >= month_start,
+                DailyActivityReport.report_date <= date_to,
+            )
+        )
+        if employee_id is not None:
+            mtd_stmt = mtd_stmt.where(DailyActivityReport.employee_id == employee_id)
+
+        mtd_res = await self.db.execute(mtd_stmt)
+        mtd_reports = mtd_res.scalars().all()
+        month_to_date_collected = 0.0
+        for rep in mtd_reports:
+            fin = SalesService.calc_totals(rep.sales_collection_entries)
+            month_to_date_collected += float(fin["total_actual_collection"])
+
+        # Pace calculations
+        expected_pace_pct = round((days_elapsed / days_in_month * 100), 1)
+        monthly_pace_pct = (
+            round((month_to_date_collected / monthly_target * 100), 1)
+            if monthly_target > 0
+            else 0.0
+        )
+        daily_current_run_rate = month_to_date_collected / days_elapsed
+        daily_run_rate_needed = (
+            max(0.0, (monthly_target - month_to_date_collected) / max(1, days_remaining))
+            if days_remaining > 0
+            else 0.0
+        )
+        projected_month_end = month_to_date_collected + (daily_current_run_rate * days_remaining)
+        projected_achievement_pct = (
+            round((projected_month_end / monthly_target * 100), 1)
+            if monthly_target > 0
+            else 0.0
+        )
+
+        if monthly_pace_pct >= expected_pace_pct * 1.05:
+            pace_status = "ahead_of_pace"
+        elif monthly_pace_pct >= expected_pace_pct * 0.85:
+            pace_status = "on_pace"
+        else:
+            pace_status = "behind_pace"
+
+        # 3. Period day-by-day trend points (date_from to date_to)
+        period_stmt = (
+            select(DailyActivityReport)
+            .options(selectinload(DailyActivityReport.sales_collection_entries))
+            .where(
+                DailyActivityReport.report_date >= date_from,
+                DailyActivityReport.report_date <= date_to,
+            )
+        )
+        if employee_id is not None:
+            period_stmt = period_stmt.where(DailyActivityReport.employee_id == employee_id)
+
+        p_res = await self.db.execute(period_stmt)
+        period_reports = p_res.scalars().all()
+
+        # Group by report_date
+        by_date_map: dict[date, dict[str, float]] = {}
+        for rep in period_reports:
+            r_date = rep.report_date
+            if r_date not in by_date_map:
+                by_date_map[r_date] = {
+                    "actual": 0.0,
+                    "new_sales": 0.0,
+                    "emi": 0.0,
+                    "commitments": 0.0,
+                }
+            fin = SalesService.calc_totals(rep.sales_collection_entries)
+            by_date_map[r_date]["actual"] += float(fin["total_actual_collection"])
+            by_date_map[r_date]["new_sales"] += float(fin["total_new_sales"])
+            by_date_map[r_date]["emi"] += float(fin["total_emi_collection"])
+            by_date_map[r_date]["commitments"] += float(
+                fin["total_sales_commitments"] + fin["total_tb_commitments"]
+            )
+
+        # Generate sequence of dates from date_from to date_to
+        total_days = (date_to - date_from).days + 1
+        trend_points: list[DailyTrendPoint] = []
+        cum_actual = 0.0
+        cum_commitments = 0.0
+        total_period_actual = 0.0
+        total_period_commitments = 0.0
+        total_period_new_sales = 0.0
+        total_period_emi = 0.0
+
+        for i in range(total_days):
+            curr_d = date_from + timedelta(days=i)
+            stats = by_date_map.get(
+                curr_d,
+                {"actual": 0.0, "new_sales": 0.0, "emi": 0.0, "commitments": 0.0},
+            )
+            act = stats["actual"]
+            ns = stats["new_sales"]
+            emi = stats["emi"]
+            comm = stats["commitments"]
+
+            cum_actual += act
+            cum_commitments += comm
+
+            total_period_actual += act
+            total_period_commitments += comm
+            total_period_new_sales += ns
+            total_period_emi += emi
+
+            trend_points.append(
+                DailyTrendPoint(
+                    date=curr_d.isoformat(),
+                    label=curr_d.strftime("%b %d"),
+                    actual_collection_bdt=act,
+                    new_sales_collection_bdt=ns,
+                    emi_collection_bdt=emi,
+                    commitments_bdt=comm,
+                    cumulative_collection_bdt=cum_actual,
+                    cumulative_commitments_bdt=cum_commitments,
+                )
+            )
+
+        return FinancialTrendResponse(
+            period_start=date_from,
+            period_end=date_to,
+            total_actual_collection_bdt=total_period_actual,
+            total_commitments_bdt=total_period_commitments,
+            total_new_sales_collection_bdt=total_period_new_sales,
+            total_emi_collection_bdt=total_period_emi,
+            monthly_target_bdt=monthly_target,
+            month_to_date_collected_bdt=month_to_date_collected,
+            monthly_pace_pct=monthly_pace_pct,
+            expected_pace_pct=expected_pace_pct,
+            pace_status=pace_status,
+            days_in_month=days_in_month,
+            days_elapsed=days_elapsed,
+            days_remaining=days_remaining,
+            daily_current_run_rate_bdt=daily_current_run_rate,
+            daily_run_rate_needed_bdt=daily_run_rate_needed,
+            projected_month_end_bdt=projected_month_end,
+            projected_achievement_pct=projected_achievement_pct,
+            trend=trend_points,
         )
 
 

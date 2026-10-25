@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { KPILeaderboard } from "@/components/dashboard/kpi-leaderboard";
+import { FinancialCharts } from "@/components/dashboard/financial-charts";
 import {
   Card,
   CardHeader,
@@ -409,6 +410,13 @@ function DashboardContent() {
             </>
           )}
         </div>
+
+        {/* ── Visual Analytics: Monthly Pace & Financial Trend ─────────── */}
+        <FinancialCharts
+          startDate={startDate}
+          endDate={endDate}
+          employeeId={selectedEmployeeId}
+        />
 
         {/* ── KPI Targets Achievement & Team Leaderboard ───────────────────── */}
         <KPILeaderboard

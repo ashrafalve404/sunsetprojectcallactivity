@@ -209,3 +209,41 @@ class PerformanceLeaderboardResponse(BaseModel):
     team_overall_score_pct: float
     champions: list[KPIChampion]
     rankings: list[EmployeeLeaderboardItem]
+
+
+class DailyTrendPoint(BaseModel):
+    date: str
+    label: str
+    actual_collection_bdt: float = 0.0
+    new_sales_collection_bdt: float = 0.0
+    emi_collection_bdt: float = 0.0
+    commitments_bdt: float = 0.0
+    cumulative_collection_bdt: float = 0.0
+    cumulative_commitments_bdt: float = 0.0
+
+
+class FinancialTrendResponse(BaseModel):
+    period_start: date
+    period_end: date
+    total_actual_collection_bdt: float = 0.0
+    total_commitments_bdt: float = 0.0
+    total_new_sales_collection_bdt: float = 0.0
+    total_emi_collection_bdt: float = 0.0
+
+    # Monthly Target & Pace Forecast
+    monthly_target_bdt: float = 0.0
+    month_to_date_collected_bdt: float = 0.0
+    monthly_pace_pct: float = 0.0
+    expected_pace_pct: float = 0.0
+    pace_status: str = "on_pace"  # "ahead_of_pace" | "on_pace" | "behind_pace"
+    days_in_month: int = 30
+    days_elapsed: int = 1
+    days_remaining: int = 29
+    daily_current_run_rate_bdt: float = 0.0
+    daily_run_rate_needed_bdt: float = 0.0
+    projected_month_end_bdt: float = 0.0
+    projected_achievement_pct: float = 0.0
+
+    # Day-by-day trend points
+    trend: list[DailyTrendPoint] = []
+

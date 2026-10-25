@@ -431,4 +431,38 @@ export interface Notice {
   updated_at: string;
 }
 
+export interface DailyTrendPoint {
+  date: string;
+  label: string;
+  actual_collection_bdt: number;
+  new_sales_collection_bdt: number;
+  emi_collection_bdt: number;
+  commitments_bdt: number;
+  cumulative_collection_bdt: number;
+  cumulative_commitments_bdt: number;
+}
+
+export interface FinancialTrendResponse {
+  period_start: string;
+  period_end: string;
+  total_actual_collection_bdt: number;
+  total_commitments_bdt: number;
+  total_new_sales_collection_bdt: number;
+  total_emi_collection_bdt: number;
+  monthly_target_bdt: number;
+  month_to_date_collected_bdt: number;
+  monthly_pace_pct: number;
+  expected_pace_pct: number;
+  pace_status: "ahead_of_pace" | "on_pace" | "behind_pace";
+  days_in_month: number;
+  days_elapsed: number;
+  days_remaining: number;
+  daily_current_run_rate_bdt: number;
+  daily_run_rate_needed_bdt: number;
+  projected_month_end_bdt: number;
+  projected_achievement_pct: number;
+  trend: DailyTrendPoint[];
+}
+
+
 

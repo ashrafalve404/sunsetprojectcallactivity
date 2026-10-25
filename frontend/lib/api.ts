@@ -19,6 +19,7 @@ import {
   User,
   RemindersResponse,
   PerformanceLeaderboardResponse,
+  FinancialTrendResponse,
   Notice,
 } from "@/types";
 
@@ -518,6 +519,26 @@ export const api = {
       const q = search.toString();
       return request<PerformanceLeaderboardResponse>(
         `/dashboard/performance-leaderboard${q ? `?${q}` : ""}`
+      );
+    },
+    getFinancialTrend: async (params?: {
+      start_date?: string;
+      end_date?: string;
+      employee_id?: number;
+    }): Promise<FinancialTrendResponse> => {
+      const search = new URLSearchParams();
+      if (params?.start_date) {
+        search.set("start_date", params.start_date);
+        search.set("date_from", params.start_date);
+      }
+      if (params?.end_date) {
+        search.set("end_date", params.end_date);
+        search.set("date_to", params.end_date);
+      }
+      if (params?.employee_id) search.set("employee_id", String(params.employee_id));
+      const q = search.toString();
+      return request<FinancialTrendResponse>(
+        `/dashboard/financial-trend${q ? `?${q}` : ""}`
       );
     },
   },

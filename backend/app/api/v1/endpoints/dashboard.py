@@ -10,7 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.permissions import get_current_user, require_admin
 from app.db.session import get_db
 from app.models.user import User, UserRole
-from app.schemas.dashboard import DashboardSummary, PerformanceLeaderboardResponse
+from app.schemas.dashboard import (
+    DashboardSummary,
+    PerformanceLeaderboardResponse,
+    FinancialTrendResponse,
+)
 from app.services.dashboard_service import DashboardService
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
@@ -134,4 +138,25 @@ async def performance_leaderboard(
         target_emp_id = current_user.id
     svc = DashboardService(db)
     return await svc.get_performance_leaderboard(df, dt, target_emp_id)
+
+
+@router.get("/financial-trend", response_model=FinancialTrendResponse)
+async def financial_trend(
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
+    start_date: Optional[date] = Query(None),
+    end_date: Optional[date] = Query(None),
+    employee_id: Optional[int] = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Day-by-day financial collections vs commitments and monthly pace projection."""
+    df = date_from or start_date or _default_from()
+    dt = date_to or end_date or date.today()
+    target_emp_id = employee_id
+    if current_user.role not in (UserRole.ADMIN, UserRole.SUB_ADMIN):
+        target_emp_id = current_user.id
+    svc = DashboardService(db)
+    return await svc.get_financial_trend(df, dt, target_emp_id)
+
 
