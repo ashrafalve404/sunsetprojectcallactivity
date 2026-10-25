@@ -65,6 +65,9 @@ class TargetAchievement(BaseModel):
     actual: Optional[Decimal] = None
     target: Optional[Decimal] = None
     achievement_pct: Optional[Decimal] = None
+    base_target: Optional[Decimal] = None
+    carry_forward: Optional[Decimal] = None
+    monthly_target: Optional[Decimal] = None
 
 
 class ReportSummary(BaseModel):
@@ -169,6 +172,10 @@ class EmployeeLeaderboardItem(BaseModel):
     collection_pct: float
     overall_score_pct: float
     status: str  # "achieved" | "on_track" | "needs_attention" | "behind_pace"
+    base_collection_target: Optional[float] = None
+    carry_forward_deficit: Optional[float] = None
+    monthly_collection_target: Optional[float] = None
+    month_to_date_collected: Optional[float] = None
 
 
 class KPIChampion(BaseModel):

@@ -318,6 +318,12 @@ export interface DailyTarget {
   sales_target?: number | null;
   collection_amount_target: number | null;
   tb_target?: number | null;
+  monthly_sales_target?: number | null;
+  monthly_collection_target?: number | null;
+  monthly_dialed_calls_target?: number | null;
+  monthly_connected_calls_target?: number | null;
+  monthly_outdoor_visits_target?: number | null;
+  monthly_meeting_hours_target?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -378,6 +384,10 @@ export interface EmployeeLeaderboardItem {
   collection_pct: number;
   overall_score_pct: number;
   status: "achieved" | "on_track" | "needs_attention" | "behind_pace";
+  base_collection_target?: number;
+  carry_forward_deficit?: number;
+  monthly_collection_target?: number;
+  month_to_date_collected?: number;
 }
 
 export interface KPIChampion {

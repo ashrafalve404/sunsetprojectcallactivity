@@ -326,9 +326,22 @@ export function KPILeaderboard({
                   {personal.collection_pct}%
                 </span>
               </div>
-              <div className="text-[10px] text-slate-400 truncate">
-                Target: {formatBDT(personal.collection_target)}
+              <div className="text-[10px] text-slate-500 truncate flex items-center flex-wrap gap-1">
+                <span>Target: {formatBDT(personal.collection_target)}</span>
+                {personal.carry_forward_deficit != null && personal.carry_forward_deficit > 0 && (
+                  <span
+                    className="text-[9px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded"
+                    title={`Base daily quota: ${formatBDT(personal.base_collection_target || 0)} + Unmet shortfall carry-forward: ${formatBDT(personal.carry_forward_deficit)}`}
+                  >
+                    +{formatBDT(personal.carry_forward_deficit)} CF
+                  </span>
+                )}
               </div>
+              {personal.monthly_collection_target != null && personal.monthly_collection_target > 0 && (
+                <div className="text-[10px] text-slate-500 font-medium">
+                  Monthly Target: {formatBDT(personal.monthly_collection_target)}
+                </div>
+              )}
               {renderProgressBar(personal.collection_pct)}
               <p className="text-[11px] text-slate-500 pt-1 font-medium truncate">
                 {personal.actual_collections >= personal.collection_target
@@ -658,9 +671,22 @@ export function KPILeaderboard({
                           {emp.collection_pct}%
                         </span>
                       </div>
-                      <div className="text-[10px] text-slate-400 truncate">
-                        Target: {formatBDT(emp.collection_target)}
+                      <div className="text-[10px] text-slate-500 truncate flex items-center flex-wrap gap-1">
+                        <span>Target: {formatBDT(emp.collection_target)}</span>
+                        {emp.carry_forward_deficit != null && emp.carry_forward_deficit > 0 && (
+                          <span
+                            className="text-[9px] bg-amber-100 text-amber-800 font-bold px-1 py-0.2 rounded"
+                            title={`Base quota: ${formatBDT(emp.base_collection_target || 0)} + Unmet deficit carry-forward: ${formatBDT(emp.carry_forward_deficit)}`}
+                          >
+                            +{formatBDT(emp.carry_forward_deficit)} CF
+                          </span>
+                        )}
                       </div>
+                      {emp.monthly_collection_target != null && emp.monthly_collection_target > 0 && (
+                        <div className="text-[9px] text-slate-400 truncate">
+                          Mo. Target: {formatBDT(emp.monthly_collection_target)}
+                        </div>
+                      )}
                       {renderProgressBar(emp.collection_pct)}
                     </td>
 

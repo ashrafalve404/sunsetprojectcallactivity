@@ -9,6 +9,7 @@ import {
   Trash2,
   Users,
   Trophy,
+  CheckCircle2,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { KPILeaderboard } from "@/components/dashboard/kpi-leaderboard";
@@ -47,6 +48,7 @@ function SettingsContent() {
   const [meetingTarget, setMeetingTarget] = useState<string>("180");
   const [salesTarget, setSalesTarget] = useState<string>("500000");
   const [collectionTarget, setCollectionTarget] = useState<string>("300000");
+  const [targetInputMode, setTargetInputMode] = useState<"daily" | "monthly">("daily");
 
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -98,6 +100,7 @@ function SettingsContent() {
     setMeetingTarget("180");
     setSalesTarget("500000");
     setCollectionTarget("300000");
+    setTargetInputMode("daily");
     setFormError(null);
     setIsTargetModalOpen(true);
   };
@@ -125,6 +128,7 @@ function SettingsContent() {
 
     const collVal = t.collection_amount_target ?? t.tb_target;
     setCollectionTarget(collVal ? String(collVal) : "");
+    setTargetInputMode("daily");
     setFormError(null);
     setIsTargetModalOpen(true);
   };
@@ -347,13 +351,28 @@ function SettingsContent() {
                             : "All Dates"}
                         </td>
                         <td className="py-3 px-3 text-right font-medium text-slate-900">
-                          {t.dialed_calls_target ?? "—"}
+                          {t.dialed_calls_target ? (
+                            <div>
+                              <div>{t.dialed_calls_target} <span className="text-[10px] text-slate-400 font-normal">/day</span></div>
+                              <div className="text-[10px] text-slate-500 font-normal">~{t.dialed_calls_target * 30} /mo</div>
+                            </div>
+                          ) : "—"}
                         </td>
                         <td className="py-3 px-3 text-right font-medium text-emerald-700">
-                          {t.connected_calls_target ?? "—"}
+                          {t.connected_calls_target ? (
+                            <div>
+                              <div>{t.connected_calls_target} <span className="text-[10px] text-emerald-600 font-normal">/day</span></div>
+                              <div className="text-[10px] text-emerald-600 font-normal">~{t.connected_calls_target * 30} /mo</div>
+                            </div>
+                          ) : "—"}
                         </td>
                         <td className="py-3 px-3 text-right text-slate-700">
-                          {t.outdoor_visits_target ?? t.outdoor_visit_target ?? "—"}
+                          {(t.outdoor_visits_target ?? t.outdoor_visit_target) ? (
+                            <div>
+                              <div>{(t.outdoor_visits_target ?? t.outdoor_visit_target)} <span className="text-[10px] text-slate-400 font-normal">/day</span></div>
+                              <div className="text-[10px] text-slate-500 font-normal">~{(t.outdoor_visits_target ?? t.outdoor_visit_target)! * 30} /mo</div>
+                            </div>
+                          ) : "—"}
                         </td>
                         <td className="py-3 px-3 text-right text-slate-700">
                           {t.meeting_minutes_target
@@ -363,14 +382,20 @@ function SettingsContent() {
                             : "—"}
                         </td>
                         <td className="py-3 px-3 text-right font-semibold text-slate-900">
-                          {(t.sales_amount_target ?? t.sales_target) != null
-                            ? formatBDT(t.sales_amount_target ?? t.sales_target!)
-                            : "—"}
+                          {(t.sales_amount_target ?? t.sales_target) != null ? (
+                            <div>
+                              <div>{formatBDT(t.sales_amount_target ?? t.sales_target!)} <span className="text-[10px] text-slate-400 font-normal">/day</span></div>
+                              <div className="text-[10px] text-slate-500 font-normal">~{formatBDT((t.sales_amount_target ?? t.sales_target!) * 30)} /mo</div>
+                            </div>
+                          ) : "—"}
                         </td>
                         <td className="py-3 px-3 text-right font-semibold text-emerald-800">
-                          {(t.collection_amount_target ?? t.tb_target) != null
-                            ? formatBDT(t.collection_amount_target ?? t.tb_target!)
-                            : "—"}
+                          {(t.collection_amount_target ?? t.tb_target) != null ? (
+                            <div>
+                              <div>{formatBDT(t.collection_amount_target ?? t.tb_target!)} <span className="text-[10px] text-emerald-600 font-normal">/day</span></div>
+                              <div className="text-[10px] text-emerald-600 font-normal">~{formatBDT((t.collection_amount_target ?? t.tb_target!) * 30)} /mo</div>
+                            </div>
+                          ) : "—"}
                         </td>
                         <td className="py-3 px-3 text-right">
                           <div className="flex items-center justify-end gap-1">
@@ -459,8 +484,8 @@ function SettingsContent() {
         <Modal
           isOpen={isTargetModalOpen}
           onClose={() => setIsTargetModalOpen(false)}
-          title={editingTarget ? "Edit Daily Target" : "Establish Performance Target"}
-          description="Specify daily quotas for phone calls, customer visits, and collections"
+          title={editingTarget ? "Edit Performance Target" : "Establish Performance Target"}
+          description="Configure daily and monthly benchmarks with dynamic employee fallback and auto shortfall carry-forward"
         >
           <form onSubmit={handleTargetSubmit} className="space-y-4">
             {formError && (
@@ -468,6 +493,46 @@ function SettingsContent() {
                 {formError}
               </div>
             )}
+
+            {/* Explanatory banner for dynamic fallback and carry-forward */}
+            <div className="p-2.5 bg-emerald-50/70 border border-emerald-200/80 rounded-lg text-[11px] text-emerald-950 space-y-1">
+              <div className="font-bold flex items-center gap-1.5 text-emerald-900">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Dynamic Scope & Auto Carry-Forward Active</span>
+              </div>
+              <p className="text-slate-600 leading-tight">
+                • <strong>Fallback:</strong> If an employee does not have an individual target, they automatically see and follow the Global Default.
+              </p>
+              <p className="text-slate-600 leading-tight">
+                • <strong>Auto Carry-Forward:</strong> If an employee falls short of their quota on earlier days, the unmet deficit automatically rolls over into their daily target until achieved, staying on track for the monthly goal.
+              </p>
+            </div>
+
+            {/* Input Mode Switcher: Daily vs Monthly */}
+            <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setTargetInputMode("daily")}
+                className={`flex-1 py-1 px-2 rounded-md transition-all ${
+                  targetInputMode === "daily"
+                    ? "bg-white text-emerald-900 shadow-xs font-bold"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Set Daily Quotas (Auto-derives Monthly)
+              </button>
+              <button
+                type="button"
+                onClick={() => setTargetInputMode("monthly")}
+                className={`flex-1 py-1 px-2 rounded-md transition-all ${
+                  targetInputMode === "monthly"
+                    ? "bg-white text-emerald-900 shadow-xs font-bold"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Set Monthly Targets (Auto-derives Daily)
+              </button>
+            </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -483,7 +548,7 @@ function SettingsContent() {
                   }
                   className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
                 >
-                  <option value="global">Global Company Default</option>
+                  <option value="global">Global Company Default (All Employees)</option>
                   {employees.map((emp) => (
                     <option key={emp.id} value={emp.id}>
                       {emp.full_name} ({formatEmployeeId(emp.id)})
@@ -494,7 +559,7 @@ function SettingsContent() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Target Date
+                  Target Date (Effective From)
                 </label>
                 <input
                   type="date"
@@ -508,90 +573,186 @@ function SettingsContent() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Dialed Calls Target
+                  {targetInputMode === "daily" ? "Dialed Calls / Day" : "Dialed Calls / Month"}
                 </label>
                 <input
                   type="number"
                   min="0"
-                  placeholder="e.g. 50"
-                  value={dialedTarget}
-                  onChange={(e) => setDialedTarget(e.target.value)}
+                  placeholder={targetInputMode === "daily" ? "e.g. 50" : "e.g. 1500"}
+                  value={
+                    targetInputMode === "daily"
+                      ? dialedTarget
+                      : dialedTarget ? String(parseInt(dialedTarget, 10) * 30) : ""
+                  }
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (targetInputMode === "daily") {
+                      setDialedTarget(val);
+                    } else {
+                      setDialedTarget(val ? String(Math.round(parseInt(val, 10) / 30)) : "");
+                    }
+                  }}
                   className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
                 />
+                <span className="text-[10px] text-slate-500 block mt-0.5">
+                  {targetInputMode === "daily"
+                    ? dialedTarget ? `~ ${parseInt(dialedTarget, 10) * 30} calls / month` : ""
+                    : dialedTarget ? `~ ${dialedTarget} calls / day` : ""}
+                </span>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Connected Target
+                  {targetInputMode === "daily" ? "Connected Calls / Day" : "Connected Calls / Month"}
                 </label>
                 <input
                   type="number"
                   min="0"
-                  placeholder="e.g. 20"
-                  value={connectedTarget}
-                  onChange={(e) => setConnectedTarget(e.target.value)}
+                  placeholder={targetInputMode === "daily" ? "e.g. 20" : "e.g. 600"}
+                  value={
+                    targetInputMode === "daily"
+                      ? connectedTarget
+                      : connectedTarget ? String(parseInt(connectedTarget, 10) * 30) : ""
+                  }
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (targetInputMode === "daily") {
+                      setConnectedTarget(val);
+                    } else {
+                      setConnectedTarget(val ? String(Math.round(parseInt(val, 10) / 30)) : "");
+                    }
+                  }}
                   className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
                 />
+                <span className="text-[10px] text-slate-500 block mt-0.5">
+                  {targetInputMode === "daily"
+                    ? connectedTarget ? `~ ${parseInt(connectedTarget, 10) * 30} connected / month` : ""
+                    : connectedTarget ? `~ ${connectedTarget} connected / day` : ""}
+                </span>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Outdoor Visits Target
+                  {targetInputMode === "daily" ? "Outdoor Visits / Day" : "Outdoor Visits / Month"}
                 </label>
                 <input
                   type="number"
                   min="0"
-                  placeholder="e.g. 3"
-                  value={outdoorTarget}
-                  onChange={(e) => setOutdoorTarget(e.target.value)}
+                  placeholder={targetInputMode === "daily" ? "e.g. 3" : "e.g. 90"}
+                  value={
+                    targetInputMode === "daily"
+                      ? outdoorTarget
+                      : outdoorTarget ? String(parseInt(outdoorTarget, 10) * 30) : ""
+                  }
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (targetInputMode === "daily") {
+                      setOutdoorTarget(val);
+                    } else {
+                      setOutdoorTarget(val ? String(Math.round(parseInt(val, 10) / 30)) : "");
+                    }
+                  }}
                   className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
                 />
+                <span className="text-[10px] text-slate-500 block mt-0.5">
+                  {targetInputMode === "daily"
+                    ? outdoorTarget ? `~ ${parseInt(outdoorTarget, 10) * 30} visits / month` : ""
+                    : outdoorTarget ? `~ ${outdoorTarget} visits / day` : ""}
+                </span>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Meeting Minutes Target
+                  {targetInputMode === "daily" ? "Meeting Time / Day (min)" : "Meeting Time / Month (min)"}
                 </label>
                 <input
                   type="number"
                   min="0"
-                  placeholder="e.g. 180"
-                  value={meetingTarget}
-                  onChange={(e) => setMeetingTarget(e.target.value)}
+                  placeholder={targetInputMode === "daily" ? "e.g. 180" : "e.g. 5400"}
+                  value={
+                    targetInputMode === "daily"
+                      ? meetingTarget
+                      : meetingTarget ? String(parseInt(meetingTarget, 10) * 30) : ""
+                  }
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (targetInputMode === "daily") {
+                      setMeetingTarget(val);
+                    } else {
+                      setMeetingTarget(val ? String(Math.round(parseInt(val, 10) / 30)) : "");
+                    }
+                  }}
                   className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
                 />
+                <span className="text-[10px] text-slate-500 block mt-0.5">
+                  {targetInputMode === "daily"
+                    ? meetingTarget ? `~ ${((parseInt(meetingTarget, 10) * 30) / 60).toFixed(1)} hours / month` : ""
+                    : meetingTarget ? `~ ${(parseInt(meetingTarget, 10) / 60).toFixed(1)} hours / day` : ""}
+                </span>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Sales Target (BDT)
+                  {targetInputMode === "daily" ? "Sales Target (BDT / Day)" : "Sales Target (BDT / Month)"}
                 </label>
                 <input
                   type="number"
                   min="0"
-                  placeholder="e.g. 500000"
-                  value={salesTarget}
-                  onChange={(e) => setSalesTarget(e.target.value)}
+                  placeholder={targetInputMode === "daily" ? "e.g. 10000" : "e.g. 300000"}
+                  value={
+                    targetInputMode === "daily"
+                      ? salesTarget
+                      : salesTarget ? String(Math.round(parseFloat(salesTarget) * 30)) : ""
+                  }
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (targetInputMode === "daily") {
+                      setSalesTarget(val);
+                    } else {
+                      setSalesTarget(val ? String(Math.round(parseFloat(val) / 30)) : "");
+                    }
+                  }}
                   className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
                 />
+                <span className="text-[10px] text-slate-500 block mt-0.5 font-medium">
+                  {targetInputMode === "daily"
+                    ? salesTarget ? `~ ৳${(parseFloat(salesTarget) * 30).toLocaleString()} / month (30 days)` : ""
+                    : salesTarget ? `~ ৳${parseFloat(salesTarget).toLocaleString()} / day` : ""}
+                </span>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Collection Target (BDT)
+                  {targetInputMode === "daily" ? "Collection Target (BDT / Day)" : "Collection Target (BDT / Month)"}
                 </label>
                 <input
                   type="number"
                   min="0"
-                  placeholder="e.g. 300000"
-                  value={collectionTarget}
-                  onChange={(e) => setCollectionTarget(e.target.value)}
+                  placeholder={targetInputMode === "daily" ? "e.g. 10000" : "e.g. 300000"}
+                  value={
+                    targetInputMode === "daily"
+                      ? collectionTarget
+                      : collectionTarget ? String(Math.round(parseFloat(collectionTarget) * 30)) : ""
+                  }
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (targetInputMode === "daily") {
+                      setCollectionTarget(val);
+                    } else {
+                      setCollectionTarget(val ? String(Math.round(parseFloat(val) / 30)) : "");
+                    }
+                  }}
                   className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
                 />
+                <span className="text-[10px] text-emerald-600 block mt-0.5 font-medium">
+                  {targetInputMode === "daily"
+                    ? collectionTarget ? `~ ৳${(parseFloat(collectionTarget) * 30).toLocaleString()} / month (30 days)` : ""
+                    : collectionTarget ? `~ ৳${parseFloat(collectionTarget).toLocaleString()} / day` : ""}
+                </span>
               </div>
             </div>
 

@@ -50,6 +50,99 @@ class DashboardService:
         self.sales_repo = SalesCollectionRepository(db)
         self.targets_repo = TargetsRepository(db)
 
+    async def get_target_with_carry_forward(
+        self, report_date: date, employee_id: Optional[int]
+    ) -> dict[str, Any]:
+        """
+        Calculate effective targets for an employee on report_date, including carry-forward deficit
+        from earlier days in the current month.
+        If an employee had a daily target (e.g. 10,000 BDT) and fell short on previous days,
+        the unfulfilled deficit rolls over to today's target (e.g. 20,000 BDT).
+        """
+        from datetime import timedelta
+        from sqlalchemy.orm import selectinload
+
+        target = await self.targets_repo.get_effective_target(report_date, employee_id)
+        if not target:
+            return {
+                "target": None,
+                "sales_target": None,
+                "sales_base": None,
+                "sales_carry_forward": Decimal("0"),
+                "tb_target": None,
+                "tb_base": None,
+                "tb_carry_forward": Decimal("0"),
+                "dialed_target": None,
+                "connected_target": None,
+                "outdoor_target": None,
+                "meeting_target": None,
+                "monthly_sales_target": None,
+                "monthly_tb_target": None,
+            }
+
+        sales_base = Decimal(str(target.sales_target)) if target.sales_target is not None else None
+        tb_base = Decimal(str(target.tb_target)) if target.tb_target is not None else None
+        dialed_target = target.dialed_calls_target
+        connected_target = target.connected_calls_target
+        outdoor_target = target.outdoor_visit_target
+        meeting_target = Decimal(str(target.meeting_hours_target)) if target.meeting_hours_target is not None else None
+
+        sales_carry_forward = Decimal("0")
+        tb_carry_forward = Decimal("0")
+
+        # Calculate carry-forward for employee if date is past start of month
+        if employee_id is not None:
+            month_start = date(report_date.year, report_date.month, 1)
+            eff_start = max(month_start, target.effective_from)
+            yesterday = report_date - timedelta(days=1)
+
+            if yesterday >= eff_start:
+                past_days = (yesterday - eff_start).days + 1
+                exp_sales = (sales_base or Decimal("0")) * past_days
+                exp_tb = (tb_base or Decimal("0")) * past_days
+
+                # Query actual historical reports in [eff_start, yesterday]
+                stmt = (
+                    select(DailyActivityReport)
+                    .options(selectinload(DailyActivityReport.sales_collection_entries))
+                    .where(
+                        DailyActivityReport.employee_id == employee_id,
+                        DailyActivityReport.report_date >= eff_start,
+                        DailyActivityReport.report_date <= yesterday,
+                    )
+                )
+                past_res = await self.db.execute(stmt)
+                past_reports = past_res.scalars().all()
+
+                act_sales = Decimal("0")
+                act_tb = Decimal("0")
+                for pr in past_reports:
+                    pfin = SalesService.calc_totals(pr.sales_collection_entries)
+                    act_sales += pfin["total_new_sales"]
+                    act_tb += pfin["total_tb_collection"]
+
+                sales_carry_forward = max(Decimal("0"), exp_sales - act_sales)
+                tb_carry_forward = max(Decimal("0"), exp_tb - act_tb)
+
+        effective_sales_target = (sales_base + sales_carry_forward) if sales_base is not None else None
+        effective_tb_target = (tb_base + tb_carry_forward) if tb_base is not None else None
+
+        return {
+            "target": target,
+            "sales_target": effective_sales_target,
+            "sales_base": sales_base,
+            "sales_carry_forward": sales_carry_forward,
+            "tb_target": effective_tb_target,
+            "tb_base": tb_base,
+            "tb_carry_forward": tb_carry_forward,
+            "dialed_target": dialed_target,
+            "connected_target": connected_target,
+            "outdoor_target": outdoor_target,
+            "meeting_target": meeting_target,
+            "monthly_sales_target": sales_base * Decimal("30") if sales_base is not None else None,
+            "monthly_tb_target": tb_base * Decimal("30") if tb_base is not None else None,
+        }
+
     async def get_report_summary(
         self, report_id: int
     ) -> ReportSummary:
@@ -113,47 +206,56 @@ class DashboardService:
         fin = SalesService.calc_totals(sales_entries)
 
         # ── Targets ───────────────────────────────────────────────────────────
-        target = await self.targets_repo.get_effective_target(
+        target_info = await self.get_target_with_carry_forward(
             report.report_date, report.employee_id
         )
 
-        def ta(actual_int, target_val) -> TargetAchievement:
+        def ta(actual_int, target_val, base_val=None, cf_val=None, monthly_val=None) -> TargetAchievement:
             actual = Decimal(str(actual_int))
             t = Decimal(str(target_val)) if target_val is not None else None
             return TargetAchievement(
                 actual=actual,
                 target=t,
                 achievement_pct=_calc_rate(actual, t) if t else None,
+                base_target=Decimal(str(base_val)) if base_val is not None else None,
+                carry_forward=Decimal(str(cf_val)) if cf_val is not None else None,
+                monthly_target=Decimal(str(monthly_val)) if monthly_val is not None else None,
             )
 
-        dialed_ta = ta(total_dialed, target.dialed_calls_target if target else None)
-        connected_ta = ta(total_connected, target.connected_calls_target if target else None)
-        visit_ta = ta(total_outdoor_visits, target.outdoor_visit_target if target else None)
+        dialed_ta = ta(total_dialed, target_info["dialed_target"])
+        connected_ta = ta(total_connected, target_info["connected_target"])
+        visit_ta = ta(total_outdoor_visits, target_info["outdoor_target"])
         sales_actual = fin["total_new_sales"]
         sales_ta = TargetAchievement(
             actual=sales_actual,
-            target=Decimal(str(target.sales_target)) if target and target.sales_target else None,
+            target=target_info["sales_target"],
             achievement_pct=(
-                _calc_rate(sales_actual, Decimal(str(target.sales_target)))
-                if target and target.sales_target else None
+                _calc_rate(sales_actual, target_info["sales_target"])
+                if target_info["sales_target"] else None
             ),
+            base_target=target_info["sales_base"],
+            carry_forward=target_info["sales_carry_forward"],
+            monthly_target=target_info["monthly_sales_target"],
         )
         tb_actual = fin["total_tb_collection"]
         tb_ta = TargetAchievement(
             actual=tb_actual,
-            target=Decimal(str(target.tb_target)) if target and target.tb_target else None,
+            target=target_info["tb_target"],
             achievement_pct=(
-                _calc_rate(tb_actual, Decimal(str(target.tb_target)))
-                if target and target.tb_target else None
+                _calc_rate(tb_actual, target_info["tb_target"])
+                if target_info["tb_target"] else None
             ),
+            base_target=target_info["tb_base"],
+            carry_forward=target_info["tb_carry_forward"],
+            monthly_target=target_info["monthly_tb_target"],
         )
         meeting_actual_h = Decimal(str(total_meeting_dur)) / Decimal("60")
         meeting_ta = TargetAchievement(
             actual=meeting_actual_h.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
-            target=Decimal(str(target.meeting_hours_target)) if target and target.meeting_hours_target else None,
+            target=target_info["meeting_target"],
             achievement_pct=(
-                _calc_rate(meeting_actual_h, Decimal(str(target.meeting_hours_target)))
-                if target and target.meeting_hours_target else None
+                _calc_rate(meeting_actual_h, target_info["meeting_target"])
+                if target_info["meeting_target"] else None
             ),
         )
 
@@ -361,11 +463,33 @@ class DashboardService:
         rankings: list[EmployeeLeaderboardItem] = []
 
         for emp in employees:
-            target = await self.targets_repo.get_effective_target(date_to, emp.id)
-            dialed_tgt = (target.dialed_calls_target if target and target.dialed_calls_target else 60)
-            connected_tgt = (target.connected_calls_target if target and target.connected_calls_target else 25)
-            outdoor_tgt = (target.outdoor_visit_target if target and target.outdoor_visit_target else 3)
-            collection_tgt = float(target.sales_target if target and target.sales_target else (target.tb_target if target and target.tb_target else 500000))
+            if date_from == date_to:
+                # Single day evaluation: include today's carry forward
+                target_info = await self.get_target_with_carry_forward(date_to, emp.id)
+                dialed_tgt = target_info["dialed_target"] or 60
+                connected_tgt = target_info["connected_target"] or 25
+                outdoor_tgt = target_info["outdoor_target"] or 3
+                eff_coll_tgt = target_info["sales_target"] or target_info["tb_target"]
+                collection_tgt = float(eff_coll_tgt if eff_coll_tgt else 500000)
+                base_coll_tgt = float(target_info["sales_base"] or target_info["tb_base"] or 0)
+                cf_deficit = float(target_info["sales_carry_forward"] if target_info["sales_target"] else target_info["tb_carry_forward"])
+                monthly_coll_tgt = float(target_info["monthly_sales_target"] or target_info["monthly_tb_target"] or (base_coll_tgt * 30))
+            else:
+                # Multi-day evaluation: calculate expected benchmark for the period
+                days_in_period = (date_to - date_from).days + 1
+                target = await self.targets_repo.get_effective_target(date_to, emp.id)
+                dialed_base = (target.dialed_calls_target if target and target.dialed_calls_target else 60)
+                conn_base = (target.connected_calls_target if target and target.connected_calls_target else 25)
+                outdoor_base = (target.outdoor_visit_target if target and target.outdoor_visit_target else 3)
+                daily_coll = float(target.sales_target if target and target.sales_target else (target.tb_target if target and target.tb_target else 500000))
+
+                dialed_tgt = dialed_base * days_in_period
+                connected_tgt = conn_base * days_in_period
+                outdoor_tgt = outdoor_base * days_in_period
+                collection_tgt = daily_coll * days_in_period
+                base_coll_tgt = daily_coll
+                cf_deficit = 0.0
+                monthly_coll_tgt = daily_coll * 30
 
             summary = await self.get_dashboard_summary(date_from, date_to, emp.id)
             dialed = summary.total_calls_dialed
@@ -412,6 +536,10 @@ class DashboardService:
                     collection_pct=colls_pct,
                     overall_score_pct=overall,
                     status=status,
+                    base_collection_target=base_coll_tgt,
+                    carry_forward_deficit=cf_deficit,
+                    monthly_collection_target=monthly_coll_tgt,
+                    month_to_date_collected=colls,
                 )
             )
 
