@@ -645,7 +645,167 @@ function ReportsContent() {
               daily reports
             </span>
           </CardHeader>
-          <div className="overflow-x-auto">
+          {/* ── Mobile View: Native App-Style Report Cards ──────────────── */}
+          <div className="block md:hidden">
+            {loading ? (
+              <div className="p-3.5 space-y-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="p-3.5 bg-slate-50 rounded-xl space-y-2 border border-slate-100">
+                    <div className="flex justify-between items-center">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-4 w-16" />
+                    </div>
+                    <Skeleton className="h-4 w-40" />
+                    <div className="grid grid-cols-3 gap-1.5 pt-2">
+                      <Skeleton className="h-10 w-full" />
+                      <Skeleton className="h-10 w-full" />
+                      <Skeleton className="h-10 w-full" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredReports.length === 0 ? (
+              <div className="py-12 px-4 text-center text-slate-400 text-xs">
+                {searchQuery
+                  ? `No reports found matching "${searchQuery}". Try a different name, Employee ID, or Report ID.`
+                  : "No reports match the selected filters."}
+              </div>
+            ) : (
+              <div className="p-3 space-y-3 bg-slate-50/50">
+                {filteredReports.map((report) => {
+                  const dialed = report.summary?.total_calls_dialed ?? report.summary?.total_dialed ?? 0;
+                  const connected = report.summary?.total_calls_connected ?? report.summary?.total_connected ?? 0;
+                  const callDur = report.summary?.total_call_duration_minutes ?? 0;
+                  const outdoorVisits = report.summary?.total_outdoor_visits ?? 0;
+                  const collection = report.summary?.actual_collection_bdt ?? report.summary?.total_actual_collection ?? 0;
+                  const commitment = report.summary?.commitments_bdt ?? (
+                    Number(report.summary?.total_sales_commitments || 0) +
+                    Number(report.summary?.total_tb_commitments || 0)
+                  );
+
+                  return (
+                    <div
+                      key={report.id}
+                      className="bg-white rounded-xl border border-slate-200/90 p-3.5 shadow-2xs space-y-3"
+                    >
+                      {/* Top Header: Date, ID, Status */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="font-bold text-slate-900 text-sm">
+                            {formatReadableDate(report.report_date)}
+                          </div>
+                          <span className="font-mono text-[10px] text-slate-500 font-semibold tracking-wider">
+                            REP-{String(report.id).padStart(5, "0")}
+                          </span>
+                        </div>
+                        <Badge variant={report.is_submitted ? "success" : "warning"} className="text-[10px] py-0.5">
+                          {report.is_submitted ? "Submitted" : "Draft"}
+                        </Badge>
+                      </div>
+
+                      {/* Employee Info if Admin */}
+                      {isAdmin && (
+                        <div className="flex items-center justify-between text-xs text-slate-700 bg-slate-50 border border-slate-200/70 px-2.5 py-1.5 rounded-lg">
+                          <span className="font-semibold text-slate-900 truncate">
+                            {report.employee_name || `Employee #${report.employee_id}`}
+                          </span>
+                          <span className="font-mono text-[10px] font-bold bg-green-50 text-green-800 border border-green-200 px-1.5 py-0.2 rounded shrink-0">
+                            {formatEmployeeId(report.employee_id)}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* KPI Mini Grid */}
+                      <div className="grid grid-cols-3 gap-1.5 text-center bg-slate-50 p-2 rounded-lg border border-slate-200/60">
+                        <div>
+                          <p className="text-[10px] font-medium text-slate-500 uppercase tracking-tight">Calls</p>
+                          <p className="text-xs font-bold text-slate-900 mt-0.5">
+                            {dialed} <span className="text-emerald-700 font-semibold text-[11px]">({connected})</span>
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-medium text-slate-500 uppercase tracking-tight">Call Time</p>
+                          <p className="text-xs font-bold text-slate-900 mt-0.5">
+                            {formatMinutes(callDur)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-medium text-slate-500 uppercase tracking-tight">Outdoor</p>
+                          <p className="text-xs font-bold text-slate-900 mt-0.5">
+                            {outdoorVisits} <span className="text-[10px] font-normal text-slate-500">vis</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Financial Badges (if any collections or commitments) */}
+                      {(collection > 0 || commitment > 0) && (
+                        <div className="flex items-center gap-2 pt-0.5">
+                          {collection > 0 && (
+                            <div className="flex-1 bg-emerald-50 border border-emerald-200/80 rounded-lg px-2.5 py-1.5">
+                              <p className="text-[9px] font-semibold text-emerald-800 uppercase tracking-tight">Collected</p>
+                              <p className="text-xs font-extrabold text-emerald-700 mt-0.5">{formatBDT(collection)}</p>
+                            </div>
+                          )}
+                          {commitment > 0 && (
+                            <div className="flex-1 bg-amber-50 border border-amber-200/80 rounded-lg px-2.5 py-1.5">
+                              <p className="text-[9px] font-semibold text-amber-900 uppercase tracking-tight">Commitment</p>
+                              <p className="text-xs font-extrabold text-amber-800 mt-0.5">{formatBDT(commitment)}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Touch Action Bar */}
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+                        <Link
+                          href={`/calls?date=${report.report_date}&employee_id=${report.employee_id}`}
+                          className="text-green-700 hover:text-green-800 font-bold inline-flex items-center gap-1 py-1"
+                        >
+                          View Dial Matrix <ArrowRight className="w-3.5 h-3.5" />
+                        </Link>
+
+                        <div className="flex items-center gap-1.5">
+                          <Link
+                            href={`/reports/${report.id}/print`}
+                            target="_blank"
+                            className="p-1.5 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors inline-flex items-center"
+                            title="Print / Save PDF"
+                          >
+                            <Printer className="w-3.5 h-3.5" />
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadSingleReportCSV(report.id)}
+                            disabled={downloadingReportId === report.id}
+                            className="p-1.5 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors inline-flex items-center disabled:opacity-50"
+                            title="Download CSV"
+                          >
+                            {downloadingReportId === report.id ? (
+                              <div className="w-3.5 h-3.5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                              <FileSpreadsheet className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                          {isAdmin && (
+                            <button
+                              onClick={() => setDeleteReportId(report.id)}
+                              className="p-1.5 text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-md transition-colors inline-flex items-center"
+                              title="Delete Report"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* ── Desktop View: Full Data Table ─────────────────────────────── */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-100/70 border-b border-slate-200 text-slate-700 text-[11px] font-semibold">
