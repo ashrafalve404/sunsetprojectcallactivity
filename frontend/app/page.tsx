@@ -51,7 +51,7 @@ function DashboardContent() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | "all">("all");
-  const [datePreset, setDatePreset] = useState<"today" | "month" | "30days" | "custom">("today");
+  const [datePreset, setDatePreset] = useState<"today" | "month" | "30days" | "year" | "custom">("today");
 
   useEffect(() => {
     const today = getDhakaToday();
@@ -130,7 +130,7 @@ function DashboardContent() {
     setDatePreset("today");
   };
 
-  const handlePresetDate = (preset: "today" | "month" | "30days") => {
+  const handlePresetDate = (preset: "today" | "month" | "30days" | "year") => {
     setDatePreset(preset);
     const today = getDhakaToday();
     if (preset === "today") {
@@ -141,6 +141,9 @@ function DashboardContent() {
       setEndDate(today);
     } else if (preset === "30days") {
       setStartDate(getDhakaDateOffset(-30));
+      setEndDate(today);
+    } else if (preset === "year") {
+      setStartDate(`${today.slice(0, 4)}-01-01`);
       setEndDate(today);
     }
   };
@@ -236,18 +239,19 @@ function DashboardContent() {
                   </div>
 
                   {/* Preset Pills */}
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 flex-wrap">
                     {[
                       { id: "today", label: "Today" },
                       { id: "month", label: "This Month" },
                       { id: "30days", label: "30 Days" },
+                      { id: "year", label: "This Year" },
                     ].map((p) => {
                       const active = datePreset === p.id;
                       return (
                         <button
                           key={p.id}
                           type="button"
-                          onClick={() => handlePresetDate(p.id as "today" | "month" | "30days")}
+                          onClick={() => handlePresetDate(p.id as "today" | "month" | "30days" | "year")}
                           className={cn(
                             "px-2.5 py-1 text-[11px] font-semibold rounded border transition-colors shadow-2xs cursor-pointer",
                             active
