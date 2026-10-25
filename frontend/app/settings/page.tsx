@@ -484,8 +484,8 @@ function SettingsContent() {
         <Modal
           isOpen={isTargetModalOpen}
           onClose={() => setIsTargetModalOpen(false)}
-          title={editingTarget ? "Edit Performance Target" : "Establish Performance Target"}
-          description="Configure daily and monthly benchmarks with dynamic employee fallback and auto shortfall carry-forward"
+          title={editingTarget ? "Edit Target" : "Establish Performance Target"}
+          description="Set daily quotas and monthly targets."
         >
           <form onSubmit={handleTargetSubmit} className="space-y-4">
             {formError && (
@@ -494,43 +494,35 @@ function SettingsContent() {
               </div>
             )}
 
-            {/* Explanatory banner for dynamic fallback and carry-forward */}
-            <div className="p-2.5 bg-emerald-50/70 border border-emerald-200/80 rounded-lg text-[11px] text-emerald-950 space-y-1">
-              <div className="font-bold flex items-center gap-1.5 text-emerald-900">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Dynamic Scope & Auto Carry-Forward Active</span>
-              </div>
-              <p className="text-slate-600 leading-tight">
-                • <strong>Fallback:</strong> If an employee does not have an individual target, they automatically see and follow the Global Default.
-              </p>
-              <p className="text-slate-600 leading-tight">
-                • <strong>Auto Carry-Forward:</strong> If an employee falls short of their quota on earlier days, the unmet deficit automatically rolls over into their daily target until achieved, staying on track for the monthly goal.
-              </p>
+            {/* Compact note */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-50 border border-emerald-200/70 rounded-md text-[11px] text-emerald-900 font-medium">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span>Global fallback and daily deficit carry-forward are active.</span>
             </div>
 
-            {/* Input Mode Switcher: Daily vs Monthly */}
+            {/* Mode Switcher */}
             <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg text-xs font-semibold">
               <button
                 type="button"
                 onClick={() => setTargetInputMode("daily")}
-                className={`flex-1 py-1 px-2 rounded-md transition-all ${
+                className={`flex-1 py-1 px-3 rounded-md transition-all text-center ${
                   targetInputMode === "daily"
                     ? "bg-white text-emerald-900 shadow-xs font-bold"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                Set Daily Quotas (Auto-derives Monthly)
+                Daily Quota
               </button>
               <button
                 type="button"
                 onClick={() => setTargetInputMode("monthly")}
-                className={`flex-1 py-1 px-2 rounded-md transition-all ${
+                className={`flex-1 py-1 px-3 rounded-md transition-all text-center ${
                   targetInputMode === "monthly"
                     ? "bg-white text-emerald-900 shadow-xs font-bold"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                Set Monthly Targets (Auto-derives Daily)
+                Monthly Target
               </button>
             </div>
 
@@ -548,7 +540,7 @@ function SettingsContent() {
                   }
                   className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
                 >
-                  <option value="global">Global Company Default (All Employees)</option>
+                  <option value="global">Global Default (All Employees)</option>
                   {employees.map((emp) => (
                     <option key={emp.id} value={emp.id}>
                       {emp.full_name} ({formatEmployeeId(emp.id)})
@@ -559,7 +551,7 @@ function SettingsContent() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Target Date (Effective From)
+                  Target Date
                 </label>
                 <input
                   type="date"
@@ -573,7 +565,7 @@ function SettingsContent() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  {targetInputMode === "daily" ? "Dialed Calls / Day" : "Dialed Calls / Month"}
+                  Dialed Calls
                 </label>
                 <input
                   type="number"
@@ -596,14 +588,14 @@ function SettingsContent() {
                 />
                 <span className="text-[10px] text-slate-500 block mt-0.5">
                   {targetInputMode === "daily"
-                    ? dialedTarget ? `~ ${parseInt(dialedTarget, 10) * 30} calls / month` : ""
-                    : dialedTarget ? `~ ${dialedTarget} calls / day` : ""}
+                    ? dialedTarget ? `~ ${parseInt(dialedTarget, 10) * 30}/mo` : ""
+                    : dialedTarget ? `~ ${dialedTarget}/day` : ""}
                 </span>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  {targetInputMode === "daily" ? "Connected Calls / Day" : "Connected Calls / Month"}
+                  Connected Calls
                 </label>
                 <input
                   type="number"
@@ -626,8 +618,8 @@ function SettingsContent() {
                 />
                 <span className="text-[10px] text-slate-500 block mt-0.5">
                   {targetInputMode === "daily"
-                    ? connectedTarget ? `~ ${parseInt(connectedTarget, 10) * 30} connected / month` : ""
-                    : connectedTarget ? `~ ${connectedTarget} connected / day` : ""}
+                    ? connectedTarget ? `~ ${parseInt(connectedTarget, 10) * 30}/mo` : ""
+                    : connectedTarget ? `~ ${connectedTarget}/day` : ""}
                 </span>
               </div>
             </div>
@@ -635,7 +627,7 @@ function SettingsContent() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  {targetInputMode === "daily" ? "Outdoor Visits / Day" : "Outdoor Visits / Month"}
+                  Outdoor Visits
                 </label>
                 <input
                   type="number"
@@ -658,14 +650,14 @@ function SettingsContent() {
                 />
                 <span className="text-[10px] text-slate-500 block mt-0.5">
                   {targetInputMode === "daily"
-                    ? outdoorTarget ? `~ ${parseInt(outdoorTarget, 10) * 30} visits / month` : ""
-                    : outdoorTarget ? `~ ${outdoorTarget} visits / day` : ""}
+                    ? outdoorTarget ? `~ ${parseInt(outdoorTarget, 10) * 30}/mo` : ""
+                    : outdoorTarget ? `~ ${outdoorTarget}/day` : ""}
                 </span>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  {targetInputMode === "daily" ? "Meeting Time / Day (min)" : "Meeting Time / Month (min)"}
+                  Meeting Minutes
                 </label>
                 <input
                   type="number"
@@ -688,8 +680,8 @@ function SettingsContent() {
                 />
                 <span className="text-[10px] text-slate-500 block mt-0.5">
                   {targetInputMode === "daily"
-                    ? meetingTarget ? `~ ${((parseInt(meetingTarget, 10) * 30) / 60).toFixed(1)} hours / month` : ""
-                    : meetingTarget ? `~ ${(parseInt(meetingTarget, 10) / 60).toFixed(1)} hours / day` : ""}
+                    ? meetingTarget ? `~ ${((parseInt(meetingTarget, 10) * 30) / 60).toFixed(1)} hrs/mo` : ""
+                    : meetingTarget ? `~ ${(parseInt(meetingTarget, 10) / 60).toFixed(1)} hrs/day` : ""}
                 </span>
               </div>
             </div>
@@ -697,7 +689,7 @@ function SettingsContent() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  {targetInputMode === "daily" ? "Sales Target (BDT / Day)" : "Sales Target (BDT / Month)"}
+                  Sales Target (BDT)
                 </label>
                 <input
                   type="number"
@@ -720,14 +712,14 @@ function SettingsContent() {
                 />
                 <span className="text-[10px] text-slate-500 block mt-0.5 font-medium">
                   {targetInputMode === "daily"
-                    ? salesTarget ? `~ ৳${(parseFloat(salesTarget) * 30).toLocaleString()} / month (30 days)` : ""
-                    : salesTarget ? `~ ৳${parseFloat(salesTarget).toLocaleString()} / day` : ""}
+                    ? salesTarget ? `~ ৳${(parseFloat(salesTarget) * 30).toLocaleString()}/mo` : ""
+                    : salesTarget ? `~ ৳${parseFloat(salesTarget).toLocaleString()}/day` : ""}
                 </span>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  {targetInputMode === "daily" ? "Collection Target (BDT / Day)" : "Collection Target (BDT / Month)"}
+                  Collection Target (BDT)
                 </label>
                 <input
                   type="number"
@@ -750,8 +742,8 @@ function SettingsContent() {
                 />
                 <span className="text-[10px] text-emerald-600 block mt-0.5 font-medium">
                   {targetInputMode === "daily"
-                    ? collectionTarget ? `~ ৳${(parseFloat(collectionTarget) * 30).toLocaleString()} / month (30 days)` : ""
-                    : collectionTarget ? `~ ৳${parseFloat(collectionTarget).toLocaleString()} / day` : ""}
+                    ? collectionTarget ? `~ ৳${(parseFloat(collectionTarget) * 30).toLocaleString()}/mo` : ""
+                    : collectionTarget ? `~ ৳${parseFloat(collectionTarget).toLocaleString()}/day` : ""}
                 </span>
               </div>
             </div>
