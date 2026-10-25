@@ -5,7 +5,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class TargetsBase(BaseModel):
@@ -108,6 +108,22 @@ class ReportSummary(BaseModel):
 
     # Breakdowns
     lead_category_breakdown: list[LeadCategoryBreakdown] = []
+
+    # Frontend aliases for seamless compatibility across report logs & analytics
+    total_calls_dialed: Optional[int] = None
+    total_calls_connected: Optional[int] = None
+    total_meeting_time_minutes: Optional[int] = None
+    actual_collection_bdt: Optional[Decimal] = None
+    commitments_bdt: Optional[Decimal] = None
+
+    @model_validator(mode="after")
+    def populate_aliases(self) -> "ReportSummary":
+        self.total_calls_dialed = self.total_dialed
+        self.total_calls_connected = self.total_connected
+        self.total_meeting_time_minutes = self.total_meeting_duration_minutes
+        self.actual_collection_bdt = self.total_actual_collection
+        self.commitments_bdt = self.total_sales_commitments + self.total_tb_commitments
+        return self
 
 
 class DashboardSummary(BaseModel):

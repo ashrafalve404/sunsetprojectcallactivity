@@ -41,13 +41,19 @@ import {
 
 interface DetailedReportRow extends Report {
   summary?: {
+    total_dialed?: number;
     total_calls_dialed?: number;
+    total_connected?: number;
     total_calls_connected?: number;
     total_call_duration_minutes?: number;
+    total_meeting_duration_minutes?: number;
     total_meeting_time_minutes?: number;
     total_outdoor_visits?: number;
+    total_actual_collection?: number;
     actual_collection_bdt?: number;
     commitments_bdt?: number;
+    total_sales_commitments?: number;
+    total_tb_commitments?: number;
   };
 }
 
@@ -269,13 +275,23 @@ function ReportsContent() {
 
     for (const r of filteredReports) {
       if (r.summary) {
-        totalDialed += r.summary.total_calls_dialed || 0;
-        totalConnected += r.summary.total_calls_connected || 0;
-        totalCallDuration += r.summary.total_call_duration_minutes || 0;
-        totalMeetingTime += r.summary.total_meeting_time_minutes || 0;
-        totalOutdoor += r.summary.total_outdoor_visits || 0;
-        totalCollection += r.summary.actual_collection_bdt || 0;
-        totalCommitment += r.summary.commitments_bdt || 0;
+        const dialed = r.summary.total_calls_dialed ?? r.summary.total_dialed ?? 0;
+        const connected = r.summary.total_calls_connected ?? r.summary.total_connected ?? 0;
+        const callDuration = r.summary.total_call_duration_minutes ?? 0;
+        const meetingTime = r.summary.total_meeting_time_minutes ?? r.summary.total_meeting_duration_minutes ?? 0;
+        const outdoor = r.summary.total_outdoor_visits ?? 0;
+        const collection = r.summary.actual_collection_bdt ?? r.summary.total_actual_collection ?? 0;
+        const commitment =
+          r.summary.commitments_bdt ??
+          (Number(r.summary.total_sales_commitments || 0) + Number(r.summary.total_tb_commitments || 0));
+
+        totalDialed += Number(dialed);
+        totalConnected += Number(connected);
+        totalCallDuration += Number(callDuration);
+        totalMeetingTime += Number(meetingTime);
+        totalOutdoor += Number(outdoor);
+        totalCollection += Number(collection);
+        totalCommitment += Number(commitment);
       }
     }
 
@@ -325,13 +341,14 @@ function ReportsContent() {
       formatEmployeeId(r.employee_id),
       r.employee_name || "N/A",
       r.is_submitted ? "Submitted" : "Draft",
-      r.summary?.total_calls_dialed ?? 0,
-      r.summary?.total_calls_connected ?? 0,
+      r.summary?.total_calls_dialed ?? r.summary?.total_dialed ?? 0,
+      r.summary?.total_calls_connected ?? r.summary?.total_connected ?? 0,
       r.summary?.total_call_duration_minutes ?? 0,
-      r.summary?.total_meeting_time_minutes ?? 0,
+      r.summary?.total_meeting_time_minutes ?? r.summary?.total_meeting_duration_minutes ?? 0,
       r.summary?.total_outdoor_visits ?? 0,
-      r.summary?.actual_collection_bdt ?? 0,
-      r.summary?.commitments_bdt ?? 0,
+      r.summary?.actual_collection_bdt ?? r.summary?.total_actual_collection ?? 0,
+      r.summary?.commitments_bdt ??
+        (Number(r.summary?.total_sales_commitments || 0) + Number(r.summary?.total_tb_commitments || 0)),
       r.submitted_at || "Pending",
     ]);
 
@@ -706,25 +723,29 @@ function ReportsContent() {
                         </Badge>
                       </td>
                       <td className="py-3 px-3 text-right font-medium text-slate-900">
-                        {report.summary?.total_calls_dialed ?? 0}
+                        {report.summary?.total_calls_dialed ?? report.summary?.total_dialed ?? 0}
                       </td>
                       <td className="py-3 px-3 text-right font-medium text-emerald-700">
-                        {report.summary?.total_calls_connected ?? 0}
+                        {report.summary?.total_calls_connected ?? report.summary?.total_connected ?? 0}
                       </td>
                       <td className="py-3 px-3 text-right text-slate-600">
                         {formatMinutes(report.summary?.total_call_duration_minutes)}
                       </td>
                       <td className="py-3 px-3 text-right text-slate-600">
-                        {formatMinutes(report.summary?.total_meeting_time_minutes)}
+                        {formatMinutes(report.summary?.total_meeting_time_minutes ?? report.summary?.total_meeting_duration_minutes)}
                       </td>
                       <td className="py-3 px-3 text-right text-slate-600">
                         {report.summary?.total_outdoor_visits ?? 0}
                       </td>
                       <td className="py-3 px-3 text-right font-bold text-emerald-700">
-                        {formatBDT(report.summary?.actual_collection_bdt)}
+                        {formatBDT(report.summary?.actual_collection_bdt ?? report.summary?.total_actual_collection)}
                       </td>
                       <td className="py-3 px-3 text-right font-bold text-amber-700">
-                        {formatBDT(report.summary?.commitments_bdt)}
+                        {formatBDT(
+                          report.summary?.commitments_bdt ??
+                            (Number(report.summary?.total_sales_commitments || 0) +
+                              Number(report.summary?.total_tb_commitments || 0))
+                        )}
                       </td>
                       <td className="py-3 px-3 text-right">
                         <div className="flex items-center justify-end gap-2">

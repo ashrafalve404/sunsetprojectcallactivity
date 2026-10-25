@@ -259,7 +259,30 @@ export const api = {
       return normalizeReport(raw);
     },
     getSummary: async (reportId: number): Promise<Record<string, unknown>> => {
-      return request<Record<string, unknown>>(`/reports/${reportId}/summary`);
+      const raw = await request<Record<string, unknown>>(`/reports/${reportId}/summary`);
+      if (!raw) return {};
+      const actualColl = Number(raw.actual_collection_bdt ?? raw.total_actual_collection ?? 0);
+      const commitTotal = Number(
+        raw.commitments_bdt ??
+          (Number(raw.total_sales_commitments || 0) + Number(raw.total_tb_commitments || 0))
+      );
+      const dialed = Number(raw.total_calls_dialed ?? raw.total_dialed ?? 0);
+      const connected = Number(raw.total_calls_connected ?? raw.total_connected ?? 0);
+      const meetTime = Number(raw.total_meeting_time_minutes ?? raw.total_meeting_duration_minutes ?? 0);
+      return {
+        ...raw,
+        total_dialed: dialed,
+        total_calls_dialed: dialed,
+        total_connected: connected,
+        total_calls_connected: connected,
+        total_meeting_time_minutes: meetTime,
+        total_meeting_duration_minutes: meetTime,
+        actual_collection_bdt: actualColl,
+        total_actual_collection: actualColl,
+        commitments_bdt: commitTotal,
+        total_sales_commitments: Number(raw.total_sales_commitments || 0),
+        total_tb_commitments: Number(raw.total_tb_commitments || 0),
+      };
     },
     update: async (
       reportId: number,
