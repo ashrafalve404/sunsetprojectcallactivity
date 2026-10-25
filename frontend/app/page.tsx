@@ -411,12 +411,14 @@ function DashboardContent() {
           )}
         </div>
 
-        {/* ── Visual Analytics: Monthly Pace & Financial Trend ─────────── */}
-        <FinancialCharts
-          startDate={startDate}
-          endDate={endDate}
-          employeeId={selectedEmployeeId}
-        />
+        {/* ── Visual Analytics: Monthly Pace & Financial Trend (Admin/Sub-Admin Only) ─── */}
+        {isAdmin && (
+          <FinancialCharts
+            startDate={startDate}
+            endDate={endDate}
+            employeeId={selectedEmployeeId}
+          />
+        )}
 
         {/* ── KPI Targets Achievement & Team Leaderboard ───────────────────── */}
         <KPILeaderboard
