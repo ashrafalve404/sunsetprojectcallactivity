@@ -176,6 +176,7 @@ class SalesService:
                     category=entry.category,
                     amount=Decimal(str(entry.amount)),
                     customer_name=entry.customer_name,
+                    customer_phone=entry.customer_phone,
                     expected_payment_date=entry.expected_payment_date,
                     reschedule_count=entry.reschedule_count or 0,
                     reschedule_history=entry.reschedule_history,

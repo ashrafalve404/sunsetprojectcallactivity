@@ -584,6 +584,11 @@ function PrintableReportContent() {
                           ) : (
                             "—"
                           )}
+                          {s.customer_phone && (
+                            <span className="font-mono text-[9.5px] text-slate-500 block mt-0.5 font-normal">
+                              Tel: {s.customer_phone}
+                            </span>
+                          )}
                         </td>
                         <td className="py-1.5 px-2 text-center">
                           {s.payment_method ? (

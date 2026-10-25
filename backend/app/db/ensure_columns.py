@@ -14,6 +14,9 @@ async def ensure_schema_updates(engine: AsyncEngine, is_sqlite: bool) -> None:
                 if not existing_cols:
                     return
 
+                if "customer_phone" not in existing_cols:
+                    await conn.execute(text("ALTER TABLE sales_collection_entries ADD COLUMN customer_phone VARCHAR(50)"))
+                    logger.info("Added customer_phone to sales_collection_entries")
                 if "expected_payment_date" not in existing_cols:
                     await conn.execute(text("ALTER TABLE sales_collection_entries ADD COLUMN expected_payment_date DATE"))
                     logger.info("Added expected_payment_date to sales_collection_entries")
@@ -26,6 +29,7 @@ async def ensure_schema_updates(engine: AsyncEngine, is_sqlite: bool) -> None:
             else:
                 await conn.execute(text("""
                     ALTER TABLE sales_collection_entries 
+                    ADD COLUMN IF NOT EXISTS customer_phone VARCHAR(50),
                     ADD COLUMN IF NOT EXISTS expected_payment_date DATE,
                     ADD COLUMN IF NOT EXISTS reschedule_count INTEGER NOT NULL DEFAULT 0,
                     ADD COLUMN IF NOT EXISTS reschedule_history JSONB;

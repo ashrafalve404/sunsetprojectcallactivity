@@ -216,6 +216,7 @@ export function exportFullReportToCSV(data: FullReportExportData) {
     [
       "#",
       "Customer Name",
+      "Customer Phone",
       "Reference / Project",
       "Category",
       "Amount (BDT)",
@@ -235,6 +236,7 @@ export function exportFullReportToCSV(data: FullReportExportData) {
         [
           idx + 1,
           s.customer_name || "",
+          s.customer_phone || "",
           s.reference || "",
           s.category.replace(/_/g, " ").toUpperCase(),
           s.amount,

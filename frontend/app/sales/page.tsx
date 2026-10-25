@@ -19,6 +19,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Users,
+  Phone,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import {
@@ -141,6 +142,7 @@ function SalesVsCollectionContent() {
   const [formCategory, setFormCategory] = useState<SalesCollectionCategory>("new_sales_collection");
   const [formAmount, setFormAmount] = useState<string>("");
   const [formCustomerNames, setFormCustomerNames] = useState<string[]>([""]);
+  const [formCustomerPhone, setFormCustomerPhone] = useState<string>("");
   const [formPaymentMethod, setFormPaymentMethod] = useState<string>("cash");
   const [formPaymentSeq, setFormPaymentSeq] = useState<string>("");
   const [formReference, setFormReference] = useState<string>("");
@@ -287,6 +289,7 @@ function SalesVsCollectionContent() {
     setFormCategory("new_sales_commit_payment_1");
     setFormAmount("");
     setFormCustomerNames([""]);
+    setFormCustomerPhone("");
     setFormPaymentMethod("cash");
     setFormPaymentSeq("");
     setFormReference("");
@@ -310,6 +313,7 @@ function SalesVsCollectionContent() {
     } else {
       setFormCustomerNames([""]);
     }
+    setFormCustomerPhone(entry.customer_phone || "");
     setFormPaymentMethod(entry.payment_method || "cash");
     setFormPaymentSeq(entry.payment_sequence ? String(entry.payment_sequence) : "");
     setFormReference(entry.reference || "");
@@ -346,6 +350,7 @@ function SalesVsCollectionContent() {
       is_collection: isCollection,
       amount: amt,
       customer_name: joinedCustomerNames || null,
+      customer_phone: formCustomerPhone.trim() || null,
       payment_method: formPaymentMethod || null,
       payment_sequence: formPaymentSeq ? parseInt(formPaymentSeq, 10) : null,
       reference: formReference.trim() || null,
@@ -438,6 +443,7 @@ function SalesVsCollectionContent() {
       items = items.filter(
         (i) =>
           i.customer_name?.toLowerCase().includes(q) ||
+          i.customer_phone?.toLowerCase().includes(q) ||
           i.category?.toLowerCase().includes(q) ||
           i.employee_name?.toLowerCase().includes(q) ||
           i.reference?.toLowerCase().includes(q)
@@ -711,24 +717,36 @@ function SalesVsCollectionContent() {
                               {formatBDT(entry.amount)}
                             </td>
                             <td className="py-3 px-3 text-slate-700">
-                              {entry.customer_name ? (
-                                entry.customer_name.includes(",") ? (
-                                  <div className="flex flex-wrap gap-1">
-                                    {entry.customer_name.split(",").map((cName, idx) => (
-                                      <span
-                                        key={idx}
-                                        className="inline-block bg-slate-100 text-slate-800 text-[11px] font-semibold px-2 py-0.5 rounded border border-slate-200"
-                                      >
-                                        {cName.trim()}
-                                      </span>
-                                    ))}
-                                  </div>
+                              <div className="flex flex-col">
+                                {entry.customer_name ? (
+                                  entry.customer_name.includes(",") ? (
+                                    <div className="flex flex-wrap gap-1">
+                                      {entry.customer_name.split(",").map((cName, idx) => (
+                                        <span
+                                          key={idx}
+                                          className="inline-block bg-slate-100 text-slate-800 text-[11px] font-semibold px-2 py-0.5 rounded border border-slate-200"
+                                        >
+                                          {cName.trim()}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <span className="font-medium text-slate-900">{entry.customer_name}</span>
+                                  )
                                 ) : (
-                                  <span className="font-medium text-slate-900">{entry.customer_name}</span>
-                                )
-                              ) : (
-                                "—"
-                              )}
+                                  <span className="text-slate-400">—</span>
+                                )}
+                                {entry.customer_phone && (
+                                  <a
+                                    href={`tel:${entry.customer_phone}`}
+                                    className="inline-flex items-center gap-1 text-[11px] font-mono font-medium text-emerald-700 hover:text-emerald-800 hover:underline mt-0.5 w-fit"
+                                    title="Click to call customer"
+                                  >
+                                    <Phone className="w-2.5 h-2.5" />
+                                    <span>{entry.customer_phone}</span>
+                                  </a>
+                                )}
+                              </div>
                             </td>
 
                             {/* Promised Date & Reschedule Audit Trail */}
@@ -955,6 +973,16 @@ function SalesVsCollectionContent() {
                           <td className="py-3 px-4 font-bold text-slate-900">
                             <div>
                               <span>{item.customer_name || "Unknown Customer"}</span>
+                              {item.customer_phone && (
+                                <a
+                                  href={`tel:${item.customer_phone}`}
+                                  className="flex items-center gap-1 text-[11px] font-mono font-medium text-emerald-700 hover:text-emerald-800 hover:underline mt-0.5 w-fit"
+                                  title="Click to call customer"
+                                >
+                                  <Phone className="w-2.5 h-2.5" />
+                                  <span>{item.customer_phone}</span>
+                                </a>
+                              )}
                               <div className="text-[10px] text-slate-400 font-mono mt-0.5">
                                 Ref #{item.id} • {item.category}
                               </div>
@@ -1254,6 +1282,23 @@ function SalesVsCollectionContent() {
                   <span>+ Add Customer {formCustomerNames.length + 1} (Optional)</span>
                 </button>
               )}
+            </div>
+
+            {/* Customer Phone Number (Optional) */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                Customer Phone Number <span className="text-slate-400 font-normal lowercase">(optional)</span>
+              </label>
+              <div className="relative">
+                <Phone className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="tel"
+                  placeholder="e.g. 01712345678 or +88018..."
+                  value={formCustomerPhone}
+                  onChange={(e) => setFormCustomerPhone(e.target.value)}
+                  className="w-full pl-8 pr-3 py-2 border border-slate-300 rounded text-xs font-semibold text-slate-800 placeholder:text-slate-400 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white font-mono"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

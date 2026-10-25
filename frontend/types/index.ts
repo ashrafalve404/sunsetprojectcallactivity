@@ -226,6 +226,7 @@ export interface SalesCollectionEntry {
   is_collection: boolean;
   amount: number;
   customer_name?: string | null;
+  customer_phone?: string | null;
   payment_method?: string | null;
   payment_sequence?: number | null;
   reference?: string | null;
@@ -245,6 +246,7 @@ export interface CommitmentItem {
   category: string;
   amount: number;
   customer_name?: string | null;
+  customer_phone?: string | null;
   expected_payment_date?: string | null;
   reschedule_count: number;
   reschedule_history?: RescheduleHistoryItem[] | null;

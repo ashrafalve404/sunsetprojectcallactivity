@@ -14,6 +14,7 @@ class SalesCollectionEntryBase(BaseModel):
     amount: Decimal = Field(..., decimal_places=2, ge=Decimal("0"))
     payment_sequence: Optional[int] = Field(None, ge=1)
     customer_name: Optional[str] = Field(None, max_length=500)
+    customer_phone: Optional[str] = Field(None, max_length=50)
     payment_method: Optional[str] = Field(None, max_length=50)
     reference: Optional[str] = Field(None, max_length=200)
     notes: Optional[str] = None
@@ -37,6 +38,7 @@ class SalesCollectionEntryUpdate(BaseModel):
     amount: Optional[Decimal] = Field(None, decimal_places=2, ge=Decimal("0"))
     payment_sequence: Optional[int] = Field(None, ge=1)
     customer_name: Optional[str] = Field(None, max_length=500)
+    customer_phone: Optional[str] = Field(None, max_length=50)
     payment_method: Optional[str] = Field(None, max_length=50)
     reference: Optional[str] = Field(None, max_length=200)
     notes: Optional[str] = None
@@ -73,6 +75,7 @@ class CommitmentItemRead(BaseModel):
     category: str
     amount: Decimal
     customer_name: Optional[str] = None
+    customer_phone: Optional[str] = None
     expected_payment_date: Optional[date] = None
     reschedule_count: int = 0
     reschedule_history: Optional[List[Dict[str, Any]]] = None

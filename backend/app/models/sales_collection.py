@@ -56,6 +56,7 @@ class SalesCollectionEntry(Base):
     payment_sequence: Mapped[int | None] = mapped_column(nullable=True)
 
     customer_name: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    customer_phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
     payment_method: Mapped[str | None] = mapped_column(String(50), nullable=True)
     reference: Mapped[str | None] = mapped_column(String(200), nullable=True)
 
