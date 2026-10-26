@@ -41,14 +41,14 @@ function SettingsContent() {
   // Target Form fields
   const [targetEmployeeId, setTargetEmployeeId] = useState<number | "global">("global");
   const [targetDate, setTargetDate] = useState<string>("");
-  const [dialedTarget, setDialedTarget] = useState<string>("50");
-  const [connectedTarget, setConnectedTarget] = useState<string>("20");
+  const [dialedTarget, setDialedTarget] = useState<string>("200");
+  const [connectedTarget, setConnectedTarget] = useState<string>("100");
   const [callDurationTarget, setCallDurationTarget] = useState<string>("120");
   const [outdoorTarget, setOutdoorTarget] = useState<string>("3");
   const [meetingTarget, setMeetingTarget] = useState<string>("180");
-  const [salesTarget, setSalesTarget] = useState<string>("500000");
-  const [tbTarget, setTbTarget] = useState<string>("200000");
-  const [emiTarget, setEmiTarget] = useState<string>("300000");
+  const [salesTarget, setSalesTarget] = useState<string>("16667");
+  const [tbTarget, setTbTarget] = useState<string>("6667");
+  const [emiTarget, setEmiTarget] = useState<string>("10000");
   const [targetInputMode, setTargetInputMode] = useState<"daily" | "monthly">("daily");
 
   const [formSubmitting, setFormSubmitting] = useState(false);
@@ -94,14 +94,14 @@ function SettingsContent() {
     setEditingTarget(null);
     setTargetEmployeeId("global");
     setTargetDate(today);
-    setDialedTarget("50");
-    setConnectedTarget("20");
+    setDialedTarget("200");
+    setConnectedTarget("100");
     setCallDurationTarget("120");
     setOutdoorTarget("3");
     setMeetingTarget("180");
-    setSalesTarget("500000");
-    setTbTarget("200000");
-    setEmiTarget("300000");
+    setSalesTarget("16667");
+    setTbTarget("6667");
+    setEmiTarget("10000");
     setTargetInputMode("daily");
     setFormError(null);
     setIsTargetModalOpen(true);
@@ -690,7 +690,7 @@ function SettingsContent() {
                 <input
                   type="number"
                   min="0"
-                  placeholder={targetInputMode === "daily" ? "e.g. 50" : "e.g. 1500"}
+                  placeholder={targetInputMode === "daily" ? "e.g. 200" : "e.g. 6000"}
                   value={
                     targetInputMode === "daily"
                       ? dialedTarget
@@ -720,7 +720,7 @@ function SettingsContent() {
                 <input
                   type="number"
                   min="0"
-                  placeholder={targetInputMode === "daily" ? "e.g. 20" : "e.g. 600"}
+                  placeholder={targetInputMode === "daily" ? "e.g. 100" : "e.g. 3000"}
                   value={
                     targetInputMode === "daily"
                       ? connectedTarget
@@ -814,7 +814,7 @@ function SettingsContent() {
                 <input
                   type="number"
                   min="0"
-                  placeholder={targetInputMode === "daily" ? "e.g. 10000" : "e.g. 300000"}
+                  placeholder={targetInputMode === "daily" ? "e.g. 16667" : "e.g. 500000"}
                   value={
                     targetInputMode === "daily"
                       ? salesTarget
@@ -844,7 +844,7 @@ function SettingsContent() {
                 <input
                   type="number"
                   min="0"
-                  placeholder={targetInputMode === "daily" ? "e.g. 7000" : "e.g. 210000"}
+                  placeholder={targetInputMode === "daily" ? "e.g. 6667" : "e.g. 200000"}
                   value={
                     targetInputMode === "daily"
                       ? tbTarget

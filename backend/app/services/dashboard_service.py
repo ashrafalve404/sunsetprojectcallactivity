@@ -499,15 +499,15 @@ class DashboardService:
             if date_from == date_to:
                 # Single day evaluation: include today's carry forward
                 target_info = await self.get_target_with_carry_forward(date_to, emp.id)
-                dialed_tgt = target_info["dialed_target"] or 60
-                connected_tgt = target_info["connected_target"] or 25
+                dialed_tgt = target_info["dialed_target"] or 200
+                connected_tgt = target_info["connected_target"] or 100
                 outdoor_tgt = target_info["outdoor_target"] or 3
                 eff_financials = [
                     val for val in [target_info["sales_target"], target_info["tb_target"], target_info["emi_target"]]
                     if val is not None
                 ]
                 eff_coll_tgt = sum(eff_financials) if eff_financials else None
-                collection_tgt = float(eff_coll_tgt if eff_coll_tgt else 500000)
+                collection_tgt = float(eff_coll_tgt if eff_coll_tgt else 33334)
 
                 base_financials = [
                     val for val in [target_info["sales_base"], target_info["tb_base"], target_info["emi_base"]]
@@ -535,14 +535,14 @@ class DashboardService:
                 # Multi-day evaluation: calculate expected benchmark for the period
                 days_in_period = (date_to - date_from).days + 1
                 target = await self.targets_repo.get_effective_target(date_to, emp.id)
-                dialed_base = (target.dialed_calls_target if target and target.dialed_calls_target else 60)
-                conn_base = (target.connected_calls_target if target and target.connected_calls_target else 25)
+                dialed_base = (target.dialed_calls_target if target and target.dialed_calls_target else 200)
+                conn_base = (target.connected_calls_target if target and target.connected_calls_target else 100)
                 outdoor_base = (target.outdoor_visit_target if target and target.outdoor_visit_target else 3)
                 daily_financials = [
                     val for val in [target.sales_target, target.tb_target, getattr(target, "emi_target", None)]
                     if val is not None
                 ] if target else []
-                daily_coll = float(sum(daily_financials)) if daily_financials else 500000.0
+                daily_coll = float(sum(daily_financials)) if daily_financials else 33334.0
 
                 dialed_tgt = dialed_base * days_in_period
                 connected_tgt = conn_base * days_in_period
