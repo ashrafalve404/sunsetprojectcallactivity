@@ -10,6 +10,8 @@ import {
   CheckCircle2,
   XCircle,
   X,
+  Mail,
+  Phone,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import {
@@ -317,7 +319,125 @@ export default function EmployeesPage() {
               {displayedEmployees.length} {displayedEmployees.length === 1 ? "account" : "accounts"}
             </span>
           </CardHeader>
-          <div className="overflow-x-auto">
+
+          {/* ── Mobile App Cards View (< md) ─────────────────────────────────── */}
+          <div className="md:hidden space-y-3 p-3 sm:p-4">
+            {loading && employees.length === 0 ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="p-4 bg-slate-50/80 rounded-xl border border-slate-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-5 w-24" />
+                    <Skeleton className="h-5 w-16" />
+                  </div>
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              ))
+            ) : displayedEmployees.length === 0 ? (
+              <div className="p-8 text-center text-slate-400 bg-slate-50/50 rounded-xl border border-slate-200 text-xs">
+                No employees match your search criteria.
+              </div>
+            ) : (
+              displayedEmployees.map((emp) => (
+                <div
+                  key={emp.id}
+                  className="p-4 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-3 transition-all hover:border-slate-300"
+                >
+                  {/* Top Bar: ID + Role + Actions */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-mono font-bold text-xs bg-slate-100 text-slate-800 border border-slate-200 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
+                        {formatEmployeeId(emp.id)}
+                      </span>
+                      <Badge
+                        variant={emp.role === "admin" ? "warning" : emp.role === "sub_admin" ? "info" : "neutral"}
+                        className="text-[10px]"
+                      >
+                        {emp.role === "admin" ? "Admin" : emp.role === "sub_admin" ? "Sub Admin" : "Employee"}
+                      </Badge>
+                      {currentUser?.id === emp.id && (
+                        <span className="text-[10px] text-green-800 bg-green-50 px-1.5 py-0.5 rounded border border-green-200 font-semibold">
+                          You
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => openEditModal(emp)}
+                        className="p-1.5 text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors"
+                        title="Edit Employee"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      {currentUser?.id !== emp.id && (
+                        <button
+                          onClick={() => setDeleteConfirmId(emp.id)}
+                          className="p-1.5 text-rose-500 hover:text-rose-700 bg-rose-50/70 hover:bg-rose-100 rounded-lg border border-rose-200 transition-colors"
+                          title="Delete Employee"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Name & Username */}
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm leading-snug">{emp.full_name}</h3>
+                    <p className="text-xs text-slate-500 font-mono mt-0.5">@{emp.username}</p>
+                  </div>
+
+                  {/* Contact Info (Email & Phone) */}
+                  <div className="grid grid-cols-1 gap-2 text-xs pt-2.5 border-t border-slate-100">
+                    <div className="flex items-center gap-2 text-slate-600 truncate">
+                      <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span className="truncate">{emp.email}</span>
+                    </div>
+
+                    {emp.phone ? (
+                      <a
+                        href={`tel:${emp.phone}`}
+                        className="inline-flex items-center gap-1.5 font-mono text-xs font-semibold text-emerald-800 hover:text-emerald-900 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 w-fit"
+                      >
+                        <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>{emp.phone}</span>
+                      </a>
+                    ) : (
+                      <span className="text-slate-400 italic flex items-center gap-1 text-[11px]">
+                        <Phone className="w-3.5 h-3.5 text-slate-300" /> No phone recorded
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Bottom: Status & Member Since */}
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px] text-slate-500">
+                    <span
+                      className={`inline-flex items-center gap-1 font-semibold ${
+                        emp.is_active ? "text-emerald-700" : "text-rose-600"
+                      }`}
+                    >
+                      {emp.is_active ? (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          Active
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="w-3.5 h-3.5 text-rose-500" />
+                          Inactive
+                        </>
+                      )}
+                    </span>
+                    <span>Joined {formatReadableDate(emp.created_at.slice(0, 10))}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* ── Desktop Table View (>= md) ───────────────────────────────────── */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-100/70 border-b border-slate-200 text-slate-700 text-[11px] font-semibold">
