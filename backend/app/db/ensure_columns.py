@@ -26,6 +26,13 @@ async def ensure_schema_updates(engine: AsyncEngine, is_sqlite: bool) -> None:
                 if "reschedule_history" not in existing_cols:
                     await conn.execute(text("ALTER TABLE sales_collection_entries ADD COLUMN reschedule_history JSON"))
                     logger.info("Added reschedule_history to sales_collection_entries")
+
+                # Ensure users.phone exists
+                result_users = await conn.execute(text("PRAGMA table_info(users)"))
+                user_cols = {row[1] for row in result_users.fetchall()}
+                if user_cols and "phone" not in user_cols:
+                    await conn.execute(text("ALTER TABLE users ADD COLUMN phone VARCHAR(50)"))
+                    logger.info("Added phone to users table")
             else:
                 await conn.execute(text("""
                     ALTER TABLE sales_collection_entries 
@@ -33,6 +40,9 @@ async def ensure_schema_updates(engine: AsyncEngine, is_sqlite: bool) -> None:
                     ADD COLUMN IF NOT EXISTS expected_payment_date DATE,
                     ADD COLUMN IF NOT EXISTS reschedule_count INTEGER NOT NULL DEFAULT 0,
                     ADD COLUMN IF NOT EXISTS reschedule_history JSONB;
+
+                    ALTER TABLE users
+                    ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
                 """))
     except Exception as exc:
         logger.warning("ensure_schema_updates warning (non-fatal): %s", exc)

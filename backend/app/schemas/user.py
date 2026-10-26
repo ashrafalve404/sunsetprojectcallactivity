@@ -12,6 +12,7 @@ from app.models.user import UserRole
 class UserBase(BaseModel):
     full_name: str = Field(..., max_length=200)
     email: str = Field(..., max_length=255)
+    phone: Optional[str] = Field(None, max_length=50)
     username: str = Field(..., min_length=3, max_length=100, pattern=r"^[\w.-]+$")
     role: UserRole = UserRole.EMPLOYEE
     is_active: bool = True
@@ -24,6 +25,7 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     full_name: Optional[str] = Field(None, max_length=200)
     email: Optional[str] = Field(None, max_length=255)
+    phone: Optional[str] = Field(None, max_length=50)
     username: Optional[str] = Field(None, min_length=3, max_length=100)
     role: Optional[UserRole] = None
     is_active: Optional[bool] = None

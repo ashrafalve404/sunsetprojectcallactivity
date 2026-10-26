@@ -567,6 +567,7 @@ export const api = {
     create: async (data: {
       full_name: string;
       email: string;
+      phone?: string | null;
       username: string;
       password: string;
       role: "admin" | "sub_admin" | "employee";
@@ -581,6 +582,7 @@ export const api = {
       data: Partial<{
         full_name: string;
         email: string;
+        phone?: string | null;
         role: "admin" | "sub_admin" | "employee";
         is_active: boolean;
         password?: string;

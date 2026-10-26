@@ -53,6 +53,7 @@ async def create_employee(
     user = User(
         full_name=data.full_name,
         email=data.email,
+        phone=data.phone,
         username=data.username,
         password_hash=hash_password(data.password),
         role=data.role,

@@ -54,6 +54,7 @@ export default function EmployeesPage() {
   // Form states
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole>("employee");
@@ -106,7 +107,8 @@ export default function EmployeesPage() {
       (emp) =>
         emp.full_name?.toLowerCase().includes(q) ||
         emp.username?.toLowerCase().includes(q) ||
-        emp.email?.toLowerCase().includes(q)
+        emp.email?.toLowerCase().includes(q) ||
+        emp.phone?.toLowerCase().includes(q)
     );
   }, [employees, search]);
 
@@ -114,6 +116,7 @@ export default function EmployeesPage() {
     setEditingEmployee(null);
     setFullName("");
     setEmail("");
+    setPhone("");
     setUsername("");
     setPassword("");
     setRole("employee");
@@ -126,6 +129,7 @@ export default function EmployeesPage() {
     setEditingEmployee(emp);
     setFullName(emp.full_name);
     setEmail(emp.email);
+    setPhone(emp.phone || "");
     setUsername(emp.username);
     setPassword("");
     setRole(emp.role);
@@ -147,9 +151,11 @@ export default function EmployeesPage() {
           role: UserRole;
           is_active: boolean;
           password?: string;
+          phone?: string | null;
         } = {
           full_name: fullName.trim(),
           email: email.trim(),
+          phone: phone.trim() || null,
           role,
           is_active: isActive,
         };
@@ -176,6 +182,7 @@ export default function EmployeesPage() {
           email: email.trim(),
           username: username.trim(),
           password: password.trim(),
+          phone: phone.trim() || null,
           role,
         });
         setEmployees((prev) => [created, ...prev]);
@@ -234,7 +241,7 @@ export default function EmployeesPage() {
                   <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
                   <input
                     type="text"
-                    placeholder="Search by name, username or email..."
+                    placeholder="Search by name, username, email or phone..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="w-full pl-9 pr-8 py-1.5 text-xs font-semibold text-slate-800 placeholder:text-slate-500 border border-slate-300 rounded focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
@@ -318,6 +325,7 @@ export default function EmployeesPage() {
                   <th className="py-2.5 px-4">Full Name</th>
                   <th className="py-2.5 px-3">Username</th>
                   <th className="py-2.5 px-3">Email</th>
+                  <th className="py-2.5 px-3">Phone</th>
                   <th className="py-2.5 px-3 text-center">Role</th>
                   <th className="py-2.5 px-3 text-center">Status</th>
                   <th className="py-2.5 px-3">Member Since</th>
@@ -332,6 +340,7 @@ export default function EmployeesPage() {
                       <td className="py-3 px-4"><Skeleton className="h-4 w-32" /></td>
                       <td className="py-3 px-3"><Skeleton className="h-4 w-20" /></td>
                       <td className="py-3 px-3"><Skeleton className="h-4 w-36" /></td>
+                      <td className="py-3 px-3"><Skeleton className="h-4 w-24" /></td>
                       <td className="py-3 px-3 text-center"><Skeleton className="h-4 w-16 mx-auto" /></td>
                       <td className="py-3 px-3 text-center"><Skeleton className="h-4 w-14 mx-auto" /></td>
                       <td className="py-3 px-3"><Skeleton className="h-4 w-24" /></td>
@@ -340,7 +349,7 @@ export default function EmployeesPage() {
                   ))
                 ) : displayedEmployees.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-slate-400">
+                    <td colSpan={9} className="py-12 text-center text-slate-400">
                       No employees match your search criteria.
                     </td>
                   </tr>
@@ -364,6 +373,15 @@ export default function EmployeesPage() {
                         @{emp.username}
                       </td>
                       <td className="py-3 px-3 text-slate-600">{emp.email}</td>
+                      <td className="py-3 px-3 text-slate-700 font-mono text-[11px] whitespace-nowrap">
+                        {emp.phone ? (
+                          <a href={`tel:${emp.phone}`} className="hover:text-green-700 hover:underline">
+                            {emp.phone}
+                          </a>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
                       <td className="py-3 px-3 text-center">
                         <Badge variant={emp.role === "admin" ? "warning" : emp.role === "sub_admin" ? "info" : "neutral"}>
                           {emp.role === "admin" ? "Admin" : emp.role === "sub_admin" ? "Sub Admin" : "Employee"}
@@ -479,6 +497,21 @@ export default function EmployeesPage() {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  placeholder="e.g. 01712345678"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
                   Email *
                 </label>
                 <input
@@ -490,19 +523,19 @@ export default function EmployeesPage() {
                   className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
                 />
               </div>
-            </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                {editingEmployee ? "Reset Password (Optional)" : "Password *"}
-              </label>
-              <input
-                type="password"
-                placeholder={editingEmployee ? "Leave blank to keep unchanged" : "••••••••"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
-              />
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  {editingEmployee ? "Reset Password (Optional)" : "Password *"}
+                </label>
+                <input
+                  type="password"
+                  placeholder={editingEmployee ? "Leave blank to keep unchanged" : "••••••••"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-500 focus:ring-1 focus:ring-green-600 focus:outline-none"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
