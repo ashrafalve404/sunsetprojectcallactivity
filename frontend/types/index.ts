@@ -322,8 +322,10 @@ export interface DailyTarget {
   sales_target?: number | null;
   collection_amount_target: number | null;
   tb_target?: number | null;
+  emi_target?: number | null;
   monthly_sales_target?: number | null;
   monthly_collection_target?: number | null;
+  monthly_emi_target?: number | null;
   monthly_dialed_calls_target?: number | null;
   monthly_connected_calls_target?: number | null;
   monthly_outdoor_visits_target?: number | null;

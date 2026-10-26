@@ -33,6 +33,13 @@ async def ensure_schema_updates(engine: AsyncEngine, is_sqlite: bool) -> None:
                 if user_cols and "phone" not in user_cols:
                     await conn.execute(text("ALTER TABLE users ADD COLUMN phone VARCHAR(50)"))
                     logger.info("Added phone to users table")
+
+                # Ensure daily_targets.emi_target exists
+                result_targets = await conn.execute(text("PRAGMA table_info(daily_targets)"))
+                target_cols = {row[1] for row in result_targets.fetchall()}
+                if target_cols and "emi_target" not in target_cols:
+                    await conn.execute(text("ALTER TABLE daily_targets ADD COLUMN emi_target NUMERIC(15, 2)"))
+                    logger.info("Added emi_target to daily_targets table")
             else:
                 await conn.execute(text("""
                     ALTER TABLE sales_collection_entries 
@@ -43,6 +50,9 @@ async def ensure_schema_updates(engine: AsyncEngine, is_sqlite: bool) -> None:
 
                     ALTER TABLE users
                     ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
+
+                    ALTER TABLE daily_targets
+                    ADD COLUMN IF NOT EXISTS emi_target NUMERIC(15, 2);
                 """))
     except Exception as exc:
         logger.warning("ensure_schema_updates warning (non-fatal): %s", exc)

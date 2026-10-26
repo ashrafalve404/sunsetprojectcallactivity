@@ -35,6 +35,7 @@ class DailyTargets(Base):
     # All targets nullable — NULL means "not configured" (not zero)
     sales_target: Mapped[float | None] = mapped_column(Numeric(15, 2), nullable=True)
     tb_target: Mapped[float | None] = mapped_column(Numeric(15, 2), nullable=True)
+    emi_target: Mapped[float | None] = mapped_column(Numeric(15, 2), nullable=True)
     outdoor_visit_target: Mapped[int | None] = mapped_column(nullable=True)
     dialed_calls_target: Mapped[int | None] = mapped_column(nullable=True)
     connected_calls_target: Mapped[int | None] = mapped_column(nullable=True)

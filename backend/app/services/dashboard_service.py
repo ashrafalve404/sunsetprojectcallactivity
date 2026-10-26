@@ -75,16 +75,21 @@ class DashboardService:
                 "tb_target": None,
                 "tb_base": None,
                 "tb_carry_forward": Decimal("0"),
+                "emi_target": None,
+                "emi_base": None,
+                "emi_carry_forward": Decimal("0"),
                 "dialed_target": None,
                 "connected_target": None,
                 "outdoor_target": None,
                 "meeting_target": None,
                 "monthly_sales_target": None,
                 "monthly_tb_target": None,
+                "monthly_emi_target": None,
             }
 
         sales_base = Decimal(str(target.sales_target)) if target.sales_target is not None else None
         tb_base = Decimal(str(target.tb_target)) if target.tb_target is not None else None
+        emi_base = Decimal(str(target.emi_target)) if getattr(target, "emi_target", None) is not None else None
         dialed_target = target.dialed_calls_target
         connected_target = target.connected_calls_target
         outdoor_target = target.outdoor_visit_target
@@ -92,6 +97,7 @@ class DashboardService:
 
         sales_carry_forward = Decimal("0")
         tb_carry_forward = Decimal("0")
+        emi_carry_forward = Decimal("0")
 
         # Calculate carry-forward for employee if date is past start of month
         if employee_id is not None:
@@ -103,6 +109,7 @@ class DashboardService:
                 past_days = (yesterday - eff_start).days + 1
                 exp_sales = (sales_base or Decimal("0")) * past_days
                 exp_tb = (tb_base or Decimal("0")) * past_days
+                exp_emi = (emi_base or Decimal("0")) * past_days
 
                 # Query actual historical reports in [eff_start, yesterday]
                 stmt = (
@@ -119,16 +126,20 @@ class DashboardService:
 
                 act_sales = Decimal("0")
                 act_tb = Decimal("0")
+                act_emi = Decimal("0")
                 for pr in past_reports:
                     pfin = SalesService.calc_totals(pr.sales_collection_entries)
                     act_sales += pfin["total_new_sales"]
                     act_tb += pfin["total_tb_collection"]
+                    act_emi += pfin["total_emi_collection"]
 
                 sales_carry_forward = max(Decimal("0"), exp_sales - act_sales)
                 tb_carry_forward = max(Decimal("0"), exp_tb - act_tb)
+                emi_carry_forward = max(Decimal("0"), exp_emi - act_emi)
 
         effective_sales_target = (sales_base + sales_carry_forward) if sales_base is not None else None
         effective_tb_target = (tb_base + tb_carry_forward) if tb_base is not None else None
+        effective_emi_target = (emi_base + emi_carry_forward) if emi_base is not None else None
 
         return {
             "target": target,
@@ -138,12 +149,16 @@ class DashboardService:
             "tb_target": effective_tb_target,
             "tb_base": tb_base,
             "tb_carry_forward": tb_carry_forward,
+            "emi_target": effective_emi_target,
+            "emi_base": emi_base,
+            "emi_carry_forward": emi_carry_forward,
             "dialed_target": dialed_target,
             "connected_target": connected_target,
             "outdoor_target": outdoor_target,
             "meeting_target": meeting_target,
             "monthly_sales_target": sales_base * Decimal("30") if sales_base is not None else None,
             "monthly_tb_target": tb_base * Decimal("30") if tb_base is not None else None,
+            "monthly_emi_target": emi_base * Decimal("30") if emi_base is not None else None,
         }
 
     async def get_report_summary(
@@ -252,6 +267,18 @@ class DashboardService:
             carry_forward=target_info["tb_carry_forward"],
             monthly_target=target_info["monthly_tb_target"],
         )
+        emi_actual = fin["total_emi_collection"]
+        emi_ta = TargetAchievement(
+            actual=emi_actual,
+            target=target_info["emi_target"],
+            achievement_pct=(
+                _calc_rate(emi_actual, target_info["emi_target"])
+                if target_info["emi_target"] else None
+            ),
+            base_target=target_info["emi_base"],
+            carry_forward=target_info["emi_carry_forward"],
+            monthly_target=target_info["monthly_emi_target"],
+        )
         meeting_actual_h = Decimal(str(total_meeting_dur)) / Decimal("60")
         meeting_ta = TargetAchievement(
             actual=meeting_actual_h.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
@@ -289,6 +316,7 @@ class DashboardService:
             outdoor_visits=visit_ta,
             sales=sales_ta,
             tb=tb_ta,
+            emi=emi_ta,
             meeting_hours=meeting_ta,
             lead_category_breakdown=lead_breakdown,
         )
@@ -474,11 +502,35 @@ class DashboardService:
                 dialed_tgt = target_info["dialed_target"] or 60
                 connected_tgt = target_info["connected_target"] or 25
                 outdoor_tgt = target_info["outdoor_target"] or 3
-                eff_coll_tgt = target_info["sales_target"] or target_info["tb_target"]
+                eff_financials = [
+                    val for val in [target_info["sales_target"], target_info["tb_target"], target_info["emi_target"]]
+                    if val is not None
+                ]
+                eff_coll_tgt = sum(eff_financials) if eff_financials else None
                 collection_tgt = float(eff_coll_tgt if eff_coll_tgt else 500000)
-                base_coll_tgt = float(target_info["sales_base"] or target_info["tb_base"] or 0)
-                cf_deficit = float(target_info["sales_carry_forward"] if target_info["sales_target"] else target_info["tb_carry_forward"])
-                monthly_coll_tgt = float(target_info["monthly_sales_target"] or target_info["monthly_tb_target"] or (base_coll_tgt * 30))
+
+                base_financials = [
+                    val for val in [target_info["sales_base"], target_info["tb_base"], target_info["emi_base"]]
+                    if val is not None
+                ]
+                base_coll_tgt = float(sum(base_financials) if base_financials else 0)
+
+                cf_financials = [
+                    target_info["sales_carry_forward"],
+                    target_info["tb_carry_forward"],
+                    target_info["emi_carry_forward"],
+                ]
+                cf_deficit = float(sum(cf_financials))
+
+                monthly_financials = [
+                    val for val in [
+                        target_info["monthly_sales_target"],
+                        target_info["monthly_tb_target"],
+                        target_info["monthly_emi_target"],
+                    ]
+                    if val is not None
+                ]
+                monthly_coll_tgt = float(sum(monthly_financials)) if monthly_financials else float(base_coll_tgt * 30)
             else:
                 # Multi-day evaluation: calculate expected benchmark for the period
                 days_in_period = (date_to - date_from).days + 1
@@ -486,7 +538,11 @@ class DashboardService:
                 dialed_base = (target.dialed_calls_target if target and target.dialed_calls_target else 60)
                 conn_base = (target.connected_calls_target if target and target.connected_calls_target else 25)
                 outdoor_base = (target.outdoor_visit_target if target and target.outdoor_visit_target else 3)
-                daily_coll = float(target.sales_target if target and target.sales_target else (target.tb_target if target and target.tb_target else 500000))
+                daily_financials = [
+                    val for val in [target.sales_target, target.tb_target, getattr(target, "emi_target", None)]
+                    if val is not None
+                ] if target else []
+                daily_coll = float(sum(daily_financials)) if daily_financials else 500000.0
 
                 dialed_tgt = dialed_base * days_in_period
                 connected_tgt = conn_base * days_in_period
@@ -612,13 +668,28 @@ class DashboardService:
         days_remaining = max(0, days_in_month - days_elapsed)
 
         # Calculate monthly target
+        def _calc_monthly_financial_target(t_inf: dict) -> float:
+            targets_list = [
+                t_inf.get("monthly_sales_target"),
+                t_inf.get("monthly_tb_target"),
+                t_inf.get("monthly_emi_target"),
+            ]
+            valid = [float(v) for v in targets_list if v is not None]
+            if valid:
+                return sum(valid)
+            bases_list = [
+                t_inf.get("sales_base"),
+                t_inf.get("tb_base"),
+                t_inf.get("emi_base"),
+            ]
+            valid_bases = [float(v) for v in bases_list if v is not None]
+            if valid_bases:
+                return sum(valid_bases) * 30
+            return 500000.0 * 30
+
         if employee_id is not None:
             t_info = await self.get_target_with_carry_forward(date_to, employee_id)
-            monthly_target = float(
-                t_info.get("monthly_sales_target")
-                or t_info.get("monthly_tb_target")
-                or (float(t_info.get("sales_base") or t_info.get("tb_base") or 500000) * 30)
-            )
+            monthly_target = _calc_monthly_financial_target(t_info)
         else:
             emp_stmt = select(User).where(User.is_active.is_(True), User.role == UserRole.EMPLOYEE)
             emp_res = await self.db.execute(emp_stmt)
@@ -626,12 +697,7 @@ class DashboardService:
             monthly_target = 0.0
             for emp in active_emps:
                 t_info = await self.get_target_with_carry_forward(date_to, emp.id)
-                emp_mo = float(
-                    t_info.get("monthly_sales_target")
-                    or t_info.get("monthly_tb_target")
-                    or (float(t_info.get("sales_base") or t_info.get("tb_base") or 500000) * 30)
-                )
-                monthly_target += emp_mo
+                monthly_target += _calc_monthly_financial_target(t_info)
             if monthly_target <= 0:
                 monthly_target = 15000000.0 * max(1, len(active_emps))
 

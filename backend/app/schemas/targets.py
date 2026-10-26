@@ -12,6 +12,7 @@ class TargetsBase(BaseModel):
     effective_from: date
     sales_target: Optional[Decimal] = Field(None, ge=Decimal("0"))
     tb_target: Optional[Decimal] = Field(None, ge=Decimal("0"))
+    emi_target: Optional[Decimal] = Field(None, ge=Decimal("0"))
     outdoor_visit_target: Optional[int] = Field(None, ge=0)
     dialed_calls_target: Optional[int] = Field(None, ge=0)
     connected_calls_target: Optional[int] = Field(None, ge=0)
@@ -49,6 +50,9 @@ class TargetsBase(BaseModel):
             if "tb_target" not in data and "collection_amount_target" not in data and "monthly_collection_target" in data:
                 mc = data.get("monthly_collection_target")
                 data["tb_target"] = round(Decimal(str(mc)) / Decimal("30"), 2) if mc is not None else None
+            if "emi_target" not in data and "monthly_emi_target" in data:
+                me = data.get("monthly_emi_target")
+                data["emi_target"] = round(Decimal(str(me)) / Decimal("30"), 2) if me is not None else None
             if "outdoor_visit_target" not in data and "outdoor_visits_target" not in data and "monthly_outdoor_visits_target" in data:
                 mo = data.get("monthly_outdoor_visits_target")
                 data["outdoor_visit_target"] = round(int(mo) / 30) if mo is not None else None
@@ -69,6 +73,7 @@ class TargetsUpdate(BaseModel):
     effective_from: Optional[date] = None
     sales_target: Optional[Decimal] = None
     tb_target: Optional[Decimal] = None
+    emi_target: Optional[Decimal] = None
     outdoor_visit_target: Optional[int] = None
     dialed_calls_target: Optional[int] = None
     connected_calls_target: Optional[int] = None
@@ -102,6 +107,9 @@ class TargetsUpdate(BaseModel):
             if "tb_target" not in data and "collection_amount_target" not in data and "monthly_collection_target" in data:
                 mc = data.get("monthly_collection_target")
                 data["tb_target"] = round(Decimal(str(mc)) / Decimal("30"), 2) if mc is not None else None
+            if "emi_target" not in data and "monthly_emi_target" in data:
+                me = data.get("monthly_emi_target")
+                data["emi_target"] = round(Decimal(str(me)) / Decimal("30"), 2) if me is not None else None
         return data
 
 
@@ -120,6 +128,7 @@ class TargetsRead(TargetsBase):
     # Monthly auto-calculated aliases (x30)
     monthly_sales_target: Optional[Decimal] = None
     monthly_collection_target: Optional[Decimal] = None
+    monthly_emi_target: Optional[Decimal] = None
     monthly_dialed_calls_target: Optional[int] = None
     monthly_connected_calls_target: Optional[int] = None
     monthly_outdoor_visits_target: Optional[int] = None
@@ -139,6 +148,8 @@ class TargetsRead(TargetsBase):
             self.monthly_sales_target = self.sales_target * Decimal("30")
         if self.tb_target is not None:
             self.monthly_collection_target = self.tb_target * Decimal("30")
+        if self.emi_target is not None:
+            self.monthly_emi_target = self.emi_target * Decimal("30")
         if self.dialed_calls_target is not None:
             self.monthly_dialed_calls_target = self.dialed_calls_target * 30
         if self.connected_calls_target is not None:

@@ -12,6 +12,7 @@ class TargetsBase(BaseModel):
     effective_from: date
     sales_target: Optional[Decimal] = Field(None, decimal_places=2, ge=Decimal("0"))
     tb_target: Optional[Decimal] = Field(None, decimal_places=2, ge=Decimal("0"))
+    emi_target: Optional[Decimal] = Field(None, decimal_places=2, ge=Decimal("0"))
     outdoor_visit_target: Optional[int] = Field(None, ge=0)
     dialed_calls_target: Optional[int] = Field(None, ge=0)
     connected_calls_target: Optional[int] = Field(None, ge=0)
@@ -27,6 +28,7 @@ class TargetsUpdate(BaseModel):
     effective_from: Optional[date] = None
     sales_target: Optional[Decimal] = None
     tb_target: Optional[Decimal] = None
+    emi_target: Optional[Decimal] = None
     outdoor_visit_target: Optional[int] = None
     dialed_calls_target: Optional[int] = None
     connected_calls_target: Optional[int] = None
@@ -104,6 +106,7 @@ class ReportSummary(BaseModel):
     outdoor_visits: TargetAchievement = TargetAchievement()
     sales: TargetAchievement = TargetAchievement()
     tb: TargetAchievement = TargetAchievement()
+    emi: TargetAchievement = TargetAchievement()
     meeting_hours: TargetAchievement = TargetAchievement()
 
     # Breakdowns
