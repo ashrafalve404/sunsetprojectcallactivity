@@ -133,31 +133,55 @@ export function KPILeaderboard({
     return list;
   }, [data, searchQuery, sortBy, sortOrder]);
 
-  const getRankBadge = (rank: number) => {
-    if (rank === 1) {
+  const getRankBadge = (emp: EmployeeLeaderboardItem) => {
+    const hasActivity =
+      emp.overall_score_pct > 0 ||
+      emp.dialed_calls > 0 ||
+      emp.connected_calls > 0 ||
+      emp.actual_collections > 0 ||
+      emp.outdoor_visits > 0;
+
+    // Only award gold, silver, bronze medals if the employee actually has positive KPI activity
+    if (hasActivity && emp.rank === 1) {
       return (
-        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-100 text-amber-800 font-extrabold text-sm shadow-xs border border-amber-300">
+        <span
+          className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-100 text-amber-800 font-extrabold text-sm shadow-xs border border-amber-300"
+          title="1st Place (Top Performer)"
+        >
           🥇
         </span>
       );
     }
-    if (rank === 2) {
+    if (hasActivity && emp.rank === 2) {
       return (
-        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-200 text-slate-800 font-extrabold text-sm shadow-xs border border-slate-300">
+        <span
+          className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-200 text-slate-800 font-extrabold text-sm shadow-xs border border-slate-300"
+          title="2nd Place"
+        >
           🥈
         </span>
       );
     }
-    if (rank === 3) {
+    if (hasActivity && emp.rank === 3) {
       return (
-        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-700/20 text-amber-900 font-extrabold text-sm shadow-xs border border-amber-600/30">
+        <span
+          className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-700/20 text-amber-900 font-extrabold text-sm shadow-xs border border-amber-600/30"
+          title="3rd Place"
+        >
           🥉
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-100 text-slate-600 font-bold text-xs border border-slate-200">
-        #{rank}
+      <span
+        className={`inline-flex items-center justify-center w-7 h-7 rounded-full font-bold text-xs border ${
+          hasActivity
+            ? "bg-slate-100 text-slate-700 border-slate-300"
+            : "bg-slate-50 text-slate-400 border-slate-200 font-normal"
+        }`}
+        title={`Rank #${emp.rank}`}
+      >
+        #{emp.rank}
       </span>
     );
   };
@@ -442,7 +466,14 @@ export function KPILeaderboard({
               })}
             </div>
           </div>
-        ) : null}
+        ) : (
+          <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-lg flex items-center justify-between text-xs text-slate-500">
+            <span className="flex items-center gap-2 font-medium">
+              <Award className="w-4 h-4 text-slate-400" />
+              Category Champions will appear once daily calls or collections are recorded for this period.
+            </span>
+          </div>
+        )}
 
         {/* ── Table Filter & Controls ────────────────────────────────── */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
@@ -604,9 +635,9 @@ export function KPILeaderboard({
               ) : (
                 sortedRankings.map((emp, index) => (
                   <tr key={emp.employee_id} className="hover:bg-slate-50/80 transition-colors">
-                    {/* Dynamic Rank Badge based on current sort */}
+                    {/* Dynamic Rank Badge based on official rank and activity */}
                     <td className="py-3 px-3 text-center">
-                      {getRankBadge(index + 1)}
+                      {getRankBadge(emp)}
                     </td>
 
                     {/* Employee info */}
@@ -753,7 +784,7 @@ export function KPILeaderboard({
                 {/* Header: Rank, Employee Name, Pace Badge */}
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="shrink-0">{getRankBadge(index + 1)}</div>
+                    <div className="shrink-0">{getRankBadge(emp)}</div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-sm font-bold text-slate-900 truncate">

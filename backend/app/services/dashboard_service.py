@@ -604,43 +604,72 @@ class DashboardService:
                 )
             )
 
-        rankings.sort(key=lambda r: (r.overall_score_pct, r.connected_calls, r.dialed_calls), reverse=True)
+        # Sort active performers above inactive ones, then by overall score, collections, connections, dialed calls,
+        # and lowest carry-forward deficit as a tie-breaker.
+        rankings.sort(
+            key=lambda r: (
+                1 if r.overall_score_pct > 0 or r.dialed_calls > 0 or r.actual_collections > 0 else 0,
+                r.overall_score_pct,
+                r.actual_collections,
+                r.connected_calls,
+                r.dialed_calls,
+                -r.carry_forward_deficit if r.carry_forward_deficit is not None else 0.0,
+            ),
+            reverse=True,
+        )
         for idx, item in enumerate(rankings, 1):
             item.rank = idx
 
         champions: list[KPIChampion] = []
         if rankings and employee_id is None:
-            top_caller = max(rankings, key=lambda r: r.dialed_calls)
-            top_conn = max(rankings, key=lambda r: r.connected_calls)
-            top_visits = max(rankings, key=lambda r: r.outdoor_visits)
-            top_closer = max(rankings, key=lambda r: r.actual_collections)
+            # Only award a champion title if the employee actually has positive activity (> 0)
+            callers_with_activity = [r for r in rankings if r.dialed_calls > 0]
+            if callers_with_activity:
+                top_caller = max(callers_with_activity, key=lambda r: r.dialed_calls)
+                champions.append(
+                    KPIChampion(
+                        title="Top Caller",
+                        metric="Most Dialed Calls",
+                        employee_name=top_caller.employee_name,
+                        value=f"{top_caller.dialed_calls} calls ({top_caller.dialed_pct}%)",
+                    )
+                )
 
-            champions = [
-                KPIChampion(
-                    title="Top Caller",
-                    metric="Most Dialed Calls",
-                    employee_name=top_caller.employee_name,
-                    value=f"{top_caller.dialed_calls} calls ({top_caller.dialed_pct}%)",
-                ),
-                KPIChampion(
-                    title="Top Connector",
-                    metric="Connected Conversations",
-                    employee_name=top_conn.employee_name,
-                    value=f"{top_conn.connected_calls} connected ({top_conn.connected_pct}%)",
-                ),
-                KPIChampion(
-                    title="Meeting Star",
-                    metric="Client Outdoor Visits",
-                    employee_name=top_visits.employee_name,
-                    value=f"{top_visits.outdoor_visits} visits ({top_visits.outdoor_pct}%)",
-                ),
-                KPIChampion(
-                    title="Top Closer",
-                    metric="Actual Collections",
-                    employee_name=top_closer.employee_name,
-                    value=f"৳{top_closer.actual_collections:,.0f} ({top_closer.collection_pct}%)",
-                ),
-            ]
+            conn_with_activity = [r for r in rankings if r.connected_calls > 0]
+            if conn_with_activity:
+                top_conn = max(conn_with_activity, key=lambda r: r.connected_calls)
+                champions.append(
+                    KPIChampion(
+                        title="Top Connector",
+                        metric="Connected Conversations",
+                        employee_name=top_conn.employee_name,
+                        value=f"{top_conn.connected_calls} connected ({top_conn.connected_pct}%)",
+                    )
+                )
+
+            visits_with_activity = [r for r in rankings if r.outdoor_visits > 0]
+            if visits_with_activity:
+                top_visits = max(visits_with_activity, key=lambda r: r.outdoor_visits)
+                champions.append(
+                    KPIChampion(
+                        title="Meeting Star",
+                        metric="Client Outdoor Visits",
+                        employee_name=top_visits.employee_name,
+                        value=f"{top_visits.outdoor_visits} visits ({top_visits.outdoor_pct}%)",
+                    )
+                )
+
+            closers_with_activity = [r for r in rankings if r.actual_collections > 0]
+            if closers_with_activity:
+                top_closer = max(closers_with_activity, key=lambda r: r.actual_collections)
+                champions.append(
+                    KPIChampion(
+                        title="Top Closer",
+                        metric="Actual Collections",
+                        employee_name=top_closer.employee_name,
+                        value=f"৳{top_closer.actual_collections:,.0f} ({top_closer.collection_pct}%)",
+                    )
+                )
 
         avg_team_score = round(sum(r.overall_score_pct for r in rankings) / len(rankings), 1) if rankings else 0.0
 
