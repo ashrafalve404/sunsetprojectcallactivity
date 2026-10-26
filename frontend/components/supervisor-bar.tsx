@@ -109,18 +109,18 @@ export function SupervisorBar({
 
             {/* Right: Controls & Cross-Navigation */}
             <div className="flex flex-wrap items-center gap-3">
-              {/* Employee Selector Dropdown */}
-              <div className="flex items-center gap-2 bg-slate-800/90 border border-slate-700 rounded-lg px-3 py-1.5 shadow-inner">
-                <Users className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span className="text-xs font-semibold text-slate-300 shrink-0">Staff:</span>
+              {/* Employee Selector Dropdown (High-Contrast Clean White Pill) */}
+              <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-1.5 shadow-sm border border-slate-200">
+                <Users className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span className="text-xs font-bold text-slate-600 uppercase tracking-wider shrink-0">Staff:</span>
                 <select
                   value={selectedEmployeeId ?? ""}
                   onChange={(e) => onSelectEmployee(Number(e.target.value))}
                   disabled={loading || employees.length === 0}
-                  className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer pr-1"
+                  className="bg-white text-xs font-bold text-slate-900 focus:outline-none cursor-pointer pr-1"
                 >
                   {employees.map((emp) => (
-                    <option key={emp.id} value={emp.id} className="bg-slate-900 text-white py-1">
+                    <option key={emp.id} value={emp.id} className="bg-white text-slate-900 font-semibold py-1">
                       {emp.full_name} ({formatEmployeeId(emp.id)}){emp.phone ? ` • ${emp.phone}` : ""}
                     </option>
                   ))}
