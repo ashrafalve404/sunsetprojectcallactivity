@@ -53,6 +53,14 @@ async def ensure_schema_updates(engine: AsyncEngine, is_sqlite: bool) -> None:
 
                     ALTER TABLE daily_targets
                     ADD COLUMN IF NOT EXISTS emi_target NUMERIC(15, 2);
+
+                    DO $$
+                    BEGIN
+                        ALTER TYPE userrole ADD VALUE IF NOT EXISTS 'tl';
+                        ALTER TYPE userrole ADD VALUE IF NOT EXISTS 'co';
+                    EXCEPTION
+                        WHEN undefined_object THEN NULL;
+                    END $$;
                 """))
     except Exception as exc:
         logger.warning("ensure_schema_updates warning (non-fatal): %s", exc)

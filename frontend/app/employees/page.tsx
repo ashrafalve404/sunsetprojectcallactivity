@@ -30,6 +30,42 @@ import { api, ApiError } from "@/lib/api";
 import { User, UserRole } from "@/types";
 import { formatReadableDate, formatEmployeeId } from "@/lib/utils";
 
+export function renderRoleBadge(userRole: UserRole) {
+  switch (userRole) {
+    case "admin":
+      return (
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-200">
+          👑 Admin
+        </span>
+      );
+    case "sub_admin":
+      return (
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-900 border border-teal-200">
+          🛡️ Sub Admin
+        </span>
+      );
+    case "tl":
+      return (
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+          ⭐ Team Lead (TL)
+        </span>
+      );
+    case "co":
+      return (
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-900 border border-sky-300">
+          🎯 Coordinator (CO)
+        </span>
+      );
+    case "employee":
+    default:
+      return (
+        <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+          👤 Executive
+        </span>
+      );
+  }
+}
+
 export default function EmployeesPage() {
   const { user: currentUser } = useAuth();
 
@@ -269,7 +305,9 @@ export default function EmployeesPage() {
                     className="border border-slate-300 rounded px-2 py-1 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
                   >
                     <option value="all">All Roles</option>
-                    <option value="employee">Employee</option>
+                    <option value="employee">Sales Executive</option>
+                    <option value="co">Coordinator (CO)</option>
+                    <option value="tl">Team Leader (TL)</option>
                     <option value="sub_admin">Sub Admin</option>
                     <option value="admin">Administrator</option>
                   </select>
@@ -349,12 +387,7 @@ export default function EmployeesPage() {
                       <span className="font-mono font-bold text-xs bg-slate-100 text-slate-800 border border-slate-200 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
                         {formatEmployeeId(emp.id)}
                       </span>
-                      <Badge
-                        variant={emp.role === "admin" ? "warning" : emp.role === "sub_admin" ? "info" : "neutral"}
-                        className="text-[10px]"
-                      >
-                        {emp.role === "admin" ? "Admin" : emp.role === "sub_admin" ? "Sub Admin" : "Employee"}
-                      </Badge>
+                      {renderRoleBadge(emp.role)}
                       {currentUser?.id === emp.id && (
                         <span className="text-[10px] text-green-800 bg-green-50 px-1.5 py-0.5 rounded border border-green-200 font-semibold">
                           You
@@ -503,9 +536,7 @@ export default function EmployeesPage() {
                         )}
                       </td>
                       <td className="py-3 px-3 text-center">
-                        <Badge variant={emp.role === "admin" ? "warning" : emp.role === "sub_admin" ? "info" : "neutral"}>
-                          {emp.role === "admin" ? "Admin" : emp.role === "sub_admin" ? "Sub Admin" : "Employee"}
-                        </Badge>
+                        {renderRoleBadge(emp.role)}
                       </td>
                       <td className="py-3 px-3 text-center">
                         <span
@@ -668,7 +699,9 @@ export default function EmployeesPage() {
                   onChange={(e) => setRole(e.target.value as UserRole)}
                   className="w-full border border-slate-300 rounded px-3 py-2 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
                 >
-                  <option value="employee">Employee</option>
+                  <option value="employee">Sales Executive (Employee)</option>
+                  <option value="co">Coordinator (CO)</option>
+                  <option value="tl">Team Leader (TL)</option>
                   <option value="sub_admin">Sub Admin</option>
                   <option value="admin">Administrator</option>
                 </select>

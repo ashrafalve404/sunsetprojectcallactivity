@@ -284,11 +284,23 @@ function DashboardContent() {
                       className="border border-slate-300 rounded px-2.5 py-1 text-xs font-semibold text-slate-800 focus:ring-1 focus:ring-green-600 focus:outline-none bg-white"
                     >
                       <option value="all">All Employees</option>
-                      {employees.map((emp) => (
-                        <option key={emp.id} value={emp.id}>
-                          {emp.full_name} ({formatEmployeeId(emp.id)})
-                        </option>
-                      ))}
+                      {employees.map((emp) => {
+                        const roleTag =
+                          emp.role === "tl"
+                            ? "TL"
+                            : emp.role === "co"
+                            ? "CO"
+                            : emp.role === "admin"
+                            ? "Admin"
+                            : emp.role === "sub_admin"
+                            ? "Sub-Admin"
+                            : "Exec";
+                        return (
+                          <option key={emp.id} value={emp.id}>
+                            {emp.full_name} ({formatEmployeeId(emp.id)} • {roleTag})
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
                 )}

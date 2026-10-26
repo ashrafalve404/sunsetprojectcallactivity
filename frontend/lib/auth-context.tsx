@@ -11,6 +11,9 @@ interface AuthContextType {
   isAdmin: boolean;
   isSubAdmin: boolean;
   isSuperAdmin: boolean;
+  isTL: boolean;
+  isCO: boolean;
+  canSupervise: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -92,6 +95,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAdmin: user?.role === "admin" || user?.role === "sub_admin",
         isSubAdmin: user?.role === "sub_admin",
         isSuperAdmin: user?.role === "admin",
+        isTL: user?.role === "tl",
+        isCO: user?.role === "co",
+        canSupervise: user?.role === "admin" || user?.role === "sub_admin" || user?.role === "tl",
         login,
         logout,
         refreshUser,

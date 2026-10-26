@@ -39,11 +39,11 @@ class ReminderService:
         overdue_count = 0
         unsubmitted_report = False
 
-        # 1. Unsubmitted daily reports across active employees
+        # 1. Unsubmitted daily reports across active employees (Executives, TLs, COs)
         emp_query = await self.db.execute(
             select(User).where(
                 User.is_active == True,
-                User.role == UserRole.EMPLOYEE,
+                User.role.in_([UserRole.EMPLOYEE, UserRole.TL, UserRole.CO]),
             ).order_by(User.full_name.asc())
         )
         active_employees = emp_query.scalars().all()

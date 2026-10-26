@@ -41,7 +41,7 @@ export function SupervisorBar({
       .list({ is_active: true })
       .then((data) => {
         if (!mounted) return;
-        const staff = data.filter((e) => e.role === "employee");
+        const staff = data.filter((e) => e.role === "employee" || e.role === "tl" || e.role === "co");
         const listToUse = staff.length > 0 ? staff : data;
         setEmployees(listToUse);
 
@@ -109,11 +109,19 @@ export function SupervisorBar({
               disabled={loading || employees.length === 0}
               className="bg-white text-xs font-bold text-slate-900 focus:outline-none cursor-pointer pr-1"
             >
-              {employees.map((emp) => (
-                <option key={emp.id} value={emp.id} className="bg-white text-slate-900 font-semibold py-1">
-                  {emp.full_name} ({formatEmployeeId(emp.id)})
-                </option>
-              ))}
+              {employees.map((emp) => {
+                const roleTag =
+                  emp.role === "tl"
+                    ? "TL"
+                    : emp.role === "co"
+                    ? "CO"
+                    : "Exec";
+                return (
+                  <option key={emp.id} value={emp.id} className="bg-white text-slate-900 font-semibold py-1">
+                    {emp.full_name} ({formatEmployeeId(emp.id)} • {roleTag})
+                  </option>
+                );
+              })}
             </select>
           </div>
 

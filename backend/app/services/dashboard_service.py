@@ -483,12 +483,12 @@ class DashboardService:
     ) -> PerformanceLeaderboardResponse:
         from app.models.user import User, UserRole
 
-        # 1. Fetch active employees
+        # 1. Fetch active employees (Executives, Team Leads, Coordinators)
         user_query = select(User).where(User.is_active.is_(True))
         if employee_id:
             user_query = user_query.where(User.id == employee_id)
         else:
-            user_query = user_query.where(User.role == UserRole.EMPLOYEE)
+            user_query = user_query.where(User.role.in_([UserRole.EMPLOYEE, UserRole.TL, UserRole.CO]))
 
         users_res = await self.db.execute(user_query.order_by(User.id))
         employees = users_res.scalars().all()
@@ -720,7 +720,7 @@ class DashboardService:
             t_info = await self.get_target_with_carry_forward(date_to, employee_id)
             monthly_target = _calc_monthly_financial_target(t_info)
         else:
-            emp_stmt = select(User).where(User.is_active.is_(True), User.role == UserRole.EMPLOYEE)
+            emp_stmt = select(User).where(User.is_active.is_(True), User.role.in_([UserRole.EMPLOYEE, UserRole.TL, UserRole.CO]))
             emp_res = await self.db.execute(emp_stmt)
             active_emps = emp_res.scalars().all()
             monthly_target = 0.0

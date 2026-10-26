@@ -17,6 +17,7 @@ import {
   CommitmentPipelineResponse,
   SystemSetting,
   User,
+  UserRole,
   RemindersResponse,
   PerformanceLeaderboardResponse,
   FinancialTrendResponse,
@@ -576,7 +577,7 @@ export const api = {
       phone?: string | null;
       username: string;
       password: string;
-      role: "admin" | "sub_admin" | "employee";
+      role: UserRole;
     }): Promise<User> => {
       return request<User>("/employees", {
         method: "POST",
@@ -589,7 +590,7 @@ export const api = {
         full_name: string;
         email: string;
         phone?: string | null;
-        role: "admin" | "sub_admin" | "employee";
+        role: UserRole;
         is_active: boolean;
         password?: string;
       }>
