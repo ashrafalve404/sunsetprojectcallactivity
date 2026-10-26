@@ -188,26 +188,33 @@ export function FinancialCharts({ startDate, endDate, employeeId }: FinancialCha
                       className="transition-all duration-700 ease-out"
                     />
 
-                    {/* Target Needle */}
-                    {expectedGaugePercent > 0 && expectedGaugePercent < 100 && (
-                      <line
-                        x1="90"
-                        y1="88"
-                        x2={90 - 74 * Math.cos((expectedGaugePercent * Math.PI) / 100)}
-                        y2={88 - 74 * Math.sin((expectedGaugePercent * Math.PI) / 100)}
-                        stroke="#0f172a"
-                        strokeWidth="2.5"
-                        strokeDasharray="2 2"
-                      />
-                    )}
+                    {/* Expected Pace Target Marker on Arc (does not cross center text) */}
+                    {expectedGaugePercent > 0 && expectedGaugePercent < 100 && (() => {
+                      const angle = (expectedGaugePercent * Math.PI) / 100;
+                      const x1 = 90 - 58 * Math.cos(angle);
+                      const y1 = 88 - 58 * Math.sin(angle);
+                      const x2 = 90 - 78 * Math.cos(angle);
+                      const y2 = 88 - 78 * Math.sin(angle);
+                      return (
+                        <line
+                          x1={x1}
+                          y1={y1}
+                          x2={x2}
+                          y2={y2}
+                          stroke="#0f172a"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                        />
+                      );
+                    })()}
                   </svg>
 
-                  {/* Centered % in Gauge */}
-                  <div className="absolute top-10 flex flex-col items-center text-center">
-                    <span className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                  {/* Centered % in Gauge (Isolated and clean) */}
+                  <div className="absolute top-8 flex flex-col items-center text-center z-10 pointer-events-none">
+                    <span className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-none">
                       {data.monthly_pace_pct}%
                     </span>
-                    <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">
+                    <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">
                       Achieved
                     </span>
                   </div>
