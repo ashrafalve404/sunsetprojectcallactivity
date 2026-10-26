@@ -35,6 +35,7 @@ import {
 } from "@/components/ui";
 import { useAuth } from "@/lib/auth-context";
 import { api, ApiError } from "@/lib/api";
+import { SupervisorBar } from "@/components/supervisor-bar";
 import {
   SALES_CATEGORIES,
   SalesCollectionCategory,
@@ -108,20 +109,35 @@ function getPaymentMethodBadge(method?: string | null) {
 function SalesVsCollectionContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isSubAdmin } = useAuth();
+  const isSupervisor = isAdmin || isSubAdmin;
 
   const today = getDhakaToday();
   const initialDate = searchParams.get("date") || today;
   const initialTab = searchParams.get("tab") === "pipeline" ? "pipeline" : "daily";
   const initialSearch = searchParams.get("search") || "";
   const initialEditId = searchParams.get("edit_id");
-  const targetEmployeeId = searchParams.get("employee_id")
-    ? parseInt(searchParams.get("employee_id")!, 10)
-    : undefined;
+  const paramEmpId = searchParams.get("employee_id");
+  const [selectedEmpId, setSelectedEmpId] = useState<number | undefined>(
+    paramEmpId ? Number(paramEmpId) : undefined
+  );
+
+  useEffect(() => {
+    if (paramEmpId) {
+      setSelectedEmpId(Number(paramEmpId));
+    }
+  }, [paramEmpId]);
+
   const [reportDate, setReportDate] = useState<string>(initialDate);
 
   // Tab: Daily Transactions vs Future Commitments Pipeline
   const [activeTab, setActiveTab] = useState<"daily" | "pipeline">(initialTab);
+
+  const handleSelectEmployee = useCallback((empId: number) => {
+    setSelectedEmpId(empId);
+    const tabQuery = activeTab === "pipeline" ? "&tab=pipeline" : "";
+    router.replace(`/sales?date=${reportDate}&employee_id=${empId}${tabQuery}`);
+  }, [reportDate, activeTab, router]);
 
   // Report & entries state
   const [report, setReport] = useState<Report | null>(null);
@@ -217,8 +233,9 @@ function SalesVsCollectionContent() {
   const loadPipeline = useCallback(async () => {
     setPipelineLoading(true);
     try {
+      const empId = isSupervisor ? selectedEmpId : undefined;
       const data = await api.sales.getCommitmentsPipeline({
-        employee_id: targetEmployeeId,
+        employee_id: empId,
       });
       setPipelineData(data);
     } catch {
@@ -226,11 +243,12 @@ function SalesVsCollectionContent() {
     } finally {
       setPipelineLoading(false);
     }
-  }, [targetEmployeeId]);
+  }, [isSupervisor, selectedEmpId]);
 
   useEffect(() => {
-    loadData(reportDate, targetEmployeeId);
-  }, [reportDate, targetEmployeeId, loadData]);
+    if (isSupervisor && !selectedEmpId) return;
+    loadData(reportDate, isSupervisor ? selectedEmpId : undefined);
+  }, [reportDate, selectedEmpId, isSupervisor, loadData]);
 
   useEffect(() => {
     if (activeTab === "pipeline") {
@@ -487,9 +505,22 @@ function SalesVsCollectionContent() {
   return (
     <DashboardLayout
       title="Sales & Collection"
-      subtitle="Financial tracking, actual collections, future commitments, and promise reschedule audit"
+      subtitle={isSupervisor ? "Supervisor Review: Monitor employee collections, commitments, and reschedule audits" : "Financial tracking, actual collections, future commitments, and promise reschedule audit"}
     >
       <div className="space-y-6">
+        {/* Supervisor Review Mode Bar */}
+        {isSupervisor && (
+          <SupervisorBar
+            isAdmin={isAdmin}
+            isSubAdmin={isSubAdmin}
+            selectedEmployeeId={selectedEmpId}
+            onSelectEmployee={handleSelectEmployee}
+            reportDate={reportDate}
+            report={report}
+            onReportUnlocked={(updated) => setReport(updated)}
+            currentPage="sales"
+          />
+        )}
         {/* ── Header Controls Card ────────────────────────────────────────── */}
         <Card>
           <CardContent className="p-3.5 sm:p-5">
@@ -507,8 +538,9 @@ function SalesVsCollectionContent() {
                     value={reportDate}
                     onChange={(e) => {
                       setReportDate(e.target.value);
-                      const empQuery = targetEmployeeId ? `&employee_id=${targetEmployeeId}` : "";
-                      router.replace(`/sales?date=${e.target.value}${empQuery}`);
+                      const empQuery = (isSupervisor ? selectedEmpId : undefined) ? `&employee_id=${selectedEmpId}` : "";
+                      const tabQuery = activeTab === "pipeline" ? "&tab=pipeline" : "";
+                      router.replace(`/sales?date=${e.target.value}${empQuery}${tabQuery}`);
                     }}
                     className="border border-slate-300 rounded px-2.5 py-1 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-green-600 bg-white"
                   />
@@ -517,8 +549,9 @@ function SalesVsCollectionContent() {
                       type="button"
                       onClick={() => {
                         setReportDate(today);
-                        const empQuery = targetEmployeeId ? `&employee_id=${targetEmployeeId}` : "";
-                        router.replace(`/sales?date=${today}${empQuery}`);
+                        const empQuery = (isSupervisor ? selectedEmpId : undefined) ? `&employee_id=${selectedEmpId}` : "";
+                        const tabQuery = activeTab === "pipeline" ? "&tab=pipeline" : "";
+                        router.replace(`/sales?date=${today}${empQuery}${tabQuery}`);
                       }}
                       className="px-2 py-1 text-[11px] font-semibold text-green-800 bg-green-50 hover:bg-green-100 rounded border border-green-200 transition-colors"
                     >
@@ -531,9 +564,9 @@ function SalesVsCollectionContent() {
 
                 <div className="text-xs text-slate-600 flex items-center gap-1.5 flex-wrap">
                   <span className="text-slate-400">Employee: </span>
-                  <span className="font-semibold text-slate-900">{report?.employee_name || user?.full_name}</span>
+                  <span className="font-semibold text-slate-900">{report?.employee_name || (isSupervisor ? "Select Employee" : user?.full_name)}</span>
                   <span className="font-mono text-[10px] font-bold bg-green-50 text-green-800 border border-green-200 px-1.5 py-0.2 rounded">
-                    {formatEmployeeId(report?.employee_id || targetEmployeeId || user?.id)}
+                    {formatEmployeeId(report?.employee_id || selectedEmpId || user?.id)}
                   </span>
                 </div>
 

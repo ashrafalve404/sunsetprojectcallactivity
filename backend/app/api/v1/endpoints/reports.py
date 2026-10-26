@@ -112,6 +112,16 @@ async def submit_report(
     return await svc.submit_report(report_id, current_user)
 
 
+@router.post("/{report_id}/reopen", response_model=ReportRead)
+async def reopen_report(
+    report_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    svc = ReportService(db)
+    return await svc.reopen_report(report_id, current_user)
+
+
 @router.get("/{report_id}/summary", response_model=ReportSummary)
 async def get_report_summary(
     report_id: int,

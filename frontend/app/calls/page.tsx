@@ -44,6 +44,7 @@ import {
 } from "@/components/ui";
 import { useAuth } from "@/lib/auth-context";
 import { api, ApiError } from "@/lib/api";
+import { SupervisorBar } from "@/components/supervisor-bar";
 import {
   LEAD_CATEGORIES,
   LeadCategory,
@@ -125,13 +126,28 @@ function MobileNumberInput({
 function DailyCallActivityContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isSubAdmin } = useAuth();
+  const isSupervisor = isAdmin || isSubAdmin;
 
   const today = getDhakaToday();
   const initialDate = searchParams.get("date") || today;
   const paramEmpId = searchParams.get("employee_id");
-  const targetEmployeeId = paramEmpId ? Number(paramEmpId) : undefined;
+  const [selectedEmpId, setSelectedEmpId] = useState<number | undefined>(
+    paramEmpId ? Number(paramEmpId) : undefined
+  );
+
+  useEffect(() => {
+    if (paramEmpId) {
+      setSelectedEmpId(Number(paramEmpId));
+    }
+  }, [paramEmpId]);
+
   const [reportDate, setReportDate] = useState<string>(initialDate);
+
+  const handleSelectEmployee = useCallback((empId: number) => {
+    setSelectedEmpId(empId);
+    router.replace(`/calls?date=${reportDate}&employee_id=${empId}`);
+  }, [reportDate, router]);
 
   // Report state
   const [report, setReport] = useState<Report | null>(null);
@@ -278,7 +294,7 @@ function DailyCallActivityContent() {
       const dd = String(d.getDate()).padStart(2, "0");
       const nextDate = `${yyyy}-${mm}-${dd}`;
       setReportDate(nextDate);
-      const empQuery = targetEmployeeId ? `&employee_id=${targetEmployeeId}` : "";
+      const empQuery = (isSupervisor ? selectedEmpId : undefined) ? `&employee_id=${selectedEmpId}` : "";
       router.replace(`/calls?date=${nextDate}${empQuery}`);
     } catch {
       // fallback
@@ -398,8 +414,9 @@ function DailyCallActivityContent() {
   }, []);
 
   useEffect(() => {
-    loadReport(reportDate, targetEmployeeId);
-  }, [reportDate, targetEmployeeId, loadReport]);
+    if (isSupervisor && !selectedEmpId) return;
+    loadReport(reportDate, isSupervisor ? selectedEmpId : undefined);
+  }, [reportDate, selectedEmpId, isSupervisor, loadReport]);
 
   const handleCellChange = (
     category: LeadCategory,
@@ -766,9 +783,22 @@ function DailyCallActivityContent() {
   return (
     <DashboardLayout
       title="Daily Call Activity"
-      subtitle="Structured dial activity tracking and lead qualification by time slot"
+      subtitle={isSupervisor ? "Supervisor Review: Monitor and audit employee call dial sheets" : "Structured dial activity tracking and lead qualification by time slot"}
     >
       <div className="space-y-6 pb-24 md:pb-6">
+        {/* Supervisor Review Mode Bar */}
+        {isSupervisor && (
+          <SupervisorBar
+            isAdmin={isAdmin}
+            isSubAdmin={isSubAdmin}
+            selectedEmployeeId={selectedEmpId}
+            onSelectEmployee={handleSelectEmployee}
+            reportDate={reportDate}
+            report={report}
+            onReportUnlocked={(updated) => setReport(updated)}
+            currentPage="calls"
+          />
+        )}
         {/* ── Header Controls Card ────────────────────────────────────────── */}
         <Card>
           <CardContent className="p-4 sm:p-5">
@@ -791,7 +821,7 @@ function DailyCallActivityContent() {
                     value={reportDate}
                     onChange={(e) => {
                       setReportDate(e.target.value);
-                      const empQuery = targetEmployeeId ? `&employee_id=${targetEmployeeId}` : "";
+                      const empQuery = (isSupervisor ? selectedEmpId : undefined) ? `&employee_id=${selectedEmpId}` : "";
                       router.replace(`/calls?date=${e.target.value}${empQuery}`);
                     }}
                     className="border border-slate-300 rounded px-2.5 py-1 text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-green-600 bg-white"
@@ -810,9 +840,9 @@ function DailyCallActivityContent() {
 
                 <div className="text-xs text-slate-600 flex items-center gap-1.5 flex-wrap">
                   <span className="text-slate-400">Employee: </span>
-                  <span className="font-semibold text-slate-900">{report?.employee_name || user?.full_name}</span>
+                  <span className="font-semibold text-slate-900">{report?.employee_name || (isSupervisor ? "Select Employee" : user?.full_name)}</span>
                   <span className="font-mono text-[10px] font-bold bg-green-50 text-green-800 border border-green-200 px-1.5 py-0.2 rounded">
-                    {formatEmployeeId(report?.employee_id || targetEmployeeId || user?.id)}
+                    {formatEmployeeId(report?.employee_id || selectedEmpId || user?.id)}
                   </span>
                 </div>
 

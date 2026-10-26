@@ -129,6 +129,21 @@ class ReportService:
         report.submitted_at = datetime.now(timezone.utc)
         return await self.repo.update(report)
 
+    async def reopen_report(
+        self, report_id: int, current_user: User
+    ) -> DailyActivityReport:
+        report = await self.repo.get_by_id(report_id)
+        if not report:
+            raise HTTPException(status_code=404, detail="Report not found")
+        if current_user.role not in (UserRole.ADMIN, UserRole.SUB_ADMIN):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only administrators or sub-administrators can unlock a submitted report.",
+            )
+        report.status = ReportStatus.DRAFT
+        report.submitted_at = None
+        return await self.repo.update(report)
+
     async def delete_report(
         self, report_id: int, current_user: User
     ) -> None:

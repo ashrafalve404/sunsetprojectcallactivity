@@ -259,6 +259,12 @@ export const api = {
       });
       return normalizeReport(raw);
     },
+    reopen: async (reportId: number): Promise<Report> => {
+      const raw = await request<Record<string, unknown>>(`/reports/${reportId}/reopen`, {
+        method: "POST",
+      });
+      return normalizeReport(raw);
+    },
     getSummary: async (reportId: number): Promise<Record<string, unknown>> => {
       const raw = await request<Record<string, unknown>>(`/reports/${reportId}/summary`);
       if (!raw) return {};

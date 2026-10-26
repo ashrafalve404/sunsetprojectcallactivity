@@ -36,6 +36,7 @@ import {
 } from "@/components/ui";
 import { useAuth } from "@/lib/auth-context";
 import { api, ApiError } from "@/lib/api";
+import { SupervisorBar } from "@/components/supervisor-bar";
 import {
   MEETING_METRICS,
   MeetingMetricType,
@@ -177,14 +178,28 @@ const FILTER_TABS = [
 function MeetingTimeDailyContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isAdmin, isSubAdmin } = useAuth();
+  const isSupervisor = isAdmin || isSubAdmin;
 
   const today = getDhakaToday();
   const initialDate = searchParams.get("date") || today;
-  const targetEmployeeId = searchParams.get("employee_id")
-    ? parseInt(searchParams.get("employee_id")!, 10)
-    : undefined;
+  const paramEmpId = searchParams.get("employee_id");
+  const [selectedEmpId, setSelectedEmpId] = useState<number | undefined>(
+    paramEmpId ? Number(paramEmpId) : undefined
+  );
+
+  useEffect(() => {
+    if (paramEmpId) {
+      setSelectedEmpId(Number(paramEmpId));
+    }
+  }, [paramEmpId]);
+
   const [reportDate, setReportDate] = useState<string>(initialDate);
+
+  const handleSelectEmployee = useCallback((empId: number) => {
+    setSelectedEmpId(empId);
+    router.replace(`/meetings?date=${reportDate}&employee_id=${empId}`);
+  }, [reportDate, router]);
 
   // State
   const [report, setReport] = useState<Report | null>(null);
@@ -307,8 +322,9 @@ function MeetingTimeDailyContent() {
   }, []);
 
   useEffect(() => {
-    loadMeetingData(reportDate, targetEmployeeId);
-  }, [reportDate, targetEmployeeId, loadMeetingData]);
+    if (isSupervisor && !selectedEmpId) return;
+    loadMeetingData(reportDate, isSupervisor ? selectedEmpId : undefined);
+  }, [reportDate, selectedEmpId, isSupervisor, loadMeetingData]);
 
   const handleCellChange = (
     metricKey: MeetingMetricType,
@@ -508,9 +524,22 @@ function MeetingTimeDailyContent() {
   return (
     <DashboardLayout
       title="Meeting Time Daily"
-      subtitle="Customer meetings, outdoor site visits, and team coordination tracking"
+      subtitle={isSupervisor ? "Supervisor Review: Monitor and audit employee customer meetings and outdoor site visits" : "Customer meetings, outdoor site visits, and team coordination tracking"}
     >
       <div className="space-y-6 pb-20 sm:pb-6">
+        {/* Supervisor Review Mode Bar */}
+        {isSupervisor && (
+          <SupervisorBar
+            isAdmin={isAdmin}
+            isSubAdmin={isSubAdmin}
+            selectedEmployeeId={selectedEmpId}
+            onSelectEmployee={handleSelectEmployee}
+            reportDate={reportDate}
+            report={report}
+            onReportUnlocked={(updated) => setReport(updated)}
+            currentPage="meetings"
+          />
+        )}
         {/* ── Header Controls Card ────────────────────────────────────────── */}
         <Card>
           <CardContent className="p-4 sm:p-5">
@@ -524,7 +553,7 @@ function MeetingTimeDailyContent() {
                     value={reportDate}
                     onChange={(e) => {
                       setReportDate(e.target.value);
-                      const empQuery = targetEmployeeId ? `&employee_id=${targetEmployeeId}` : "";
+                      const empQuery = (isSupervisor ? selectedEmpId : undefined) ? `&employee_id=${selectedEmpId}` : "";
                       router.replace(`/meetings?date=${e.target.value}${empQuery}`);
                     }}
                     className="border border-slate-300 rounded px-2.5 py-1 text-xs font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-green-600 bg-white"
@@ -535,9 +564,9 @@ function MeetingTimeDailyContent() {
 
                 <div className="text-xs text-slate-600 flex items-center gap-1.5 flex-wrap">
                   <span className="text-slate-400">Employee: </span>
-                  <span className="font-semibold text-slate-900">{report?.employee_name || user?.full_name}</span>
+                  <span className="font-semibold text-slate-900">{report?.employee_name || (isSupervisor ? "Select Employee" : user?.full_name)}</span>
                   <span className="font-mono text-[10px] font-bold bg-green-50 text-green-800 border border-green-200 px-1.5 py-0.2 rounded">
-                    {formatEmployeeId(report?.employee_id || targetEmployeeId || user?.id)}
+                    {formatEmployeeId(report?.employee_id || selectedEmpId || user?.id)}
                   </span>
                 </div>
 
