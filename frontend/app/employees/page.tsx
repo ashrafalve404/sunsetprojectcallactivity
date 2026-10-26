@@ -12,6 +12,11 @@ import {
   X,
   Mail,
   Phone,
+  Crown,
+  Shield,
+  Star,
+  Target,
+  User as UserIcon,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import {
@@ -35,32 +40,37 @@ export function renderRoleBadge(userRole: UserRole) {
     case "admin":
       return (
         <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-200">
-          👑 Admin
+          <Crown className="w-3 h-3 text-purple-700 shrink-0" />
+          <span>Admin</span>
         </span>
       );
     case "sub_admin":
       return (
         <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-900 border border-teal-200">
-          🛡️ Sub Admin
+          <Shield className="w-3 h-3 text-teal-700 shrink-0" />
+          <span>Sub Admin</span>
         </span>
       );
     case "tl":
       return (
         <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
-          ⭐ Team Lead (TL)
+          <Star className="w-3 h-3 text-amber-700 shrink-0" />
+          <span>Team Lead (TL)</span>
         </span>
       );
     case "co":
       return (
         <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-900 border border-sky-300">
-          🎯 Coordinator (CO)
+          <Target className="w-3 h-3 text-sky-700 shrink-0" />
+          <span>Coordinator (CO)</span>
         </span>
       );
     case "employee":
     default:
       return (
         <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
-          👤 Executive
+          <UserIcon className="w-3 h-3 text-emerald-700 shrink-0" />
+          <span>Executive</span>
         </span>
       );
   }
