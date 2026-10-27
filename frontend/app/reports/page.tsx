@@ -499,6 +499,16 @@ function ReportsContent() {
                     Reset
                   </Button>
 
+                  <Link
+                    href={`/reports/print?start_date=${startDate}&end_date=${endDate}&employee_id=${selectedEmployeeId}&preset=${datePreset}`}
+                    target="_blank"
+                    className="inline-flex items-center justify-center px-2.5 py-1.5 rounded-md text-xs font-semibold bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs"
+                    title="Print or Save as PDF Multi-Day Executive Summary"
+                  >
+                    <Printer className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                    Print / PDF Summary
+                  </Link>
+
                   <Button
                     variant="primary"
                     size="sm"

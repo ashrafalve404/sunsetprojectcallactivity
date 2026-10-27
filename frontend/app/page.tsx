@@ -18,6 +18,7 @@ import {
   Bell,
   Phone,
   ChevronRight,
+  Printer,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { KPILeaderboard } from "@/components/dashboard/kpi-leaderboard";
@@ -46,7 +47,7 @@ import {
 } from "@/lib/utils";
 
 function DashboardContent() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isTL } = useAuth();
 
   // Filters
   const [startDate, setStartDate] = useState("");
@@ -325,6 +326,19 @@ function DashboardContent() {
                   <RotateCcw className="w-3.5 h-3.5 mr-1" />
                   Reset
                 </Button>
+
+                {/* Print / PDF Executive Report Button (Admin / Supervisor) */}
+                {(isAdmin || isTL) && (
+                  <Link
+                    href={`/reports/print?start_date=${startDate}&end_date=${endDate}&employee_id=${selectedEmployeeId}&preset=${datePreset}`}
+                    target="_blank"
+                    className="inline-flex items-center justify-center px-2.5 py-1.5 rounded-md text-xs font-semibold bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs"
+                    title="Print or Save as PDF Executive Performance Report for this period"
+                  >
+                    <Printer className="w-3.5 h-3.5 mr-1 text-slate-600" />
+                    Print / PDF Report
+                  </Link>
+                )}
               </div>
             </div>
           </CardContent>
