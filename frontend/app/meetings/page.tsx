@@ -950,7 +950,7 @@ function MeetingTimeDailyContent() {
                       className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
                     >
                       <Plus className="w-4 h-4 mr-1.5 stroke-[2.5]" />
-                      + Log Meeting
+                      Log Meeting
                     </Button>
                     <Button
                       variant="outline"
@@ -1025,7 +1025,7 @@ function MeetingTimeDailyContent() {
                 className="w-full sm:w-auto font-bold bg-white text-green-900 hover:bg-emerald-50 shadow-xs text-xs sm:text-sm py-2.5 px-4 shrink-0 rounded-xl"
               >
                 <Plus className="w-4 h-4 mr-1.5 stroke-[2.5]" />
-                + Log Meeting / Field Visit
+                Log Meeting / Field Visit
               </Button>
             </div>
 
@@ -1106,7 +1106,7 @@ function MeetingTimeDailyContent() {
                     className="text-xs font-bold text-green-700 hover:text-green-800 flex items-center gap-1"
                   >
                     <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                    <span>+ Add Another</span>
+                    <span>Add Another</span>
                   </button>
                 )}
               </div>
@@ -1128,7 +1128,7 @@ function MeetingTimeDailyContent() {
                     className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl px-4 py-2"
                   >
                     <Plus className="w-3.5 h-3.5 mr-1 stroke-[2.5]" />
-                    + Log Meeting / Visit
+                    Log Meeting / Visit
                   </Button>
                 </div>
               ) : (
@@ -2073,7 +2073,7 @@ function MeetingTimeDailyContent() {
                 disabled={loading || saving}
               >
                 <Plus className="w-3.5 h-3.5 mr-1 stroke-[2.5]" />
-                + Log
+                Log
               </Button>
               <Button
                 variant="outline"
