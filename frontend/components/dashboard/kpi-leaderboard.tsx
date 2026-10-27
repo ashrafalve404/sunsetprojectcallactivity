@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import {
-  Trophy,
   Medal,
   Award,
   PhoneCall,
@@ -384,8 +383,7 @@ export function KPILeaderboard({
       <CardHeader className="bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 text-white p-4 sm:p-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <CardTitle className="text-base sm:text-lg font-bold flex items-center gap-2 text-white">
-              <Trophy className="w-5 h-5 text-amber-400" />
+            <CardTitle className="text-base sm:text-lg font-bold text-white">
               {title}
             </CardTitle>
             <p className="text-xs text-slate-300 mt-0.5">{subtitle}</p>
