@@ -1009,13 +1009,9 @@ function MeetingTimeDailyContent() {
            ═══════════════════════════════════════════════════════════════════ */}
         {viewMode === "cards" && (
           <div className="space-y-4">
-            {/* Quick 1-Tap Entry Hero Banner */}
+            {/* Quick Entry Hero Banner */}
             <div className="bg-gradient-to-r from-emerald-700 via-green-700 to-emerald-800 text-white rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="space-y-1">
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/20 text-emerald-50 text-[11px] font-bold uppercase tracking-wider backdrop-blur-xs">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  Fast 1-Tap Logging
-                </div>
                 <h3 className="text-base sm:text-lg font-extrabold tracking-tight">Record Meeting or Client Visit</h3>
                 <p className="text-xs text-emerald-100 max-w-lg">
                   Select activity, time slot, and duration with 1 tap. Saves directly to your daily report in seconds.
