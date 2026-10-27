@@ -156,15 +156,6 @@ export default function LoginPage() {
               Sign In
             </Button>
           </form>
-
-          {/* Dev credentials hint */}
-          <div className="mt-6 pt-5 border-t border-slate-100 text-center">
-            <p className="text-[11px] text-slate-500">
-              Demo Admin Account:{" "}
-              <span className="font-mono text-slate-700 font-semibold">admin</span> /{" "}
-              <span className="font-mono text-slate-700 font-semibold">ChangeMe123!</span>
-            </p>
-          </div>
         </div>
       </div>
     </div>
