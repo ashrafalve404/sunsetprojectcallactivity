@@ -381,11 +381,13 @@ class DashboardService:
                 slot1 = ce.slot_10am_1pm or 0
                 slot2 = ce.slot_2pm_5pm or 0
                 slot3 = ce.slot_5pm_6pm or 0
-                ce_dialed = ce.total_dialed if ce.total_dialed is not None else (slot1 + slot2 + slot3)
                 ce_hp = ce.lead_status_hp or 0
                 ce_p = ce.lead_status_p or 0
                 ce_fub = ce.lead_status_fub or 0
-                ce_connected = ce.total_connected if ce.total_connected is not None else (ce_hp + ce_p + ce_fub)
+                ce_ni = ce.lead_status_ni or 0
+                outcomes_conn = ce_hp + ce_p + ce_fub + ce_ni
+                ce_connected = ce.total_connected if (ce.total_connected is not None and ce.total_connected >= outcomes_conn) else outcomes_conn
+                ce_dialed = max(ce.total_dialed if ce.total_dialed is not None else (slot1 + slot2 + slot3), ce_connected)
                 ce_dur = ce.total_duration_minutes or 0
 
                 total_dialed += ce_dialed

@@ -121,8 +121,9 @@ export function exportFullReportToCSV(data: FullReportExportData) {
     const p = row?.p_count ?? 0;
     const fub = row?.fub_count ?? 0;
     const ni = row?.ni_count ?? 0;
-    const dialed = (row?.total_dialed ?? 0) || s1 + s2 + s3;
+    const rawDialed = (row?.total_dialed ?? 0) || s1 + s2 + s3;
     const connected = (row?.total_connected ?? 0) || hp + p + fub + ni;
+    const dialed = Math.max(rawDialed, connected);
 
     lines.push(
       [

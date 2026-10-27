@@ -194,10 +194,28 @@ class CallService:
         entries_data = []
         for entry in data.entries:
             d = entry.model_dump()
+            # Calculate total_connected from outcomes (HP + P + FUB + NI)
+            outcomes = [
+                d.get("lead_status_hp") or 0,
+                d.get("lead_status_p") or 0,
+                d.get("lead_status_fub") or 0,
+                d.get("lead_status_ni") or 0,
+            ]
+            sum_outcomes = sum(outcomes)
+            if d.get("total_connected") is None or (sum_outcomes > 0 and (d.get("total_connected") or 0) < sum_outcomes):
+                d["total_connected"] = sum_outcomes
+
             # Recalculate total_dialed from slots when all three are provided
             slots = [d.get("slot_10am_1pm"), d.get("slot_2pm_5pm"), d.get("slot_5pm_6pm")]
             if all(s is not None for s in slots):
                 d["total_dialed"] = sum(slots)
+
+            # Ensure total_dialed is at least total_connected
+            conn = d.get("total_connected") or 0
+            dial = d.get("total_dialed") or 0
+            if conn > dial:
+                d["total_dialed"] = conn
+
             entries_data.append(d)
 
         return await self.call_repo.upsert_entries(report_id, entries_data)

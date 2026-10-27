@@ -430,7 +430,7 @@ function PrintableReportContent() {
             <span><strong className="text-slate-700">P:</strong> Potential (Interested, follow-up needed)</span>
             <span><strong className="text-slate-700">FUB:</strong> Follow-Up Booked (Scheduled callback)</span>
             <span><strong className="text-slate-700">NI:</strong> Not Interested</span>
-            <span><strong className="text-slate-700">Connected:</strong> HP + P + Fub</span>
+            <span><strong className="text-slate-700">Connected Calls:</strong> HP + P + FUB + NI (Total calls answered & spoken)</span>
           </div>
         </div>
 

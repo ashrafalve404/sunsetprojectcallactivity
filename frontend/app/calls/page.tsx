@@ -556,13 +556,14 @@ function DailyCallActivityContent() {
         const rowConn =
           e.total_connected !== null && e.total_connected !== undefined
             ? e.total_connected
-            : (e.hp_count || 0) + (e.p_count || 0) + (e.fub_count || 0);
+            : (e.hp_count || 0) + (e.p_count || 0) + (e.fub_count || 0) + (e.ni_count || 0);
         totalConnected += rowConn;
       }
       totalUpdatedLeads += categoryCalculations[cat.key]?.finalTotal ?? 0;
     }
 
-    const totalDialed = slot1 + slot2 + slot3;
+    const slotDials = slot1 + slot2 + slot3;
+    const totalDialed = Math.max(slotDials, totalConnected);
     const connectionRate =
       totalDialed > 0 ? Math.round((totalConnected / totalDialed) * 100) : 0;
 
@@ -586,11 +587,12 @@ function DailyCallActivityContent() {
   const buildPayload = (): CallActivityEntry[] => {
     return LEAD_CATEGORIES.map((cat) => {
       const e = entries[cat.key];
-      const rowDialed = (e.slot_10_to_1 || 0) + (e.slot_2_to_5 || 0) + (e.slot_5_to_6 || 0);
       const rowConnected =
         e.total_connected !== null && e.total_connected !== undefined
           ? e.total_connected
-          : ((e.hp_count || 0) + (e.p_count || 0) + (e.fub_count || 0));
+          : ((e.hp_count || 0) + (e.p_count || 0) + (e.fub_count || 0) + (e.ni_count || 0));
+      const slotDials = (e.slot_10_to_1 || 0) + (e.slot_2_to_5 || 0) + (e.slot_5_to_6 || 0);
+      const rowDialed = Math.max(slotDials, rowConnected);
 
       return {
         lead_category: cat.key,
@@ -1071,7 +1073,7 @@ function DailyCallActivityContent() {
                 const rowConnected =
                   e.total_connected !== null && e.total_connected !== undefined
                     ? e.total_connected
-                    : (e.hp_count || 0) + (e.p_count || 0) + (e.fub_count || 0);
+                    : (e.hp_count || 0) + (e.p_count || 0) + (e.fub_count || 0) + (e.ni_count || 0);
                 const isActive = activeCategoryFilter === cat.key;
                 return (
                   <button
@@ -1108,14 +1110,15 @@ function DailyCallActivityContent() {
                 : LEAD_CATEGORIES.filter((c) => c.key === activeCategoryFilter)
               ).map((cat) => {
                 const e = entries[cat.key];
-                const rowDialed =
-                  (e.slot_10_to_1 || 0) +
-                  (e.slot_2_to_5 || 0) +
-                  (e.slot_5_to_6 || 0);
                 const rowConnected =
                   e.total_connected !== null && e.total_connected !== undefined
                     ? e.total_connected
-                    : (e.hp_count || 0) + (e.p_count || 0) + (e.fub_count || 0);
+                    : (e.hp_count || 0) + (e.p_count || 0) + (e.fub_count || 0) + (e.ni_count || 0);
+                const slotDials =
+                  (e.slot_10_to_1 || 0) +
+                  (e.slot_2_to_5 || 0) +
+                  (e.slot_5_to_6 || 0);
+                const rowDialed = Math.max(slotDials, rowConnected);
 
                 return (
                   <div
@@ -1453,14 +1456,15 @@ function DailyCallActivityContent() {
                 <tbody className="divide-y divide-slate-100">
                   {LEAD_CATEGORIES.map((cat) => {
                     const e = entries[cat.key];
-                    const rowDialed =
-                      (e.slot_10_to_1 || 0) +
-                      (e.slot_2_to_5 || 0) +
-                      (e.slot_5_to_6 || 0);
                     const rowConnected =
                       e.total_connected !== null && e.total_connected !== undefined
                         ? e.total_connected
-                        : (e.hp_count || 0) + (e.p_count || 0) + (e.fub_count || 0);
+                        : (e.hp_count || 0) + (e.p_count || 0) + (e.fub_count || 0) + (e.ni_count || 0);
+                    const slotDials =
+                      (e.slot_10_to_1 || 0) +
+                      (e.slot_2_to_5 || 0) +
+                      (e.slot_5_to_6 || 0);
+                    const rowDialed = Math.max(slotDials, rowConnected);
 
                     return (
                       <tr
