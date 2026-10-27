@@ -1714,10 +1714,10 @@ function MeetingTimeDailyContent() {
           <div className="space-y-4">
             {/* 1. Activity Type */}
             <div>
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-2">
+              <label className="text-[11px] sm:text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
                 1. Select Activity Type
               </label>
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
                 {[
                   {
                     key: "outdoor" as const,
@@ -1774,21 +1774,21 @@ function MeetingTimeDailyContent() {
                           if (quickDuration === 60) setQuickDuration(30);
                         }
                       }}
-                      className={`p-3 rounded-xl border text-left flex items-start gap-2.5 transition-all ${
+                      className={`p-2 sm:p-2.5 rounded-xl border text-left flex items-start gap-1.5 sm:gap-2 transition-all ${
                         isSelected ? item.activeBg : `${item.bg} ${item.border} hover:opacity-90`
                       }`}
                     >
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-white shadow-2xs ${item.color}`}>
-                        <Icon className="w-4 h-4" />
+                      <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 bg-white shadow-2xs ${item.color}`}>
+                        <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <span className="font-bold text-xs text-slate-900 truncate block">
+                          <span className="font-bold text-[11px] sm:text-xs text-slate-900 leading-tight block break-words">
                             {item.title}
                           </span>
-                          {isSelected && <Check className="w-3.5 h-3.5 text-emerald-700 shrink-0 stroke-[3]" />}
+                          {isSelected && <Check className="w-3 h-3 text-emerald-700 shrink-0 stroke-[3] ml-1" />}
                         </div>
-                        <span className="text-[10px] text-slate-500 block truncate mt-0.5">
+                        <span className="text-[9px] sm:text-[10px] text-slate-500 leading-tight block mt-0.5 break-words">
                           {item.desc}
                         </span>
                       </div>
