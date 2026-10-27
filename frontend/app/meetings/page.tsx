@@ -1112,20 +1112,20 @@ function MeetingTimeDailyContent() {
               </div>
 
               {loggedActivities.length === 0 ? (
-                <div className="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center">
-                  <div className="w-12 h-12 bg-emerald-50 text-emerald-700 rounded-2xl flex items-center justify-center mx-auto mb-2.5">
-                    <Sparkles className="w-6 h-6" />
+                <div className="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-4 sm:p-5 text-center">
+                  <div className="w-10 h-10 bg-emerald-50 text-emerald-700 rounded-xl flex items-center justify-center mx-auto mb-2">
+                    <Sparkles className="w-5 h-5" />
                   </div>
-                  <h4 className="font-bold text-slate-800 text-sm mb-1">No Meetings Logged Yet Today</h4>
-                  <p className="text-xs text-slate-500 max-w-sm mx-auto mb-3.5">
-                    Tap the button below to quickly record an outdoor visit, customer meeting, or team discussion.
+                  <h4 className="font-bold text-slate-800 text-xs sm:text-sm mb-1">No activities logged today</h4>
+                  <p className="text-[11px] sm:text-xs text-slate-400 mb-3">
+                    Tap below to log a visit or meeting.
                   </p>
                   <Button
                     type="button"
                     variant="primary"
                     disabled={isLocked || loading}
                     onClick={() => handleOpenQuickModal("outdoor")}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl px-4 py-2"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl px-3.5 py-1.5"
                   >
                     <Plus className="w-3.5 h-3.5 mr-1 stroke-[2.5]" />
                     Log Meeting / Visit
