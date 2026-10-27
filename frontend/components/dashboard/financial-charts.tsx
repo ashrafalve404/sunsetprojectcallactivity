@@ -2,8 +2,6 @@
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
-  Target,
-  Banknote,
   Calendar,
   ArrowUpRight,
   CheckCircle2,
@@ -507,8 +505,7 @@ export function FinancialCharts({ startDate, endDate, employeeId }: FinancialCha
         <div>
           {/* Header with Title + Pace Badge + PNG Download */}
           <div className="bg-slate-900 text-white px-3.5 py-2.5 sm:px-4 sm:py-3 border-b border-slate-800 flex items-center justify-between">
-            <h3 className="text-xs sm:text-sm font-bold flex items-center gap-1.5 text-white">
-              <Target className="w-4 h-4 text-emerald-400 shrink-0" />
+            <h3 className="text-xs sm:text-sm font-bold text-white">
               Monthly Target Pace
             </h3>
             <div className="flex items-center gap-1.5">
@@ -692,8 +689,7 @@ export function FinancialCharts({ startDate, endDate, employeeId }: FinancialCha
         <div>
           {/* Header with Title + Controls (Presets, Zoom, Reset, PNG) */}
           <div className="bg-slate-900 text-white px-3.5 py-2.5 sm:px-4 sm:py-3 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2.5">
-            <h3 className="text-xs sm:text-sm font-bold flex items-center gap-1.5 text-white">
-              <Banknote className="w-4 h-4 text-emerald-400 shrink-0" />
+            <h3 className="text-xs sm:text-sm font-bold text-white">
               Collections vs. Commitments
             </h3>
 
