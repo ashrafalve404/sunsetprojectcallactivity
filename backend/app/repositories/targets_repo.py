@@ -30,7 +30,7 @@ class TargetsRepository:
                     DailyTargets.employee_id == employee_id,
                     DailyTargets.effective_from <= report_date,
                 )
-                .order_by(DailyTargets.effective_from.desc())
+                .order_by(DailyTargets.effective_from.desc(), DailyTargets.id.desc())
                 .limit(1)
             )
             result = await self.db.execute(stmt)
@@ -45,7 +45,7 @@ class TargetsRepository:
                 DailyTargets.employee_id.is_(None),
                 DailyTargets.effective_from <= report_date,
             )
-            .order_by(DailyTargets.effective_from.desc())
+            .order_by(DailyTargets.effective_from.desc(), DailyTargets.id.desc())
             .limit(1)
         )
         result = await self.db.execute(stmt)
@@ -59,7 +59,9 @@ class TargetsRepository:
             stmt = stmt.where(DailyTargets.employee_id.is_(None))
         elif employee_id is not None:
             stmt = stmt.where(DailyTargets.employee_id == employee_id)
-        result = await self.db.execute(stmt.order_by(DailyTargets.effective_from.desc()))
+        result = await self.db.execute(
+            stmt.order_by(DailyTargets.effective_from.desc(), DailyTargets.id.desc())
+        )
         return result.scalars().all()
 
     async def get_by_id(self, target_id: int) -> Optional[DailyTargets]:
