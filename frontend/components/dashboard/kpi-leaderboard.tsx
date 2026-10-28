@@ -16,7 +16,6 @@ import {
   Flame,
   ArrowUpDown,
   ExternalLink,
-  Target,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent, Badge, Skeleton, Button } from "@/components/ui";
 import { PerformanceLeaderboardResponse, EmployeeLeaderboardItem } from "@/types";
@@ -239,7 +238,6 @@ export function KPILeaderboard({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <CardTitle className="text-base sm:text-lg font-bold flex items-center gap-2 text-white">
-                <Target className="w-5 h-5 text-emerald-400" />
                 <span>My Daily KPI Targets & Progress</span>
                 <span className="font-mono text-xs font-bold bg-emerald-900/90 text-emerald-300 border border-emerald-700/80 px-2 py-0.5 rounded-md">
                   {formatEmployeeId(personal.employee_id)}
