@@ -1010,7 +1010,7 @@ function MeetingTimeDailyContent() {
         {viewMode === "cards" && (
           <div className="space-y-4">
             {/* Quick Entry Hero Banner */}
-            <div className="bg-gradient-to-r from-emerald-700 via-green-700 to-emerald-800 text-white rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="bg-emerald-800 text-white rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="space-y-1">
                 <h3 className="text-base sm:text-lg font-extrabold tracking-tight">Record Meeting or Client Visit</h3>
                 <p className="text-xs text-emerald-100">
@@ -1022,7 +1022,7 @@ function MeetingTimeDailyContent() {
                 variant="secondary"
                 disabled={isLocked || loading}
                 onClick={() => handleOpenQuickModal("outdoor")}
-                className="w-full sm:w-auto font-bold bg-white text-green-900 hover:bg-emerald-50 shadow-xs text-xs sm:text-sm py-2.5 px-4 shrink-0 rounded-xl"
+                className="w-full sm:w-auto font-bold bg-white text-emerald-900 hover:bg-emerald-50 shadow-xs text-xs sm:text-sm py-2.5 px-4 shrink-0 rounded-xl"
               >
                 <Plus className="w-4 h-4 mr-1.5 stroke-[2.5]" />
                 Log Meeting / Field Visit
@@ -1265,7 +1265,7 @@ function MeetingTimeDailyContent() {
                           className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden transition-all hover:border-slate-300"
                         >
                           {/* Header */}
-                          <div className="p-3.5 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100 flex items-center justify-between gap-2">
+                          <div className="p-3.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between gap-2">
                             <div className="flex items-center gap-2.5">
                               <div
                                 className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${theme.iconBg}`}
