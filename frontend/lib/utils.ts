@@ -87,9 +87,32 @@ export function formatReadableDate(dateStr: string): string {
 }
 
 /**
- * Format numeric user ID into standardized employee code (e.g. EMP-001, EMP-025).
+ * Format numeric user ID into standardized year-based numeric employee code (e.g. 2026001, 2026006, 2027001).
+ * Only numbers, automatically incorporates the employee creation year or current year.
  */
-export function formatEmployeeId(id: number | null | undefined): string {
-  if (!id || id <= 0) return "EMP-000";
-  return `EMP-${String(id).padStart(3, "0")}`;
+export function formatEmployeeId(
+  id: number | null | undefined,
+  createdAtOrYear?: string | Date | number | null
+): string {
+  if (!id || id <= 0) return "";
+
+  // If already a full year-based numeric ID (e.g. 2026001, 2027005)
+  if (id >= 2000000) {
+    return String(id);
+  }
+
+  // Determine year: from createdAtOrYear, or fallback to current calendar year
+  let year: number;
+  if (typeof createdAtOrYear === "number") {
+    year = createdAtOrYear >= 2000 ? createdAtOrYear : new Date().getFullYear();
+  } else if (createdAtOrYear) {
+    const parsed = new Date(createdAtOrYear);
+    const parsedYear = parsed.getFullYear();
+    year = !isNaN(parsedYear) && parsedYear >= 2000 ? parsedYear : new Date().getFullYear();
+  } else {
+    year = new Date().getFullYear();
+  }
+
+  return `${year}${String(id).padStart(3, "0")}`;
 }
+

@@ -84,7 +84,50 @@ class UserRepository:
         result = await self.db.execute(stmt)
         return result.scalar_one()
 
+    async def get_next_employee_id(self) -> int:
+        """
+        Generate year-based numeric employee ID: YYYY001, YYYY002, etc. (e.g. 2026001).
+        Automatically updates year when calendar year changes (e.g. 2026001 -> 2027001 in 2027).
+        """
+        from datetime import datetime, timezone, timedelta
+        from sqlalchemy import func
+
+        # Business timezone: Asia/Dhaka is UTC+6
+        dhaka_year = (datetime.now(timezone.utc) + timedelta(hours=6)).year
+        base_id = dhaka_year * 1000  # e.g. 2026000
+        max_id_limit = (dhaka_year + 1) * 1000  # e.g. 2027000
+
+        # Find maximum existing ID in this year's range (e.g. 2026001 - 2026999)
+        stmt = select(func.max(User.id)).where(
+            User.id >= base_id,
+            User.id < max_id_limit,
+        )
+        res = await self.db.execute(stmt)
+        max_id = res.scalar_one_or_none()
+
+        if max_id is not None and max_id >= (base_id + 1):
+            return max_id + 1
+
+        # Check legacy short IDs (< 100000) created in the current year
+        year_start = datetime(dhaka_year, 1, 1)
+        year_end = datetime(dhaka_year + 1, 1, 1)
+        stmt_legacy = select(func.max(User.id)).where(
+            User.id < 100000,
+            User.created_at >= year_start,
+            User.created_at < year_end,
+        )
+        try:
+            res_legacy = await self.db.execute(stmt_legacy)
+            legacy_max = res_legacy.scalar_one_or_none()
+        except Exception:
+            legacy_max = None
+
+        legacy_seq = legacy_max if legacy_max and legacy_max > 0 else 0
+        return base_id + legacy_seq + 1
+
     async def create(self, user: User) -> User:
+        if not user.id:
+            user.id = await self.get_next_employee_id()
         self.db.add(user)
         await self.db.flush()
         await self.db.refresh(user)

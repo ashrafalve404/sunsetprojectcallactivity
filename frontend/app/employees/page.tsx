@@ -395,7 +395,7 @@ export default function EmployeesPage() {
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="font-mono font-bold text-xs bg-slate-100 text-slate-800 border border-slate-200 px-2 py-0.5 rounded-md inline-flex items-center gap-1">
-                        {formatEmployeeId(emp.id)}
+                        {formatEmployeeId(emp.id, emp.created_at)}
                       </span>
                       {renderRoleBadge(emp.role)}
                       {currentUser?.id === emp.id && (
@@ -521,7 +521,7 @@ export default function EmployeesPage() {
                     <tr key={emp.id} className="hover:bg-slate-50 transition-colors">
                       <td className="py-3 px-3">
                         <span className="font-mono font-bold text-xs bg-slate-100 text-slate-800 border border-slate-200 px-2 py-0.5 rounded-md inline-flex items-center gap-1 shadow-2xs">
-                          {formatEmployeeId(emp.id)}
+                          {formatEmployeeId(emp.id, emp.created_at)}
                         </span>
                       </td>
                       <td className="py-3 px-4 font-semibold text-slate-900">
@@ -616,7 +616,7 @@ export default function EmployeesPage() {
               <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between text-xs">
                 <span className="font-semibold text-slate-600">Employee ID:</span>
                 <span className="font-mono font-bold text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-300">
-                  {formatEmployeeId(editingEmployee.id)} (System #{editingEmployee.id})
+                  {formatEmployeeId(editingEmployee.id, editingEmployee.created_at)}
                 </span>
               </div>
             ) : (
