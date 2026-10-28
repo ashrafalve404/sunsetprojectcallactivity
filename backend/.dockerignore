@@ -1,0 +1,43 @@
+# Git
+.git
+.gitignore
+
+# Python cache and virtual environment
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv
+venv
+ENV/
+env/
+
+# Databases & local persistent files
+*.db
+*.sqlite
+*.sqlite3
+sunset_dashboard.db
+
+# Uploads directory (mounted via Docker volume in production)
+uploads/*
+!uploads/.gitkeep
+
+# Testing and coverage
+.pytest_cache
+.coverage
+htmlcov/
+tests/
+
+# Environment files (never bake secrets into Docker images)
+.env
+.env.local
+.env.*.local
+
+# IDE & OS files
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

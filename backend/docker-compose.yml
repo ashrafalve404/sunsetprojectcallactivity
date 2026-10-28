@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  # ─── FastAPI Backend Service ────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sunset_backend
+    restart: always
+    ports:
+      # Expose port 8000 on host (can be mapped behind Nginx/Caddy reverse proxy)
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      # If using postgres service in compose, override or ensure DATABASE_URL matches:
+      - DATABASE_URL=postgresql://sunset_user:sunset_secret_password@db:5432/sunset_dashboard
+    volumes:
+      # Persist user uploads across container rebuilds
+      - uploads_data:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ─── PostgreSQL Database Service ─────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: sunset_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sunset_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sunset_secret_password}
+      POSTGRES_DB: ${POSTGRES_DB:-sunset_dashboard}
+    volumes:
+      # Persist database storage on the host
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sunset_user} -d ${POSTGRES_DB:-sunset_dashboard}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  postgres_data:
+    driver: local
+  uploads_data:
+    driver: local
